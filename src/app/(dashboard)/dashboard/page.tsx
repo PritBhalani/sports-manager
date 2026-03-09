@@ -1,0 +1,102 @@
+"use client";
+
+import { useState } from "react";
+import { Calendar } from "lucide-react";
+import { StatsCard } from "@/components";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+
+const STATS_CONFIG = (
+  s: ReturnType<typeof useDashboardStats>
+): { title: string; value: string; subStats: { label: string; value: string }[] }[] => [
+  { title: "Current Cashable Balance", value: s.balance, subStats: [] },
+  { title: "GGR", value: s.ggr, subStats: [] },
+  { title: "Player Sports Exposure", value: s.exposure, subStats: [] },
+  {
+    title: "Players",
+    value: s.players,
+    subStats: [
+      { label: "New", value: s.playersNew },
+      { label: "Unique", value: s.playersUnique },
+    ],
+  },
+  { title: "Deposits", value: s.deposits, subStats: [] },
+  { title: "Withdraws", value: s.withdraws, subStats: [] },
+  { title: "New Player Deposits", value: "0", subStats: [] },
+  { title: "New Player Withdraws", value: "0", subStats: [] },
+  { title: "NGR", value: s.ngr, subStats: [] },
+  { title: "Agents", value: "0", subStats: [] },
+  { title: "Bonus", value: "0", subStats: [] },
+  { title: "Losing Commission", value: "0", subStats: [] },
+];
+
+export default function DashboardPage() {
+  const [activeTab, setActiveTab] = useState<"details" | "visual">("details");
+  const [period, setPeriod] = useState("Today");
+  const stats = useDashboardStats();
+  const statList = STATS_CONFIG(stats);
+
+  return (
+    <div className="min-w-0 space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <h1 className="truncate text-xl font-bold text-zinc-900 sm:text-2xl">
+          Welcome Back, Sports Manager#1
+        </h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex rounded-lg border border-zinc-200 bg-white p-0.5" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "details"}
+              onClick={() => setActiveTab("details")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeTab === "details"
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              }`}
+            >
+              Details
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "visual"}
+              onClick={() => setActiveTab("visual")}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                activeTab === "visual"
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:bg-zinc-100"
+              }`}
+            >
+              Visual
+            </button>
+          </div>
+          <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2">
+            <Calendar className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="bg-transparent text-sm font-medium text-zinc-900 focus:outline-none"
+              aria-label="Report period"
+            >
+              <option value="Today">Today</option>
+              <option value="Yesterday">Yesterday</option>
+              <option value="Last 7 days">Last 7 days</option>
+              <option value="Last 30 days">Last 30 days</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+        {statList.map((stat) => (
+          <StatsCard
+            key={stat.title}
+            title={stat.title}
+            value={stat.value}
+            subStats={stat.subStats}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

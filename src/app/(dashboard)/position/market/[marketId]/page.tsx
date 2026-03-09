@@ -1,0 +1,54 @@
+"use client";
+
+import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataGrid } from "@/components";
+
+type Row = Record<string, unknown>;
+
+const rows: Row[] = [
+  { id: "1", selection: "Team A", exposure: -300 },
+  { id: "2", selection: "Team B", exposure: 200 },
+];
+
+const columns = [
+  { id: "selection", header: "Selection", sortable: true, cell: (row: Row) => String(row.selection ?? "—") },
+  { id: "exposure", header: "Exposure", sortable: true, cell: (row: Row) => String(row.exposure ?? "0") },
+];
+
+export default function MarketPositionDetailPage() {
+  return (
+    <div className="min-w-0 space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Market Position Detail"
+        breadcrumbs={["Position", "Market", "Detail"]}
+        action={<Button variant="primary" size="sm">Export</Button>}
+      />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Total Exposure" value="0" />
+        <StatsCard title="Selections" value="0" />
+        <StatsCard title="Max Exposure" value="0" />
+        <StatsCard title="Net P&L" value="0" />
+      </div>
+
+      <Card>
+        <FilterBar className="mb-4">
+          <Input placeholder="Filter by selection" className="max-w-xs" />
+          <Button variant="primary">Filter</Button>
+        </FilterBar>
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          initialSortColumnId="selection"
+          initialSortDirection="asc"
+          enableSearch
+          searchPlaceholder="Search selections…"
+          getSearchText={(row: Row) =>
+            `${row.selection ?? ""}`.toLowerCase()
+          }
+          emptyMessage="No position data for this market."
+        />
+      </Card>
+    </div>
+  );
+}
+

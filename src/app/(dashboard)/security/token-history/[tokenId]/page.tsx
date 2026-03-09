@@ -1,0 +1,56 @@
+"use client";
+
+import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataGrid } from "@/components";
+
+type Row = Record<string, unknown>;
+
+const rows: Row[] = [
+  { id: "1", field: "Token ID", value: "token-123" },
+  { id: "2", field: "User", value: "player001" },
+  { id: "3", field: "Created At", value: "2024-01-10T08:00:00Z" },
+  { id: "4", field: "Expires At", value: "2024-01-11T08:00:00Z" },
+  { id: "5", field: "Status", value: "Active" },
+];
+
+const columns = [
+  { id: "field", header: "Field", sortable: false, cell: (row: Row) => String(row.field ?? "—") },
+  { id: "value", header: "Value", sortable: false, cell: (row: Row) => String(row.value ?? "—") },
+];
+
+export default function TokenDetailPage() {
+  return (
+    <div className="min-w-0 space-y-4 sm:space-y-6">
+      <PageHeader
+        title="Token Detail"
+        breadcrumbs={["Token / Login History", "Token History", "Detail"]}
+      />
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatsCard title="Status" value="—" />
+        <StatsCard title="User" value="—" />
+        <StatsCard title="Created At" value="—" />
+        <StatsCard title="Expires At" value="—" />
+      </div>
+
+      <Card>
+        <FilterBar className="mb-4">
+          <Input placeholder="Search fields" className="max-w-xs" />
+          <Button variant="primary">Filter</Button>
+        </FilterBar>
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          initialSortColumnId="field"
+          initialSortDirection="asc"
+          enableSearch
+          searchPlaceholder="Search token fields…"
+          getSearchText={(row: Row) =>
+            `${row.field ?? ""} ${row.value ?? ""}`.toLowerCase()
+          }
+          emptyMessage="No token detail."
+        />
+      </Card>
+    </div>
+  );
+}
+
