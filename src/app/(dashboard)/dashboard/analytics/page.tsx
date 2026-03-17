@@ -19,7 +19,7 @@ export default function DashboardAnalyticsPage() {
   const stats = useDashboardStats();
   const rows: Row[] = [
     { id: "1", metric: "Current Balance", value: stats.balance },
-    { id: "2", metric: "Live Bet Total", value: stats.liveBetTotal },
+    { id: "2", metric: "Live Bet Stake", value: stats.liveBetStake },
     { id: "3", metric: "Total Markets", value: stats.totalMarket },
     { id: "4", metric: "Players", value: stats.players },
   ];
@@ -34,7 +34,7 @@ export default function DashboardAnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard title="Current Balance" value={stats.balance} />
-        <StatsCard title="Live Bet Total" value={stats.liveBetTotal} />
+        <StatsCard title="Live Bet Stake" value={stats.liveBetStake} />
         <StatsCard title="Active Users" value={stats.players} />
         <StatsCard title="Active Markets" value={stats.totalMarket} />
       </div>

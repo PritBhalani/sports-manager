@@ -135,7 +135,7 @@ export default function WebsiteBannersPage() {
           <div className="flex items-center gap-2">
             <Select
               value={pageSize}
-              onChange={(value) => setPageSize(value)}
+              onChange={(e) => setPageSize(e.target.value)}
               options={[
                 { label: "15", value: "15" },
                 { label: "30", value: "30" },

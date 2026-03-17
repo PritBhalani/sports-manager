@@ -60,7 +60,7 @@ export default function PlayersPage() {
           <Select
             aria-label="Player type"
             value={playerType}
-            onChange={setPlayerType}
+            onChange={(e) => setPlayerType(e.target.value)}
             options={[
               { label: "All Players", value: "all" },
               { label: "Active", value: "active" },
@@ -71,7 +71,7 @@ export default function PlayersPage() {
           <Select
             aria-label="Choose Date"
             value={dateRange}
-            onChange={setDateRange}
+            onChange={(e) => setDateRange(e.target.value)}
             options={[
               { label: "Choose Date", value: "date" },
               { label: "Today", value: "today" },

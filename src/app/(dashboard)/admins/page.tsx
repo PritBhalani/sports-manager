@@ -61,7 +61,7 @@ export default function AdminsPage() {
           <Select
             aria-label="Role filter"
             value={role}
-            onChange={setRole}
+            onChange={(e) => setRole(e.target.value)}
             options={[
               { label: "Select a Role", value: "all" },
               { label: "Affiliate", value: "affiliate" },
