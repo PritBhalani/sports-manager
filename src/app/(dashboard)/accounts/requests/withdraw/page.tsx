@@ -105,14 +105,14 @@ export default function RequestWithdrawPage() {
             <Select
               aria-label="Status filter"
               value={status}
-              onChange={setStatus}
+              onChange={(e) => setStatus(e.target.value)}
               options={STATUS_OPTIONS}
               className="h-10 min-w-[140px]"
             />
             <Select
               aria-label="Time range"
               value={timeRange}
-              onChange={setTimeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
               options={TIME_RANGE_OPTIONS}
               className="h-10 min-w-[130px]"
             />
