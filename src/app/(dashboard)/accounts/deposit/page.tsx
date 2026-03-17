@@ -48,8 +48,8 @@ export default function DepositPage() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Deposit"
-        breadcrumbs={["Accounts", "Deposit"]}
+        title="Auto Deposit"
+        breadcrumbs={["Transactions", "Auto Deposit"]}
       />
 
       <Card title="Deposit chips (POST /account/in)" className="max-w-lg">

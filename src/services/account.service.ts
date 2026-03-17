@@ -14,9 +14,22 @@ import type {
 
 const ACCOUNT = "/account";
 
+type BalanceEnvelope = {
+  success?: boolean;
+  data?: BalanceResponse;
+  messages?: unknown;
+  [key: string]: unknown;
+};
+
 /** GET /account/getbalance – balance for authenticated user */
 export async function getBalance(): Promise<BalanceResponse> {
-  return apiGet(`${ACCOUNT}/getbalance`);
+  const raw = await apiGet<unknown>(`${ACCOUNT}/getbalance`);
+  if (!raw || typeof raw !== "object") return ({} as BalanceResponse);
+  const env = raw as BalanceEnvelope;
+  if (env.data && typeof env.data === "object") {
+    return env.data as BalanceResponse;
+  }
+  return raw as BalanceResponse;
 }
 
 /** GET /account/getbalancedetail/{userId} */

@@ -1,61 +1,73 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
-import { mockProfitLossByMarket, mockDownlineSummary, MockProfitLossRow, MockDownlineSummaryRow } from "@/mocks/reports.mock";
+import { getDownlineSummary, getPlByMarket } from "@/services/betHistory.service";
 
 export default function ReportsAnalyticsPage() {
   const router = useRouter();
+  const [marketRows, setMarketRows] = useState<Record<string, unknown>[]>([]);
+  const [downlineRows, setDownlineRows] = useState<Record<string, unknown>[]>([]);
+
+  useEffect(() => {
+    getPlByMarket({ page: 1, pageSize: 100, orderByDesc: true }, {})
+      .then((res) => setMarketRows(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setMarketRows([]));
+    getDownlineSummary({ page: 1, pageSize: 100, orderByDesc: true }, {})
+      .then((res) => setDownlineRows(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setDownlineRows([]));
+  }, []);
 
   const columns = [
     {
       id: "marketName",
       header: "Market",
       sortable: true,
-      cell: (row: MockProfitLossRow) => row.marketName,
+      cell: (row: Record<string, unknown>) => String(row.marketName ?? row.market ?? "—"),
     },
     {
       id: "sport",
       header: "Sport",
       sortable: true,
-      cell: (row: MockProfitLossRow) => row.sport,
+      cell: (row: Record<string, unknown>) => String(row.sport ?? row.eventType ?? "—"),
     },
     {
       id: "totalBets",
       header: "Bets",
       sortable: true,
-      cell: (row: MockProfitLossRow) => row.totalBets.toString(),
-      sortValue: (row: MockProfitLossRow) => row.totalBets,
+      cell: (row: Record<string, unknown>) => String(row.totalBets ?? row.bets ?? "0"),
+      sortValue: (row: Record<string, unknown>) => Number(row.totalBets ?? row.bets ?? 0),
     },
     {
       id: "stake",
       header: "Stake",
       sortable: true,
-      cell: (row: MockProfitLossRow) => `₹ ${formatCurrency(row.stake)}`,
-      sortValue: (row: MockProfitLossRow) => row.stake,
+      cell: (row: Record<string, unknown>) => `₹ ${formatCurrency(row.stake ?? row.amount)}`,
+      sortValue: (row: Record<string, unknown>) => Number(row.stake ?? row.amount ?? 0),
     },
     {
       id: "profitLoss",
       header: "Net P&L",
       sortable: true,
-      cell: (row: MockProfitLossRow) => `₹ ${formatCurrency(row.profitLoss)}`,
-      sortValue: (row: MockProfitLossRow) => row.profitLoss,
+      cell: (row: Record<string, unknown>) => `₹ ${formatCurrency(row.profitLoss ?? row.pl)}`,
+      sortValue: (row: Record<string, unknown>) => Number(row.profitLoss ?? row.pl ?? 0),
     },
     {
       id: "settledAt",
       header: "Settled At",
       sortable: true,
-      cell: (row: MockProfitLossRow) => formatDateTime(row.settledAt),
-      sortValue: (row: MockProfitLossRow) => Date.parse(row.settledAt),
+      cell: (row: Record<string, unknown>) => formatDateTime(row.settledAt ?? row.createdAt ?? row.date),
+      sortValue: (row: Record<string, unknown>) => Date.parse(String(row.settledAt ?? row.createdAt ?? row.date ?? 0)),
     },
     {
       id: "actions",
       header: "Actions",
       sortable: false,
-      cell: (row: MockProfitLossRow) => {
-        const id = row.marketId;
+      cell: (row: Record<string, unknown>) => {
+        const id = String(row.marketId ?? row.id ?? "");
         return (
           <div className="flex flex-wrap gap-1">
             <Button
@@ -68,7 +80,7 @@ export default function ReportsAnalyticsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/reports/downline-summary/${row.userId}`)}
+              onClick={() => router.push(`/reports/downline-summary/${String(row.userId ?? "")}`)}
             >
               View Downline
             </Button>
@@ -86,15 +98,15 @@ export default function ReportsAnalyticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="P&L Markets" value={mockProfitLossByMarket.length.toString()} />
-        <StatsCard title="Downline Records" value={mockDownlineSummary.length.toString()} />
+        <StatsCard title="P&L Markets" value={marketRows.length.toString()} />
+        <StatsCard title="Downline Records" value={downlineRows.length.toString()} />
         <StatsCard
           title="Positive Markets"
-          value={mockProfitLossByMarket.filter((r) => r.profitLoss > 0).length.toString()}
+          value={marketRows.filter((r) => Number(r.profitLoss ?? r.pl ?? 0) > 0).length.toString()}
         />
         <StatsCard
           title="Negative Markets"
-          value={mockProfitLossByMarket.filter((r) => r.profitLoss < 0).length.toString()}
+          value={marketRows.filter((r) => Number(r.profitLoss ?? r.pl ?? 0) < 0).length.toString()}
         />
       </div>
 
@@ -107,13 +119,13 @@ export default function ReportsAnalyticsPage() {
         </FilterBar>
         <DataTable
           columns={columns}
-          rows={mockProfitLossByMarket}
+          rows={marketRows}
           initialSortColumnId="marketName"
           initialSortDirection="asc"
           enableSearch
           searchPlaceholder="Search by market or sport…"
-          getSearchText={(row: MockProfitLossRow) =>
-            `${row.marketName} ${row.sport}`.toLowerCase()
+          getSearchText={(row: Record<string, unknown>) =>
+            `${row.marketName ?? row.market ?? ""} ${row.sport ?? row.eventType ?? ""}`.toLowerCase()
           }
           emptyMessage="No reports."
         />

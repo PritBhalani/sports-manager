@@ -1,22 +1,128 @@
 import { apiGet, apiPost } from "./apiClient";
+import { getAuthSession } from "@/store/authStore";
 import type { MyInfo, UpdateMemberBody } from "@/types/user.types";
 
 const USER = "/user";
 
+function strId(v: unknown): string | null {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s || null;
+}
+
+/**
+ * README §3: GET /user/getmyinfo/{parentId} — path param is the **parent** id.
+ * Resolve strictly from login payload: parent.id / user.parentId (and their
+ * copies inside loginData). Do NOT fall back to the current user id.
+ */
+export function getMyInfoPathId(): string | null {
+  const s = getAuthSession();
+  const loginData = s.loginData as Record<string, unknown> | undefined;
+
+  const parentFromSession = strId(s.parent?.id);
+  if (parentFromSession) return parentFromSession;
+
+  const parentIdFromUser = strId(s.user?.parentId);
+  if (parentIdFromUser) return parentIdFromUser;
+
+  if (loginData?.parent && typeof loginData.parent === "object") {
+    const pid = strId((loginData.parent as { id?: string }).id);
+    if (pid) return pid;
+  }
+  if (loginData?.user && typeof loginData.user === "object") {
+    const pid = strId((loginData.user as { parentId?: string }).parentId);
+    if (pid) return pid;
+  }
+
+  // No parent id available in session/login payload
+  return null;
+}
+
+/** Current member id for updatemember / getuserbyid — token userId or user.id */
+export function getSessionMemberId(): string | null {
+  const s = getAuthSession();
+  const loginData = s.loginData as Record<string, unknown> | undefined;
+  return (
+    strId(s.userId) ||
+    strId(s.user?.id) ||
+    (loginData?.user && typeof loginData.user === "object"
+      ? strId((loginData.user as { id?: string }).id)
+      : null)
+  );
+}
+
+/**
+ * @deprecated Use getMyInfoPathId() — README getmyinfo path is parentId.
+ * Kept for any code still importing the old name.
+ */
+export function getProfileParentId(): string | null {
+  return getMyInfoPathId();
+}
+
+type MyInfoEnvelope = {
+  success?: boolean;
+  data?: MyInfo;
+  messages?: string[];
+  [key: string]: unknown;
+};
+
+function normalizeMyInfo(payload: unknown): MyInfo {
+  if (!payload || typeof payload !== "object") return {};
+  const env = payload as MyInfoEnvelope;
+  if (env.success === false) {
+    const msg = Array.isArray(env.messages)
+      ? env.messages.filter(Boolean).join(", ")
+      : "getmyinfo failed";
+    throw new Error(msg || "getmyinfo failed");
+  }
+  if (env.data && typeof env.data === "object") return env.data as MyInfo;
+  return payload as MyInfo;
+}
+
 /**
  * GET /user/getmyinfo/{parentId}
- * Auth: Session. Returns authenticated user info (README §3 User).
+ * Auth: Session. Pass parent id from session (see getMyInfoPathId).
  */
 export async function getMyInfo(parentId: string): Promise<MyInfo> {
-  return apiGet(`${USER}/getmyinfo/${encodeURIComponent(parentId)}`);
+  const id = String(parentId || "").trim();
+  if (!id || id === "me") {
+    throw new Error("Profile requires parent id in session. Please log in again.");
+  }
+  const raw = await apiGet<unknown>(
+    `${USER}/getmyinfo/${encodeURIComponent(id)}`,
+  );
+  return normalizeMyInfo(raw);
 }
 
 /**
  * POST /user/updatemember
- * Auth: Session. Body: member fields to update (README §3 User).
+ * Sends member id + parentId when available so backend can scope updates.
  */
 export async function updateMember(body: UpdateMemberBody): Promise<unknown> {
-  return apiPost(`${USER}/updatemember`, body);
+  const s = getAuthSession();
+
+  // Resolve parentId explicitly to avoid union types like string | null | false
+  let parentId: string | null = null;
+  const fromParent = strId(s.parent?.id);
+  if (fromParent) {
+    parentId = fromParent;
+  } else {
+    const fromUser = strId(s.user?.parentId);
+    if (fromUser) {
+      parentId = fromUser;
+    } else if (s.loginData?.user && typeof s.loginData.user === "object") {
+      const fromLogin = strId(
+        (s.loginData.user as { parentId?: string }).parentId,
+      );
+      if (fromLogin) parentId = fromLogin;
+    }
+  }
+
+  const payload: UpdateMemberBody = { ...body };
+  if (parentId !== null && payload.parentId == null) {
+    payload.parentId = parentId;
+  }
+  return apiPost(`${USER}/updatemember`, payload);
 }
 
 /** GET /user/getusercode/{parentId} — next user code under parent (README §3) */
@@ -24,7 +130,7 @@ export async function getNextUserCode(parentId: string): Promise<{ userCode?: st
   return apiGet(`${USER}/getusercode/${encodeURIComponent(parentId)}`);
 }
 
-/** POST /user/addmember — create new member (README §3). Body: username, userCode, parentId, type, etc. */
+/** POST /user/addmember — create new member (README §3) */
 export async function addMember(body: Record<string, unknown>): Promise<unknown> {
   return apiPost(`${USER}/addmember`, body);
 }

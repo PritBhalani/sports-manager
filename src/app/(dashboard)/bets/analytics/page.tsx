@@ -1,31 +1,39 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { mockBets, MockBet } from "@/mocks/bets.mock";
+import { getLiveBets } from "@/services/bet.service";
 
-type Row = MockBet;
+type Row = Record<string, unknown>;
 
 export default function BetsAnalyticsPage() {
   const router = useRouter();
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    getLiveBets({ page: 1, pageSize: 100, orderByDesc: true }, {})
+      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setRows([]));
+  }, []);
 
   const columns = [
-    { id: "sport", header: "Sport", sortable: true, cell: (row: Row) => row.sport },
-    { id: "market", header: "Market", sortable: true, cell: (row: Row) => row.market },
+    { id: "sport", header: "Sport", sortable: true, cell: (row: Row) => String(row.sport ?? row.eventType ?? "—") },
+    { id: "market", header: "Market", sortable: true, cell: (row: Row) => String(row.market ?? row.marketName ?? "—") },
     {
       id: "stake",
       header: "Stake",
       sortable: true,
-      cell: (row: Row) => `₹ ${formatCurrency(row.stake)}`,
-      sortValue: (row: Row) => row.stake,
+      cell: (row: Row) => `₹ ${formatCurrency(row.stake ?? row.amount)}`,
+      sortValue: (row: Row) => Number(row.stake ?? row.amount ?? 0),
     },
     {
       id: "potentialPayout",
       header: "Potential Payout",
       sortable: true,
-      cell: (row: Row) => `₹ ${formatCurrency(row.potentialPayout)}`,
-      sortValue: (row: Row) => row.potentialPayout,
+      cell: (row: Row) => `₹ ${formatCurrency(row.potentialPayout ?? row.payout)}`,
+      sortValue: (row: Row) => Number(row.potentialPayout ?? row.payout ?? 0),
     },
     {
       id: "result",
@@ -43,7 +51,7 @@ export default function BetsAnalyticsPage() {
               : "default"
           }
         >
-          {row.result}
+          {String(row.result ?? row.status ?? "Unknown")}
         </Badge>
       ),
     },
@@ -52,7 +60,7 @@ export default function BetsAnalyticsPage() {
       header: "Actions",
       sortable: false,
       cell: (row: Row) => {
-        const id = row.id;
+        const id = String(row.id ?? row.marketId ?? "");
         return (
           <div className="flex flex-wrap gap-1">
             <Button
@@ -76,10 +84,10 @@ export default function BetsAnalyticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Bets (Today)" value="0" />
-        <StatsCard title="Total Volume (Today)" value="0" />
-        <StatsCard title="Average Stake" value="0" />
-        <StatsCard title="Net P&L (Today)" value="0" />
+        <StatsCard title="Total Bets (Today)" value={rows.length.toString()} />
+        <StatsCard title="Total Volume (Today)" value={`₹ ${formatCurrency(rows.reduce((sum, row) => sum + Number(row.stake ?? row.amount ?? 0), 0))}`} />
+        <StatsCard title="Average Stake" value={`₹ ${formatCurrency(rows.length ? rows.reduce((sum, row) => sum + Number(row.stake ?? row.amount ?? 0), 0) / rows.length : 0)}`} />
+        <StatsCard title="Open / Pending" value={rows.filter((row) => String(row.result ?? row.status ?? "").toLowerCase() === "pending").length.toString()} />
       </div>
 
       <Card>
@@ -91,13 +99,13 @@ export default function BetsAnalyticsPage() {
         </FilterBar>
         <DataTable
           columns={columns}
-          rows={mockBets}
+          rows={rows}
           initialSortColumnId="sport"
           initialSortDirection="asc"
           enableSearch
           searchPlaceholder="Search by sport…"
           getSearchText={(row: Row) =>
-            `${row.sport ?? ""}`.toLowerCase()
+            `${row.sport ?? ""} ${row.market ?? row.marketName ?? ""}`.toLowerCase()
           }
           emptyMessage="No bet analytics data."
         />

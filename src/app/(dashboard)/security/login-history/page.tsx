@@ -31,9 +31,12 @@ export default function LoginHistoryPage() {
       id: "date",
       header: "Date / Time",
       sortable: true,
-      cell: (row: Row) => formatDateTime(row.date ?? row.createdAt ?? row.timestamp),
+      cell: (row: Row) =>
+        formatDateTime(
+          row.issuedOn ?? row.date ?? row.createdAt ?? row.timestamp,
+        ),
       sortValue: (row: Row) => {
-        const v = row.date ?? row.createdAt ?? row.timestamp;
+        const v = row.issuedOn ?? row.date ?? row.createdAt ?? row.timestamp;
         return typeof v === "number" ? v : Date.parse(String(v ?? ""));
       },
       align: "left" as const,
@@ -42,41 +45,23 @@ export default function LoginHistoryPage() {
       id: "ip",
       header: "IP",
       sortable: true,
-      cell: (row: Row) => String(row.ip ?? "—"),
+      cell: (row: Row) => String(row.remoteIp ?? row.ip ?? "—"),
       align: "left" as const,
     },
     {
-      id: "device",
-      header: "Device",
+      id: "location",
+      header: "Location",
       sortable: true,
-      cell: (row: Row) => String(row.device ?? row.userAgent ?? "—"),
+      cell: (row: Row) =>
+        String(row.location ?? row.provider ?? row.device ?? row.userAgent ?? "—"),
       align: "left" as const,
     },
     {
       id: "status",
-      header: "Status",
+      header: "Login Since",
       sortable: true,
-      cell: (row: Row) => String(row.status ?? "—"),
+      cell: (row: Row) => String(row.loginSince ?? row.status ?? "—"),
       align: "left" as const,
-    },
-    {
-      id: "actions",
-      header: "Actions",
-      sortable: false,
-      cell: (row: Row) => {
-        const id = String(row.id ?? "");
-        return (
-          <div className="flex flex-wrap gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => id && router.push(`/security/login-history/${id}`)}
-            >
-              View Details
-            </Button>
-          </div>
-        );
-      },
     },
   ];
 
@@ -101,9 +86,11 @@ export default function LoginHistoryPage() {
             initialSortColumnId="date"
             initialSortDirection="desc"
             enableSearch
-            searchPlaceholder="Search by IP, device or status"
+            searchPlaceholder="Search by IP, location or provider"
             getSearchText={(row: Row) =>
-              `${row.ip ?? ""} ${row.device ?? row.userAgent ?? ""} ${row.status ?? ""}`
+              `${row.remoteIp ?? row.ip ?? ""} ${row.location ?? ""} ${
+                row.provider ?? ""
+              } ${row.loginSince ?? ""}`
                 .toString()
                 .toLowerCase()
             }

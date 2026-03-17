@@ -1,40 +1,75 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
-import { mockAccountTransactions, MockAccountTransaction } from "@/mocks/accounts.mock";
+import { getAccountStatement } from "@/services/account.service";
+import { CURRENT_USER_ID } from "@/utils/constants";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { formatDateTime } from "@/utils/date";
+import { dateRangeToISO, formatDateTime, todayRangeUTC } from "@/utils/date";
 
-type Row = MockAccountTransaction;
+type Row = Record<string, unknown>;
+
+const getAmount = (row: Row) =>
+  Number(row.amount ?? row.credit ?? row.debit ?? row.chips ?? 0);
 
 const columns = [
   {
     id: "createdAt",
     header: "Date / Time",
     sortable: true,
-    cell: (row: Row) => formatDateTime(row.createdAt),
-    sortValue: (row: Row) => Date.parse(row.createdAt),
+    cell: (row: Row) => formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
+    sortValue: (row: Row) => Date.parse(String(row.createdAt ?? row.date ?? row.timestamp ?? 0)),
   },
-  { id: "type", header: "Type", sortable: true, cell: (row: Row) => row.type },
-  { id: "username", header: "User", sortable: true, cell: (row: Row) => row.username },
+  {
+    id: "type",
+    header: "Type",
+    sortable: true,
+    cell: (row: Row) => String(row.type ?? row.dwType ?? row.description ?? "—"),
+  },
+  {
+    id: "username",
+    header: "User",
+    sortable: true,
+    cell: (row: Row) => String(row.username ?? row.userCode ?? row.userId ?? "—"),
+  },
   {
     id: "amount",
     header: "Amount",
     sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(row.amount)}`,
-    sortValue: (row: Row) => row.amount,
+    cell: (row: Row) => `₹ ${formatCurrency(getAmount(row))}`,
+    sortValue: (row: Row) => getAmount(row),
   },
   {
     id: "balanceAfter",
     header: "Balance After",
     sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(row.balanceAfter)}`,
-    sortValue: (row: Row) => row.balanceAfter,
+    cell: (row: Row) => `₹ ${formatCurrency(row.balance ?? row.balanceAfter)}`,
+    sortValue: (row: Row) => Number(row.balance ?? row.balanceAfter ?? 0),
   },
 ];
 
 export default function AccountsHistoryPage() {
-  const rows = mockAccountTransactions;
+  const [rows, setRows] = useState<Row[]>([]);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  useEffect(() => {
+    const range = todayRangeUTC();
+    setFromDate(range.fromDate.slice(0, 10));
+    setToDate(range.toDate.slice(0, 10));
+  }, []);
+
+  useEffect(() => {
+    if (!fromDate || !toDate) return;
+    const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
+    getAccountStatement(
+      { page: 1, pageSize: 100, orderByDesc: true },
+      { fromDate: fromISO, toDate: toISO },
+      CURRENT_USER_ID,
+    )
+      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setRows([]));
+  }, [fromDate, toDate]);
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -49,16 +84,22 @@ export default function AccountsHistoryPage() {
           title="Total In"
           value={`₹ ${formatCurrency(
             rows
-              .filter((t) => t.type === "Deposit" || t.type === "TransferIn")
-              .reduce((sum, t) => sum + t.amount, 0),
+              .filter((t) => {
+                const label = String(t.type ?? t.dwType ?? "").toLowerCase();
+                return label === "deposit" || label === "transferin" || label === "transfer in" || label === "d";
+              })
+              .reduce((sum, t) => sum + getAmount(t), 0),
           )}`}
         />
         <StatsCard
           title="Total Out"
           value={`₹ ${formatCurrency(
             rows
-              .filter((t) => t.type === "Withdraw" || t.type === "TransferOut")
-              .reduce((sum, t) => sum + t.amount, 0),
+              .filter((t) => {
+                const label = String(t.type ?? t.dwType ?? "").toLowerCase();
+                return label === "withdraw" || label === "transferout" || label === "transfer out" || label === "w";
+              })
+              .reduce((sum, t) => sum + getAmount(t), 0),
           )}`}
         />
         <StatsCard
@@ -67,9 +108,11 @@ export default function AccountsHistoryPage() {
             rows.reduce(
               (sum, t) =>
                 sum +
-                (t.type === "Deposit" || t.type === "TransferIn"
-                  ? t.amount
-                  : -t.amount),
+                (["deposit", "transferin", "transfer in", "d"].includes(
+                  String(t.type ?? t.dwType ?? "").toLowerCase(),
+                )
+                  ? getAmount(t)
+                  : -getAmount(t)),
               0,
             ),
           )}`}
@@ -78,8 +121,18 @@ export default function AccountsHistoryPage() {
 
       <Card>
         <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
+          <Input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="max-w-[160px]"
+          />
+          <Input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="max-w-[160px]"
+          />
           <Input placeholder="Filter by user or type" className="max-w-xs" />
           <Button variant="primary">Filter</Button>
         </FilterBar>
@@ -91,7 +144,7 @@ export default function AccountsHistoryPage() {
           enableSearch
           searchPlaceholder="Search account history…"
           getSearchText={(row: Row) =>
-            `${row.type} ${row.username} ${row.userCode} ${row.referenceId}`.toLowerCase()
+            `${row.type ?? ""} ${row.username ?? ""} ${row.userCode ?? ""} ${row.referenceId ?? ""}`.toLowerCase()
           }
           emptyMessage="No account history."
         />

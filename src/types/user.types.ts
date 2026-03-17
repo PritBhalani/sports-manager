@@ -17,8 +17,12 @@ export type MyInfo = {
 /**
  * POST /user/updatemember
  * Body: member fields to update (README §3 User).
+ * Include id when the backend expects the member id (often from getmyinfo/getuserbyid).
  */
 export type UpdateMemberBody = Partial<{
+  id: string;
+  /** Scope for updatemember when API expects parent context */
+  parentId: string;
   name: string;
   username: string;
   email: string;

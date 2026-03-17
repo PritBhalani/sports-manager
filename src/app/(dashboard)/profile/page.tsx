@@ -1,120 +1,170 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Button, Input, Tabs, Badge } from "@/components";
-import { User, FileText, ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
-import { getMyInfo, updateMember } from "@/services/user.service";
-import type { MyInfo } from "@/types/user.types";
+import { PageHeader, Card, Button, Input, Select } from "@/components";
+import {
+  User,
+  FileText,
+  ArrowRight,
+  CheckCircle2,
+  AlertCircle,
+  Pencil,
+  Copy,
+  Check,
+  Calendar,
+  Download,
+} from "lucide-react";
+import {
+  getMyInfo,
+  updateMember,
+  getMyInfoPathId,
+  getSessionMemberId,
+} from "@/services/user.service";
+import type { MyInfo, UpdateMemberBody } from "@/types/user.types";
 
-/** README §3: GET /user/getmyinfo/{parentId} — pass parentId from session when auth is wired */
-const PROFILE_PARENT_ID = "me";
-
-function getInitial(name?: string, username?: string): string {
-  if (name?.trim()) return name.trim().charAt(0).toUpperCase();
-  if (username?.trim()) return username.trim().charAt(0).toUpperCase();
-  return "?";
+function formatNow(): string {
+  try {
+    return new Date().toLocaleString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  } catch {
+    return new Date().toISOString();
+  }
 }
 
-function ProfileForm({
-  info,
-  onSave,
-  saving,
+function ProfileFieldRow({
+  label,
+  value,
+  emptyPlaceholder = "—",
+  copyable,
+  editable,
+  onEdit,
+  children,
 }: {
-  info: MyInfo | null;
-  onSave: (fields: { name?: string; username?: string; email?: string; phone?: string }) => void;
-  saving: boolean;
+  label: string;
+  value?: string | null;
+  emptyPlaceholder?: string;
+  copyable?: boolean;
+  editable?: boolean;
+  onEdit?: () => void;
+  children?: React.ReactNode;
 }) {
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [copied, setCopied] = useState(false);
+  const display = value?.trim() ? value : emptyPlaceholder;
+  const isEmpty = !value?.trim();
 
-  useEffect(() => {
-    if (info) {
-      setName(info.name ?? "");
-      setUsername(info.username ?? "");
-      setEmail(info.email ?? "");
-      setPhone(info.phone ?? "");
-    }
-  }, [info]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ name, username, email, phone });
-  };
+  const handleCopy = useCallback(() => {
+    if (!value?.trim()) return;
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [value]);
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 sm:gap-8">
-      <section className="space-y-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Personal details
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-          <Input
-            label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Your name"
-          />
-          <Input
-            label="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username"
-          />
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="lg:col-span-2"
-          />
-          <Input
-            label="Phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+91 …"
-          />
-          {info?.role != null && info.role !== "" && (
-            <div className="flex flex-col gap-1.5 lg:col-span-2">
-              <span className="text-sm font-medium text-zinc-700">Role</span>
-              <Badge variant="info" className="w-fit capitalize">
-                {info.role}
-              </Badge>
-            </div>
-          )}
-        </div>
-      </section>
+    <div className="flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <span className="shrink-0 text-sm font-medium text-zinc-500">{label}</span>
+      <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:justify-end">
+        {children ?? (
+          <>
+            <span
+              className={`truncate text-right text-sm ${
+                isEmpty ? "text-zinc-400" : "text-zinc-900"
+              }`}
+            >
+              {display}
+            </span>
+            {copyable && !isEmpty && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50"
+                aria-label="Copy"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </button>
+            )}
+            {editable && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50"
+                aria-label={`Edit ${label}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
-      <div className="border-t border-zinc-100 pt-6 sm:pt-8">
+function InlineEditBlock({
+  label,
+  initialValue,
+  onSave,
+  onCancel,
+  saving,
+  type = "text",
+}: {
+  label: string;
+  initialValue: string;
+  onSave: (v: string) => void;
+  onCancel: () => void;
+  saving: boolean;
+  type?: string;
+}) {
+  const [v, setV] = useState(initialValue);
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+      <Input
+        label={label}
+        type={type}
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        className="bg-white"
+      />
+      <div className="mt-3 flex gap-2">
         <Button
-          type="submit"
+          type="button"
           variant="primary"
-          size="lg"
+          size="sm"
           disabled={saving}
-          className="w-full sm:w-auto min-w-[140px]"
+          onClick={() => onSave(v)}
         >
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? "Saving…" : "Save"}
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+          Cancel
         </Button>
       </div>
-    </form>
+    </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="animate-pulse space-y-6">
-      <div className="space-y-3">
-        <div className="h-3 w-24 rounded bg-zinc-200" />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-10 rounded-lg bg-zinc-100" />
-          ))}
+    <div className="animate-pulse space-y-3">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="flex justify-between border-b border-zinc-100 py-3">
+          <div className="h-4 w-20 rounded bg-zinc-200" />
+          <div className="h-4 w-40 rounded bg-zinc-100" />
         </div>
-      </div>
-      <div className="h-10 w-32 rounded-lg bg-zinc-100" />
+      ))}
     </div>
   );
 }
@@ -123,17 +173,52 @@ export default function ProfilePage() {
   const [info, setInfo] = useState<MyInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(
+    null,
+  );
   const [activeTab, setActiveTab] = useState("profile");
+  const [now, setNow] = useState(formatNow);
+  const [editingField, setEditingField] = useState<
+    "name" | "email" | "phone" | "timezone" | null
+  >(null);
+  const [timezone, setTimezone] = useState(() => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Calcutta";
+    } catch {
+      return "Asia/Calcutta";
+    }
+  });
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(formatNow()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    getMyInfo(PROFILE_PARENT_ID)
+    // README §3 getmyinfo/{parentId} — use parent id from login payload
+    const pathId = getMyInfoPathId();
+    if (!pathId) {
+      setLoading(false);
+      setInfo(null);
+      setMessage({
+        type: "error",
+        text: "Session has no parent id. Log out and log in again to load profile.",
+      });
+      return;
+    }
+    getMyInfo(pathId)
       .then((res) => {
         if (!cancelled) setInfo(res ?? null);
       })
       .catch(() => {
-        if (!cancelled) setInfo(null);
+        if (!cancelled) {
+          setInfo(null);
+          setMessage({
+            type: "error",
+            text: "Could not load profile. Check session or try logging in again.",
+          });
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -143,18 +228,20 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const handleSave = async (fields: {
-    name?: string;
-    username?: string;
-    email?: string;
-    phone?: string;
-  }) => {
+  const handleSaveField = async (fields: Partial<UpdateMemberBody>) => {
     setSaving(true);
     setMessage(null);
     try {
-      await updateMember(fields);
+      // README §3 POST /user/updatemember — member id + parentId when available
+      const memberId = info?.id || getSessionMemberId();
+      const body: UpdateMemberBody = {
+        ...fields,
+        ...(memberId ? { id: memberId } : {}),
+      };
+      await updateMember(body);
       setInfo((prev) => (prev ? { ...prev, ...fields } : null));
-      setMessage({ type: "success", text: "Profile updated successfully." });
+      setMessage({ type: "success", text: "Updated successfully." });
+      setEditingField(null);
     } catch {
       setMessage({ type: "error", text: "Update failed. Please try again." });
     } finally {
@@ -162,104 +249,341 @@ export default function ProfilePage() {
     }
   };
 
+  const tabs = [
+    {
+      id: "profile",
+      label: "Profile",
+      icon: <User className="h-4 w-4 shrink-0" />,
+    },
+    {
+      id: "account-statement",
+      label: "Account Statement",
+      icon: <FileText className="h-4 w-4 shrink-0" />,
+    },
+  ];
+
   return (
     <div className="min-w-0">
       <PageHeader title="My Profile" breadcrumbs={["Profile"]} />
 
-      <div className="flex flex-col gap-6 lg:gap-8">
-        {/* Profile identity strip – responsive: stacks on mobile, row on md+ */}
-        <div className="flex flex-col items-start gap-4 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:gap-6 sm:p-5">
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-xl font-semibold text-zinc-600 sm:h-16 sm:w-16 sm:text-2xl"
-            aria-hidden
-          >
-            {loading ? "…" : getInitial(info?.name, info?.username)}
+      {/* Tab bar – blue underline on active (matches reference) */}
+      <div className="border-b border-zinc-200">
+        <nav className="-mb-px flex gap-8" aria-label="Tabs">
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTab;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 border-b-2 py-3 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+                }`}
+                aria-selected={isActive}
+                role="tab"
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="pt-6" role="tabpanel">
+        {activeTab === "account-statement" && (
+          <div className="space-y-4">
+            {/* Totals strip */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 sm:px-5">
+              <div className="flex flex-wrap items-center gap-4 text-sm">
+                <span className="font-medium text-zinc-700">
+                  Total Debit:{" "}
+                  <span className="font-semibold text-red-600">10,302,053</span>
+                </span>
+                <span className="font-medium text-zinc-700">
+                  Total Credit:{" "}
+                  <span className="font-semibold text-emerald-600">
+                    10,445,818.06
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  aria-label="Time range"
+                  value="all"
+                  onChange={() => {}}
+                  options={[
+                    { label: "All Time", value: "all" },
+                    { label: "Today", value: "today" },
+                    { label: "Yesterday", value: "yesterday" },
+                  ]}
+                  className="h-9 min-w-[120px]"
+                />
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                >
+                  <Calendar className="h-4 w-4" aria-hidden />
+                </button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Download className="h-4 w-4" aria-hidden />}
+                >
+                  Export
+                </Button>
+              </div>
+            </div>
+
+            {/* Statement table mock */}
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+              <div className="hidden bg-zinc-50 px-4 py-2.5 text-xs font-semibold text-zinc-500 sm:grid sm:grid-cols-6">
+                <span className="col-span-2">Narration</span>
+                <span>Debit</span>
+                <span>Credit</span>
+                <span>Balance</span>
+                <span>Date</span>
+              </div>
+              <div className="divide-y divide-zinc-100">
+                <div className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3">
+                  <div className="col-span-2">
+                    <p className="text-sm text-zinc-800">
+                      Withdrawal request of 2000 approved for Cbtc1 | 92SVSLGWP1LFP22V |
+                      Comment: 4151
+                    </p>
+                  </div>
+                  <div className="mt-2 text-xs text-red-600 sm:mt-0">0</div>
+                  <div className="mt-2 sm:mt-0">
+                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      2,000
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
+                    143,766
+                  </div>
+                  <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
+                    Sat 15 Jun 2024, 17:37:58
+                  </div>
+                </div>
+                <div className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3">
+                  <div className="col-span-2">
+                    <p className="text-sm text-zinc-800">
+                      Withdrawal request of 8000 approved for Cbtc1 | 11YPXI6USPX3IU3 |
+                      Comment: 0889
+                    </p>
+                  </div>
+                  <div className="mt-2 text-xs text-red-600 sm:mt-0">0</div>
+                  <div className="mt-2 sm:mt-0">
+                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      8,000
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
+                    141,766
+                  </div>
+                  <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
+                    Sat 15 Jun 2024, 17:06:10
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-zinc-900 sm:text-xl">
-              {loading ? "Loading…" : info?.name || info?.username || "Profile"}
-            </h2>
-            {info?.username && (
-              <p className="mt-0.5 text-sm text-zinc-500">@{info.username}</p>
-            )}
-            {info?.role != null && info.role !== "" && (
-              <div className="mt-2">
-                <Badge variant="info" className="capitalize">
-                  {info.role}
-                </Badge>
+        )}
+
+        {activeTab === "profile" && (
+          <div className="flex flex-col gap-6">
+            {loading && (
+              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 p-6 shadow-sm">
+                <ProfileSkeleton />
               </div>
             )}
-          </div>
-        </div>
+            {!loading && message && (
+              <div
+                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+                  message.type === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+                }`}
+                role="alert"
+              >
+                {message.type === "success" ? (
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                )}
+                <span>{message.text}</span>
+              </div>
+            )}
 
-        <Tabs
-          activeId={activeTab}
-          onTabChange={setActiveTab}
-          className="w-full"
-          tabs={[
-            {
-              id: "profile",
-              label: "Profile",
-              icon: <User className="h-4 w-4 shrink-0" />,
-              content: (
-                <Card className="max-w-2xl">
-                  {message && (
-                    <div
-                      className={`mb-6 flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
-                        message.type === "success"
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                          : "border-red-200 bg-red-50 text-red-800"
-                      }`}
-                      role="alert"
-                    >
-                      {message.type === "success" ? (
-                        <CheckCircle2 className="h-5 w-5 shrink-0" />
-                      ) : (
-                        <AlertCircle className="h-5 w-5 shrink-0" />
-                      )}
-                      <span>{message.text}</span>
+            {!loading && (
+            <>
+            {/* Main profile card – light grey container, two columns */}
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+              <div className="grid gap-0 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
+                {/* Left column */}
+                <div className="space-y-0 border-zinc-100 sm:border-r sm:pr-6">
+                  {editingField === "name" ? (
+                    <div className="py-3">
+                      <InlineEditBlock
+                        label="Name"
+                        initialValue={info?.name ?? ""}
+                        saving={saving}
+                        onSave={(name) => handleSaveField({ name })}
+                        onCancel={() => setEditingField(null)}
+                      />
                     </div>
-                  )}
-                  {loading ? (
-                    <ProfileSkeleton />
                   ) : (
-                    <ProfileForm
-                      info={info}
-                      onSave={handleSave}
-                      saving={saving}
+                    <ProfileFieldRow
+                      label="Name"
+                      value={info?.name || info?.username}
+                      editable={!loading}
+                      onEdit={() => setEditingField("name")}
                     />
                   )}
-                </Card>
-              ),
-            },
-            {
-              id: "account-statement",
-              label: "Account Statement",
-              icon: <FileText className="h-4 w-4 shrink-0" />,
-              content: (
-                <Card className="max-w-2xl">
-                  <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-zinc-900">
-                        View account statement
-                      </h3>
-                      <p className="mt-1 text-sm text-zinc-500">
-                        See your transaction history and balance details in Reports.
-                      </p>
+
+                  <ProfileFieldRow
+                    label="Username"
+                    value={info?.username}
+                    copyable={Boolean(info?.username?.trim())}
+                  />
+
+                  {editingField === "phone" ? (
+                    <div className="py-3">
+                      <InlineEditBlock
+                        label="Phone"
+                        initialValue={info?.phone ?? ""}
+                        saving={saving}
+                        onSave={(phone) => handleSaveField({ phone })}
+                        onCancel={() => setEditingField(null)}
+                      />
                     </div>
-                    <Link
-                      href="/reports/account-statement"
-                      className="inline-flex h-10 min-w-[140px] shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto"
+                  ) : (
+                    <ProfileFieldRow
+                      label="Phone"
+                      value={info?.phone}
+                      emptyPlaceholder=""
+                      editable={!loading}
+                      onEdit={() => setEditingField("phone")}
+                    />
+                  )}
+
+                  <div className="flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-sm font-medium text-zinc-500">
+                      Password Auto
+                    </span>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="w-full bg-red-600 hover:bg-red-700 sm:w-auto"
+                      onClick={() =>
+                        setMessage({
+                          type: "success",
+                          text: "If your backend exposes this action, wire it here.",
+                        })
+                      }
                     >
-                      Open report
-                      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-                    </Link>
+                      Generate and Email new Password
+                    </Button>
                   </div>
-                </Card>
-              ),
-            },
-          ]}
-        />
+                </div>
+
+                {/* Right column */}
+                <div className="space-y-0 sm:pl-0">
+                  {editingField === "email" ? (
+                    <div className="py-3">
+                      <InlineEditBlock
+                        label="Email"
+                        type="email"
+                        initialValue={info?.email ?? ""}
+                        saving={saving}
+                        onSave={(email) => handleSaveField({ email })}
+                        onCancel={() => setEditingField(null)}
+                      />
+                    </div>
+                  ) : (
+                    <ProfileFieldRow
+                      label="Email"
+                      value={info?.email}
+                      editable={!loading}
+                      onEdit={() => setEditingField("email")}
+                    />
+                  )}
+
+                  <ProfileFieldRow label="Role" value={info?.role || "—"} editable={false} />
+
+                  <ProfileFieldRow
+                    label="Password"
+                    value="********"
+                    editable
+                    onEdit={() =>
+                      setMessage({
+                        type: "success",
+                        text: "Password change can be wired to your API when available.",
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Date/time line */}
+            <p className="text-sm text-zinc-700">{now}</p>
+
+            {/* Time zone card */}
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+              <div className="p-4 sm:p-6">
+                <h3 className="mb-3 text-sm font-semibold text-zinc-900">Time</h3>
+                {editingField === "timezone" ? (
+                  <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                    <Input
+                      label="Time Zone"
+                      value={timezone}
+                      onChange={(e) => setTimezone(e.target.value)}
+                      placeholder="e.g. Asia/Calcutta"
+                      className="bg-white"
+                    />
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          setEditingField(null);
+                          setMessage({
+                            type: "success",
+                            text: "Time zone saved locally. Persist via API if supported.",
+                          });
+                        }}
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => setEditingField(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <ProfileFieldRow
+                    label="Time Zone"
+                    value={timezone}
+                    editable
+                    onEdit={() => setEditingField("timezone")}
+                  />
+                )}
+              </div>
+            </div>
+            </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

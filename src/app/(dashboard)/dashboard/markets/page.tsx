@@ -1,19 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
-import { mockMarkets, MockMarket } from "@/mocks/markets.mock";
+import { getPlByMarket } from "@/services/betHistory.service";
 
-type Row = MockMarket;
+type Row = Record<string, unknown>;
 
 const columns = [
-  { id: "sport", header: "Sport", sortable: true, cell: (row: Row) => row.sport },
-  { id: "eventName", header: "Event", sortable: true, cell: (row: Row) => row.eventName },
-  { id: "marketName", header: "Market", sortable: true, cell: (row: Row) => row.marketName },
-  { id: "status", header: "Status", sortable: true, cell: (row: Row) => row.status },
+  { id: "sport", header: "Sport", sortable: true, cell: (row: Row) => String(row.sport ?? row.eventType ?? "—") },
+  { id: "eventName", header: "Event", sortable: true, cell: (row: Row) => String(row.eventName ?? row.event ?? "—") },
+  { id: "marketName", header: "Market", sortable: true, cell: (row: Row) => String(row.marketName ?? row.market ?? "—") },
+  { id: "status", header: "Status", sortable: true, cell: (row: Row) => String(row.status ?? "—") },
 ];
 
 export default function DashboardMarketsPage() {
-  const rows = mockMarkets;
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    getPlByMarket({ page: 1, pageSize: 100, orderByDesc: true }, {})
+      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
+      .catch(() => setRows([]));
+  }, []);
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -26,15 +33,15 @@ export default function DashboardMarketsPage() {
         <StatsCard title="Total Markets" value={rows.length.toString()} />
         <StatsCard
           title="In-Play Markets"
-          value={rows.filter((m) => m.status === "In-Play").length.toString()}
+          value={rows.filter((m) => String(m.status ?? "").toLowerCase() === "in-play").length.toString()}
         />
         <StatsCard
           title="Locked / Suspended"
-          value={rows.filter((m) => m.status === "Suspended").length.toString()}
+          value={rows.filter((m) => String(m.status ?? "").toLowerCase() === "suspended").length.toString()}
         />
         <StatsCard
           title="Sports Covered"
-          value={Array.from(new Set(rows.map((m) => m.sport))).length.toString()}
+          value={Array.from(new Set(rows.map((m) => String(m.sport ?? "")))).length.toString()}
         />
       </div>
 
@@ -51,7 +58,7 @@ export default function DashboardMarketsPage() {
           enableSearch
           searchPlaceholder="Search sports…"
           getSearchText={(row: Row) =>
-            `${row.sport ?? ""}`.toLowerCase()
+            `${row.sport ?? ""} ${row.marketName ?? row.market ?? ""}`.toLowerCase()
           }
           emptyMessage="No markets."
         />

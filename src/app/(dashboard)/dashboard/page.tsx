@@ -9,24 +9,42 @@ const STATS_CONFIG = (
   s: ReturnType<typeof useDashboardStats>
 ): { title: string; value: string; subStats: { label: string; value: string }[] }[] => [
   { title: "Current Cashable Balance", value: s.balance, subStats: [] },
-  { title: "GGR", value: s.ggr, subStats: [] },
-  { title: "Player Sports Exposure", value: s.exposure, subStats: [] },
+  {
+    title: "Credit",
+    value: s.availableCredit,
+    subStats: [
+      { label: "Limit", value: s.creditLimit },
+      { label: "Used", value: s.givenCredit },
+      { label: "Available", value: s.availableCredit },
+    ],
+  },
+  {
+    title: "GGR",
+    value: s.ggr,
+    subStats: [{ label: "Stake", value: s.totalStake }],
+  },
+  {
+    title: "Player Sports Exposure",
+    value: s.exposure,
+    subStats: [{ label: "Live Bets", value: s.liveBetCount }],
+  },
   {
     title: "Players",
     value: s.players,
     subStats: [
-      { label: "New", value: s.playersNew },
-      { label: "Unique", value: s.playersUnique },
+      { label: "Live", value: s.playersLive },
     ],
   },
-  { title: "Deposits", value: s.deposits, subStats: [] },
-  { title: "Withdraws", value: s.withdraws, subStats: [] },
-  { title: "New Player Deposits", value: "0", subStats: [] },
-  { title: "New Player Withdraws", value: "0", subStats: [] },
-  { title: "NGR", value: s.ngr, subStats: [] },
-  { title: "Agents", value: "0", subStats: [] },
-  { title: "Bonus", value: "0", subStats: [] },
-  { title: "Losing Commission", value: "0", subStats: [] },
+  {
+    title: "Markets",
+    value: s.totalMarket,
+    subStats: [{ label: "In-Play", value: s.inplayMarkets }],
+  },
+  {
+    title: "Live Bet Stake",
+    value: s.liveBetStake,
+    subStats: [{ label: "Total Bets", value: s.liveBetCount }],
+  },
 ];
 
 export default function DashboardPage() {

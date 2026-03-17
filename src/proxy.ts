@@ -26,8 +26,6 @@ export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
-  if (apiConfig.useMock) return NextResponse.next();
-
   const cookieName = apiConfig.authCookieName;
   const hasSession = request.cookies.has(cookieName) && request.cookies.get(cookieName)?.value;
 

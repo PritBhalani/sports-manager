@@ -1,19 +1,28 @@
-/**
- * API and app config. Prefer env vars in production.
- * When baseUrl is not set, app runs in UI-only mode (mocks) so it does not break.
- */
 const env = typeof process !== "undefined" ? process.env : undefined;
+const isBrowser = typeof window !== "undefined";
 
-const baseUrl =
+/**
+ * Upstream backend base URL.
+ *
+ * IMPORTANT:
+ * - Uses NEXT_PUBLIC_API_BASE when provided.
+ * - Falls back to the shared DrPapaya backend for local/client review builds.
+ */
+const upstreamBaseUrl =
   (env?.NEXT_PUBLIC_API_BASE as string) ||
-  (typeof window !== "undefined" ? "" : "http://localhost:3000");
+  "https://f768dafd155e.drpapaya.in";
 
+/**
+ * Browser requests go through the local Next.js proxy to avoid CORS.
+ * Server-side requests can talk to the upstream backend directly.
+ */
+const baseUrl = isBrowser ? "/api/backend" : upstreamBaseUrl;
 export const apiConfig = {
-  /** Base URL for REST API (README: BASE_URL_REST). Empty = UI-only mode with mocks. */
+  /** Base URL used by frontend services. */
   baseUrl,
 
-  /** When true, apiClient returns mocks instead of calling the API (no base URL or explicit override). */
-  useMock: !baseUrl || (env?.NEXT_PUBLIC_USE_MOCK === "true"),
+  /** Real upstream REST API base URL. */
+  upstreamBaseUrl,
 
   /** Cookie name used by proxy to detect logged-in session */
   authCookieName: "sm_session",

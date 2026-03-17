@@ -61,8 +61,8 @@ export default function BetHistoryListPage() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Bet History"
-        breadcrumbs={["Bets", "History"]}
+        title="Sports | Betlist"
+        breadcrumbs={["Sports", "Betlist"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       {error && (

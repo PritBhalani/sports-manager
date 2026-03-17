@@ -2,10 +2,7 @@
 
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { mockBets } from "@/mocks/bets.mock";
-import { mockMarkets } from "@/mocks/markets.mock";
-import { mockPlayers } from "@/mocks/players.mock";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
 
 type Row = {
   id: string;
@@ -13,24 +10,20 @@ type Row = {
   value: string;
 };
 
-const totalVolume = mockBets.reduce((sum, b) => sum + b.stake, 0);
-const totalBets = mockBets.length;
-const activeMarkets = mockMarkets.filter((m) => m.status === "Open" || m.status === "In-Play").length;
-const activePlayers = mockPlayers.filter((p) => p.status === "Active").length;
-
-const rows: Row[] = [
-  { id: "1", metric: "Total Volume (Today)", value: `₹ ${formatCurrency(totalVolume)}` },
-  { id: "2", metric: "Total Bets (Today)", value: totalBets.toString() },
-  { id: "3", metric: "Active Markets", value: activeMarkets.toString() },
-  { id: "4", metric: "Active Players", value: activePlayers.toString() },
-];
-
 const kpiColumns = [
   { id: "metric", header: "Metric", sortable: true, cell: (row: Row) => row.metric },
   { id: "value", header: "Value", sortable: true, cell: (row: Row) => row.value },
 ];
 
 export default function DashboardAnalyticsPage() {
+  const stats = useDashboardStats();
+  const rows: Row[] = [
+    { id: "1", metric: "Current Balance", value: stats.balance },
+    { id: "2", metric: "Live Bet Total", value: stats.liveBetTotal },
+    { id: "3", metric: "Total Markets", value: stats.totalMarket },
+    { id: "4", metric: "Players", value: stats.players },
+  ];
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6 px-6 py-6">
       <PageHeader
@@ -40,10 +33,10 @@ export default function DashboardAnalyticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Volume (Today)" value={`₹ ${formatCurrency(totalVolume)}`} />
-        <StatsCard title="Total Bets (Today)" value={totalBets.toString()} />
-        <StatsCard title="Active Users" value={activePlayers.toString()} />
-        <StatsCard title="Active Markets" value={activeMarkets.toString()} />
+        <StatsCard title="Current Balance" value={stats.balance} />
+        <StatsCard title="Live Bet Total" value={stats.liveBetTotal} />
+        <StatsCard title="Active Users" value={stats.players} />
+        <StatsCard title="Active Markets" value={stats.totalMarket} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

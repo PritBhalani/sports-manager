@@ -1,27 +1,36 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
 import { formatDateTime } from "@/utils/date";
-import { mockUserActivity, MockUserActivity } from "@/mocks/activity.mock";
+import { getLoginHistory } from "@/services/token.service";
 
-type Row = MockUserActivity;
+type Row = Record<string, unknown>;
 
 const columns = [
-  { id: "type", header: "Event Type", sortable: true, cell: (row: Row) => row.type },
-  { id: "module", header: "Module", sortable: true, cell: (row: Row) => row.module },
-  { id: "username", header: "User", sortable: true, cell: (row: Row) => row.username },
+  { id: "type", header: "Event Type", sortable: true, cell: (row: Row) => String(row.type ?? row.eventType ?? "Login") },
+  { id: "module", header: "Module", sortable: true, cell: (row: Row) => String(row.module ?? "Security") },
+  { id: "username", header: "User", sortable: true, cell: (row: Row) => String(row.username ?? row.userCode ?? row.userId ?? "—") },
   {
     id: "createdAt",
     header: "Time",
     sortable: true,
-    cell: (row: Row) => formatDateTime(row.createdAt),
-    sortValue: (row: Row) => Date.parse(row.createdAt),
+    cell: (row: Row) => formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
+    sortValue: (row: Row) => Date.parse(String(row.createdAt ?? row.date ?? row.timestamp ?? 0)),
   },
-  { id: "ipAddress", header: "IP", sortable: true, cell: (row: Row) => row.ipAddress },
-  { id: "device", header: "Device", sortable: true, cell: (row: Row) => row.device },
+  { id: "ipAddress", header: "IP", sortable: true, cell: (row: Row) => String(row.ipAddress ?? row.ip ?? "—") },
+  { id: "device", header: "Device", sortable: true, cell: (row: Row) => String(row.device ?? row.userAgent ?? "—") },
 ];
 
 export default function SecurityAnalyticsPage() {
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    getLoginHistory()
+      .then((res) => setRows(Array.isArray(res) ? res : []))
+      .catch(() => setRows([]));
+  }, []);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -31,18 +40,18 @@ export default function SecurityAnalyticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Events (Demo)" value={mockUserActivity.length.toString()} />
+        <StatsCard title="Events" value={rows.length.toString()} />
         <StatsCard
           title="Logins"
-          value={mockUserActivity.filter((a) => a.type === "Login").length.toString()}
+          value={rows.filter((a) => String(a.type ?? a.eventType ?? "").toLowerCase() === "login").length.toString()}
         />
         <StatsCard
-          title="Bet Actions"
-          value={mockUserActivity.filter((a) => a.module === "Bets").length.toString()}
+          title="Known IPs"
+          value={new Set(rows.map((a) => String(a.ipAddress ?? a.ip ?? ""))).size.toString()}
         />
         <StatsCard
-          title="Security Events"
-          value={mockUserActivity.filter((a) => a.module === "Security").length.toString()}
+          title="Devices"
+          value={new Set(rows.map((a) => String(a.device ?? a.userAgent ?? ""))).size.toString()}
         />
       </div>
 
@@ -54,13 +63,13 @@ export default function SecurityAnalyticsPage() {
         </FilterBar>
         <DataTable
           columns={columns}
-          rows={mockUserActivity}
+          rows={rows}
           initialSortColumnId="createdAt"
           initialSortDirection="asc"
           enableSearch
           searchPlaceholder="Search events…"
           getSearchText={(row: Row) =>
-            `${row.type ?? ""}`.toLowerCase()
+            `${row.type ?? row.eventType ?? ""} ${row.username ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
           }
           emptyMessage="No security analytics data."
         />

@@ -1,8 +1,19 @@
-/** Balance – GET /account/getbalance, getbalancedetail/{userId} */
+/** Balance – GET /account/getbalance, getbalancedetail/{userId} (README §2) */
 export type BalanceResponse = {
+  /** Legacy fields used in some endpoints */
   balance?: number;
   chips?: number;
   cash?: number;
+  coins?: number;
+  /** New DrPapaya balance payload (README example) */
+  exposure?: number;
+  balanceUp?: number;
+  balanceDown?: number;
+  take?: number;
+  give?: number;
+  creditLimit?: number;
+  givenCredit?: number;
+  availableCredit?: number;
   [key: string]: unknown;
 };
 

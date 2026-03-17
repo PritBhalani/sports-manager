@@ -1,9 +1,7 @@
 /**
  * Base API client. Uses apiConfig.baseUrl (NEXT_PUBLIC_API_BASE).
- * When apiConfig.useMock is true (no base URL), returns mocks from API bindings so UI does not break.
  * Authenticated requests send: Primary-Token, Token, Content-Decoding (IMEI) per README.
  */
-import { getMockForPath } from "@/api/bindings";
 import { apiConfig } from "@/config/api.config";
 import { getAuthTokens } from "@/store/authStore";
 
@@ -21,9 +19,6 @@ function fullPath(path: string): string {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  if (apiConfig.useMock) {
-    return Promise.resolve(getMockForPath(fullPath(path), "GET") as T);
-  }
   const url = `${apiConfig.baseUrl}${fullPath(path)}`;
   const res = await fetch(url, {
     method: "GET",
@@ -35,9 +30,6 @@ export async function apiGet<T>(path: string): Promise<T> {
 }
 
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  if (apiConfig.useMock) {
-    return Promise.resolve(getMockForPath(fullPath(path), "POST") as T);
-  }
   const url = `${apiConfig.baseUrl}${fullPath(path)}`;
   const res = await fetch(url, {
     method: "POST",

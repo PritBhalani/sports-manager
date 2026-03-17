@@ -2,15 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AlertCircle, RefreshCw, X } from "lucide-react";
 import { Card, Button, Input } from "@/components";
 import { setAuthSessionCookie } from "@/hooks/useAuth";
 import { getCaptcha, login } from "@/services/auth.service";
-import { setAuthTokens } from "@/store/authStore";
+import {
+  clearAuth,
+  setAuthSession,
+  AUTH_LOGIN_ENVELOPE_KEY,
+} from "@/store/authStore";
 import type { CaptchaResponse, LoginResponse } from "@/types/auth.types";
 
 const DEFAULT_DEVICE = "web";
 const DEFAULT_MODE = 2;
-const DEFAULT_MOBILE = "+91";
 
 function getStoredImei(): string {
   if (typeof window === "undefined") return "";
@@ -34,11 +38,83 @@ function applyLoginResponse(res: LoginResponse): void {
   const primaryToken = res.PrimaryToken ?? res.primaryToken;
   const token = res.Token ?? res.token;
   const imei = res.IMEI ?? "";
-  setAuthTokens({
+  const loginData =
+    res.rawLoginData && typeof res.rawLoginData === "object"
+      ? res.rawLoginData
+      : undefined;
+  setAuthSession({
     primaryToken: typeof primaryToken === "string" ? primaryToken : undefined,
     token: typeof token === "string" ? token : undefined,
     imei: typeof imei === "string" ? imei : undefined,
+    userId: typeof res.userId === "string" ? res.userId : undefined,
+    claims: Array.isArray(res.claims) ? res.claims : [],
+    user: res.user,
+    currency: res.currency,
+    parent: res.parent,
+    ipAddress: typeof res.ipAddress === "string" ? res.ipAddress : undefined,
+    // Full API `data` blob — same structure as server (betConfigs, stakeConfigs, …)
+    loginData,
   });
+  // Optional: persist full envelope { success, messages, data, wsMessageType } for parity with API
+  if (
+    res.rawLoginEnvelope &&
+    typeof res.rawLoginEnvelope === "object" &&
+    typeof window !== "undefined"
+  ) {
+    try {
+      window.localStorage.setItem(
+        AUTH_LOGIN_ENVELOPE_KEY,
+        JSON.stringify(res.rawLoginEnvelope),
+      );
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function hasValidLoginTokens(res: LoginResponse): boolean {
+  const primaryToken = res.PrimaryToken ?? res.primaryToken;
+  const token = res.Token ?? res.token;
+
+  return (
+    (typeof primaryToken === "string" && primaryToken.length > 0) ||
+    (typeof token === "string" && token.length > 0)
+  );
+}
+
+function formatLoginErrorMessage(message: string): string {
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("captcha") &&
+    (normalized.includes("invalid") || normalized.includes("wrong"))
+  ) {
+    return "The captcha code is incorrect. Please enter the latest captcha and try again.";
+  }
+
+  if (
+    normalized.includes("invalid credential") ||
+    normalized.includes("invalid username") ||
+    normalized.includes("invalid password") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("401")
+  ) {
+    return "Username or password is incorrect. Please verify your credentials and try again.";
+  }
+
+  if (
+    normalized.includes("failed to fetch") ||
+    normalized.includes("network") ||
+    normalized.includes("cors")
+  ) {
+    return "Unable to reach the server right now. Please check the backend connection and try again.";
+  }
+
+  if (normalized.includes("token not returned")) {
+    return "Login could not be completed because the server did not return a valid session.";
+  }
+
+  return message;
 }
 
 export default function LoginPage() {
@@ -53,7 +129,6 @@ export default function LoginPage() {
 
   const loadCaptcha = useCallback(async () => {
     setCaptchaLoading(true);
-    setError(null);
     try {
       const res = await getCaptcha();
       setCaptcha(res);
@@ -89,15 +164,24 @@ export default function LoginPage() {
         IMEI: getStoredImei() || "web-session",
         device: DEFAULT_DEVICE,
         mode: DEFAULT_MODE,
-        mobile: DEFAULT_MOBILE,
       });
+
+      if (!hasValidLoginTokens(res)) {
+        throw new Error("Login failed: token not returned by server.");
+      }
+
       applyLoginResponse(res);
       setAuthSessionCookie();
       if (res.IMEI && typeof res.IMEI === "string") setStoredImei(res.IMEI);
       router.replace("/dashboard");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Login failed.");
+      clearAuth();
+      setError(
+        formatLoginErrorMessage(
+          e instanceof Error ? e.message : "Login failed.",
+        ),
+      );
       loadCaptcha();
     } finally {
       setSubmitLoading(false);
@@ -113,6 +197,27 @@ export default function LoginPage() {
 
       <Card className="w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {error && (
+            <div
+              className="sticky top-3 z-10 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800 shadow-sm"
+              role="alert"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">Unable to sign in</p>
+                <p className="mt-1 text-red-700">{error}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition-colors hover:bg-red-100 hover:text-red-700"
+                aria-label="Dismiss login error"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <Input
             label="Username"
             autoComplete="username"
@@ -140,23 +245,35 @@ export default function LoginPage() {
               <label className="block text-sm font-medium text-zinc-700">
                 Captcha
               </label>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div
-                  className="h-12 w-full shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50 sm:w-32"
-                  style={{
-                    backgroundImage: captcha.image.startsWith("data:")
-                      ? `url(${captcha.image})`
-                      : undefined,
-                    backgroundSize: "contain",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center",
-                  }}
-                >
-                  {!captcha.image.startsWith("data:") && (
-                    <span className="flex h-full items-center justify-center text-xs text-zinc-400">
-                      Image
-                    </span>
-                  )}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-md border border-zinc-300 bg-white"
+                    style={{
+                      backgroundImage: captcha.image.startsWith("data:")
+                        ? `url(${captcha.image})`
+                        : undefined,
+                      backgroundSize: "contain",
+                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center",
+                    }}
+                  >
+                    {!captcha.image.startsWith("data:") && (
+                      <span className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                        Image
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadCaptcha}
+                    disabled={submitLoading || captchaLoading}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-300 bg-[#7a8b12] text-white transition-colors hover:bg-[#68770f] disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Refresh captcha"
+                    title="Refresh captcha"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </button>
                 </div>
                 <Input
                   placeholder="Enter captcha"
@@ -177,12 +294,6 @@ export default function LoginPage() {
             />
           )}
 
-          {error && (
-            <p className="text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
-
           <Button
             type="submit"
             variant="primary"
@@ -193,15 +304,6 @@ export default function LoginPage() {
             {submitLoading ? "Signing in…" : "Sign in"}
           </Button>
 
-          {!captchaLoading && (
-            <button
-              type="button"
-              onClick={loadCaptcha}
-              className="text-sm text-zinc-500 underline hover:text-zinc-700"
-            >
-              Refresh captcha
-            </button>
-          )}
         </form>
       </Card>
     </div>

@@ -20,8 +20,8 @@ export default function BetsMarketsPage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
-        title="Bet Markets"
-        breadcrumbs={["Bet", "Markets"]}
+        title="Sports | SPM Sports"
+        breadcrumbs={["Sports", "SPM Sports"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
 

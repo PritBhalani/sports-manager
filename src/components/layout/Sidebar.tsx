@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   User,
@@ -10,8 +10,6 @@ import {
   TrendingUp,
   Store,
   Users,
-  Layers,
-  FileBarChart,
   Shield,
   Settings,
   LogOut,
@@ -43,81 +41,82 @@ type MenuDropdown = {
 
 type MenuItem = MenuLink | MenuDropdown;
 
-/** Sidebar menu derived from app (dashboard) folder structure */
+/** Sidebar menu matching BharatPlays layout, using only existing pages */
 const menuConfig: MenuItem[] = [
+  // Dashboard
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/profile", label: "Profile", icon: User },
+
+  // Transactions
   {
-    label: "Account",
+    label: "Transactions",
     icon: Wallet,
     children: [
-      { href: "/accounts/balance", label: "Balance" },
-      { href: "/accounts/deposit", label: "Deposit" },
-      { href: "/accounts/withdraw", label: "Withdraw" },
-      { href: "/accounts/transfer", label: "Transfer" },
-      { href: "/accounts/activity", label: "Activity" },
-      // Account statements (README §2 Statements)
+      { href: "/accounts/requests/deposit", label: "Request" },
+      { href: "/accounts/deposit", label: "Auto" },
+      { href: "/accounts/withdraw", label: "Manual" },
+    ],
+  },
+
+  // Players
+  { href: "/players", label: "Players", icon: Users },
+
+  // Admins
+  { href: "/admins", label: "Admins", icon: Users },
+
+  // Sports
+  {
+    label: "Sports",
+    icon: TrendingUp,
+    children: [
+      { href: "/bets/history", label: "Betlist" },
+      { href: "/bets/markets", label: "SPM Sports" },
+    ],
+  },
+
+  // Website
+  {
+    label: "Website",
+    icon: Store,
+    children: [{ href: "/website/banners", label: "Banners" }],
+  },
+
+  // Reports
+  {
+    label: "Reports",
+    icon: Store,
+    children: [
       { href: "/reports/account-statement", label: "Account Statement" },
       { href: "/reports/credit-statement", label: "Credit Statement" },
       { href: "/reports/profit-loss", label: "P&L Statement" },
-    ],
-  },
-  {
-    label: "Bet",
-    icon: TrendingUp,
-    children: [
-      { href: "/bets/live", label: "Live" },
-      { href: "/bets/history", label: "History" },
-    ],
-  },
-  {
-    label: "Manage Market",
-    icon: Store,
-    children: [
-      { href: "/markets/manage", label: "Manage" },
-      { href: "/markets/lock-status", label: "Lock Status" },
-    ],
-  },
-  {
-    label: "User",
-    icon: Users,
-    children: [
-      { href: "/players/add", label: "Add" },
-      { href: "/players/inactive", label: "Inactive" },
-      { href: "/players/master", label: "Master" },
-      { href: "/players/detail", label: "Detail" },
-    ],
-  },
-  {
-    label: "Position",
-    icon: Layers,
-    children: [
-      { href: "/position/event", label: "Event" },
-      { href: "/position/market", label: "Market" },
-    ],
-  },
-  {
-    label: "Bet History",
-    icon: FileBarChart,
-    children: [
       { href: "/reports/bet-history", label: "Bet History" },
+      {
+        href: "/reports/bet-history-by-market",
+        label: "Bet History by Market",
+      },
       { href: "/reports/pl-by-market", label: "P&L by Market" },
-      { href: "/reports/pl-by-market-details", label: "P&L by Market Details" },
-      { href: "/reports/bet-history-by-market", label: "Bet History by Market" },
+      {
+        href: "/reports/pl-by-market-details",
+        label: "P&L by Market Details",
+      },
       { href: "/reports/pl-by-agent", label: "P&L by Agent" },
       { href: "/reports/downline-summary", label: "Downline Summary" },
+      { href: "/reports/analytics", label: "Reports Analytics" },
     ],
   },
+
+  // Security
   {
-    label: "Token / Login History",
+    label: "Security",
     icon: Shield,
     children: [
-      { href: "/security/login-history", label: "Login History" },
-      { href: "/security/token-history", label: "Token History" },
+      { href: "/security/login-history", label: "Activity" },
+      { href: "/security/token-history", label: "Fraud Logs" },
     ],
   },
+
+  // Settings
   {
-    label: "Setting",
+    label: "Settings",
     icon: Settings,
     children: [
       { href: "/settings/notifications", label: "Notifications" },
@@ -125,6 +124,9 @@ const menuConfig: MenuItem[] = [
       { href: "/settings/referral", label: "Referral" },
     ],
   },
+
+  // My Profile
+  { href: "/profile", label: "My Profile", icon: User },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -147,6 +149,21 @@ type SidebarProps = {
 export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
+
+  // Ensure the dropdown for the current route is open (e.g. on hard refresh
+  // or when navigating directly to a deep link).
+  useEffect(() => {
+    setOpenDropdowns((prev) => {
+      const next = new Set(prev);
+      menuConfig.forEach((item) => {
+        if ("children" in item && item.children?.length) {
+          const shouldBeOpen = hasActiveChild(pathname, item.children);
+          if (shouldBeOpen) next.add(item.label);
+        }
+      });
+      return next;
+    });
+  }, [pathname]);
 
   const toggleDropdown = (label: string) => {
     setOpenDropdowns((prev) => {
@@ -231,8 +248,10 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                             <Link
                               href={child.href}
                               onClick={onClose}
-                              className={`block rounded-lg px-2 py-2 text-sm transition-colors hover:bg-zinc-800 hover:text-white ${
-                                childActive ? "text-white" : "text-zinc-400"
+                              className={`block rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-zinc-800 hover:text-white ${
+                                childActive
+                                  ? "bg-zinc-800/80 text-white ring-1 ring-zinc-600"
+                                  : "text-zinc-400"
                               }`}
                             >
                               {segmentToLabel(child.label)}

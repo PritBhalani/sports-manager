@@ -16,17 +16,56 @@ export type LoginBody = {
   IMEI: string;
   device: string;
   mode: number;
-  mobile: string;
+  mobile?: string;
   username: string;
   password: string;
 };
 
-/** POST /authenticate/login — Response: token/session data */
+export type AuthenticatedUser = {
+  id?: string;
+  parentId?: string;
+  userCode?: string;
+  username?: string;
+  userType?: number;
+  status?: number;
+  bettingLock?: number;
+  [key: string]: unknown;
+};
+
+export type AuthenticatedCurrency = {
+  id?: string;
+  name?: string;
+  code?: string;
+  [key: string]: unknown;
+};
+
+export type AuthenticatedParent = {
+  id?: string;
+  userCode?: string;
+  username?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * POST /authenticate/login — normalized response used by the app.
+ * When the API returns { success, data: { token, claims, user, ... } }, we also
+ * set rawLoginData to data so localStorage can hold the exact same shape.
+ */
 export type LoginResponse = {
   token?: string;
   primaryToken?: string;
   PrimaryToken?: string;
   Token?: string;
   IMEI?: string;
+  userId?: string;
+  claims?: string[];
+  user?: AuthenticatedUser;
+  currency?: AuthenticatedCurrency;
+  parent?: AuthenticatedParent;
+  ipAddress?: string;
+  /** Full `data` object from login envelope — persisted to localStorage as-is */
+  rawLoginData?: Record<string, unknown>;
+  /** Full API envelope (success, messages, data, wsMessageType) if needed */
+  rawLoginEnvelope?: Record<string, unknown>;
   [key: string]: unknown;
 };

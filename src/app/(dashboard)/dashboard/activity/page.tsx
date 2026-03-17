@@ -1,25 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
-import { mockUserActivity, MockUserActivity } from "@/mocks/activity.mock";
 import { formatDateTime } from "@/utils/date";
+import { getLoginHistory } from "@/services/token.service";
 
-type Row = MockUserActivity;
+type Row = Record<string, unknown>;
 
 const columns = [
   {
     id: "createdAt",
     header: "Date / Time",
     sortable: true,
-    cell: (row: Row) => formatDateTime(row.createdAt),
-    sortValue: (row: Row) => Date.parse(row.createdAt),
+    cell: (row: Row) => formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
+    sortValue: (row: Row) => Date.parse(String(row.createdAt ?? row.date ?? row.timestamp ?? 0)),
   },
-  { id: "type", header: "Type", sortable: true, cell: (row: Row) => row.type },
-  { id: "username", header: "User", sortable: true, cell: (row: Row) => row.username },
+  { id: "type", header: "Type", sortable: true, cell: (row: Row) => String(row.type ?? row.eventType ?? "Login") },
+  { id: "username", header: "User", sortable: true, cell: (row: Row) => String(row.username ?? row.userCode ?? row.userId ?? "—") },
 ];
 
 export default function DashboardActivityPage() {
-  const rows = mockUserActivity;
+  const [rows, setRows] = useState<Row[]>([]);
+
+  useEffect(() => {
+    getLoginHistory()
+      .then((res) => setRows(Array.isArray(res) ? res : []))
+      .catch(() => setRows([]));
+  }, []);
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -28,18 +35,18 @@ export default function DashboardActivityPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Events (Demo)" value={rows.length.toString()} />
+        <StatsCard title="Events" value={rows.length.toString()} />
         <StatsCard
           title="Logins"
-          value={rows.filter((a) => a.type === "Login").length.toString()}
+          value={rows.filter((a) => String(a.type ?? a.eventType ?? "").toLowerCase() === "login").length.toString()}
         />
         <StatsCard
-          title="Bet Activity"
-          value={rows.filter((a) => a.type === "Bet Placed" || a.type === "Bet Settled").length.toString()}
+          title="Sessions"
+          value={rows.filter((a) => Boolean(a.sessionId ?? a.tokenId)).length.toString()}
         />
         <StatsCard
-          title="Security Events"
-          value={rows.filter((a) => a.module === "Security").length.toString()}
+          title="Unique Users"
+          value={new Set(rows.map((a) => String(a.username ?? a.userCode ?? a.userId ?? ""))).size.toString()}
         />
       </div>
 
@@ -58,7 +65,7 @@ export default function DashboardActivityPage() {
           enableSearch
           searchPlaceholder="Search activity…"
           getSearchText={(row: Row) =>
-            `${row.type} ${row.username} ${row.module} ${row.description}`.toLowerCase()
+            `${row.type ?? row.eventType ?? ""} ${row.username ?? row.userCode ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
           }
           emptyMessage="No activity."
         />
