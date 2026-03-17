@@ -97,7 +97,7 @@ export default function RequestDepositPage() {
           <Select
             aria-label="Status filter"
             value={status}
-            onChange={setStatus}
+            onChange={(e) => setStatus(e.target.value)}
             options={STATUS_OPTIONS}
             className="h-10"
           />
