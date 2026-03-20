@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
-  User,
   Wallet,
   TrendingUp,
   Store,
@@ -17,18 +16,11 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-/** Format route segment to display label (e.g. "account-statement" → "Account Statement") */
-function segmentToLabel(segment: string): string {
-  return segment
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
-
 type MenuLink = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
+  badge?: "beta";
   children?: never;
 };
 
@@ -36,12 +28,11 @@ type MenuDropdown = {
   href?: never;
   label: string;
   icon: typeof LayoutDashboard;
-  children: { href: string; label: string }[];
+  children: { href: string; label: string; badge?: "beta" }[];
 };
 
 type MenuItem = MenuLink | MenuDropdown;
 
-/** Sidebar menu matching BharatPlays layout, using only existing pages */
 const menuConfig: MenuItem[] = [
   // Dashboard
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -68,65 +59,75 @@ const menuConfig: MenuItem[] = [
     label: "Sports",
     icon: TrendingUp,
     children: [
-      { href: "/bets/history", label: "Betlist" },
+      { href: "/bets/history", label: "Betlist", badge: "beta" },
       { href: "/bets/markets", label: "SPM Sports" },
+      { href: "/bets/markets", label: "Betfair" },
+      { href: "/bets/markets", label: "Betby" },
+      { href: "/bets/markets", label: "Atlas" },
+      { href: "/bets/markets", label: "IG Pixel" },
+      { href: "/bets/markets", label: "Alt Gaming" },
     ],
   },
+
+  // Casino
+  {
+    label: "Casino",
+    icon: Store,
+    children: [
+      { href: "/security/analytics", label: "Stats", badge: "beta" },
+      { href: "/bets/history", label: "Bet List" },
+      { href: "/markets/manage", label: "Games" },
+    ],
+  },
+
+  // Bonus
+  {
+    label: "Bonus",
+    icon: Store,
+    children: [
+      { href: "/reports/account-statement", label: "Bonus" },
+      { href: "/reports/credit-statement", label: "Statement" },
+      { href: "/reports/downline-summary", label: "Claims" },
+    ],
+  },
+
+  // Referrals (link)
+  { href: "/settings/referral", label: "Referrals", icon: Settings },
 
   // Website
   {
     label: "Website",
     icon: Store,
-    children: [{ href: "/website/banners", label: "Banners" }],
-  },
-
-  // Reports
-  {
-    label: "Reports",
-    icon: Store,
     children: [
-      { href: "/reports/account-statement", label: "Account Statement" },
-      { href: "/reports/credit-statement", label: "Credit Statement" },
-      { href: "/reports/profit-loss", label: "P&L Statement" },
-      { href: "/reports/bet-history", label: "Bet History" },
+      { href: "/dashboard/analytics", label: "Analytics" },
+      { href: "/website/banners", label: "Banners" },
+      { href: "/accounts/history", label: "Banking" },
+      { href: "/accounts/deposit", label: "Gateways" },
+      { href: "/accounts/balance", label: "Currency" },
+      { href: "/settings/notifications", label: "Forms", badge: "beta" },
       {
-        href: "/reports/bet-history-by-market",
-        label: "Bet History by Market",
+        href: "/settings/event-types",
+        label: "External Integrations",
       },
-      { href: "/reports/pl-by-market", label: "P&L by Market" },
       {
-        href: "/reports/pl-by-market-details",
-        label: "P&L by Market Details",
+        href: "/settings/event-types",
+        label: "Data Integrations",
       },
-      { href: "/reports/pl-by-agent", label: "P&L by Agent" },
-      { href: "/reports/downline-summary", label: "Downline Summary" },
-      { href: "/reports/analytics", label: "Reports Analytics" },
     ],
   },
+
+  // Reports (link)
+  { href: "/reports/profit-loss", label: "Reports", icon: Store },
 
   // Security
   {
     label: "Security",
     icon: Shield,
     children: [
-      { href: "/security/login-history", label: "Activity" },
-      { href: "/security/token-history", label: "Fraud Logs" },
+      { href: "/security/login-history", label: "User Groups" },
+      { href: "/settings/notifications", label: "Announcement" },
     ],
   },
-
-  // Settings
-  {
-    label: "Settings",
-    icon: Settings,
-    children: [
-      { href: "/settings/notifications", label: "Notifications" },
-      { href: "/settings/event-types", label: "Event Types" },
-      { href: "/settings/referral", label: "Referral" },
-    ],
-  },
-
-  // My Profile
-  { href: "/profile", label: "My Profile", icon: User },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -231,7 +232,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   >
                     <span className="flex items-center gap-3">
                       <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{segmentToLabel(item.label)}</span>
+                      <span>{item.label}</span>
                     </span>
                     {isOpenDropdown ? (
                       <ChevronDown className="h-4 w-4" />
@@ -254,7 +255,14 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                                   : "text-zinc-400"
                               }`}
                             >
-                              {segmentToLabel(child.label)}
+                            <div className="flex items-center gap-2">
+                              <span>{child.label}</span>
+                              {child.badge === "beta" && (
+                                <span className="rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-semibold text-zinc-900">
+                                  beta
+                                </span>
+                              )}
+                            </div>
                             </Link>
                           </li>
                         );

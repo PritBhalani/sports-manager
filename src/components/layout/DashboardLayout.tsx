@@ -8,6 +8,7 @@ import { LAYOUT_BREAKPOINT_MD } from "@/utils/constants";
 import { getBalance } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import type { BalanceResponse } from "@/types/account.types";
+import { useAuth } from "@/hooks/useAuth";
 
 /** Navbar strip — same GET /account/getbalance as dashboard / balance page */
 function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
@@ -37,6 +38,7 @@ function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
 }
 
 export default function DashboardLayout({ children }: LayoutProps) {
+  const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
@@ -51,6 +53,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
 
   // README §2 GET /account/getbalance — balance for authenticated user
   useEffect(() => {
+    if (!isAuthenticated) return;
     let cancelled = false;
     getBalance()
       .then((res) => {
@@ -63,7 +66,7 @@ export default function DashboardLayout({ children }: LayoutProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const closeSidebar = () => {
     if (typeof window !== "undefined" && window.innerWidth < LAYOUT_BREAKPOINT_MD) {

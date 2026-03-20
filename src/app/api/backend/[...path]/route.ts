@@ -52,7 +52,19 @@ async function proxyRequest(
     init.body = await request.text();
   }
 
-  const upstreamResponse = await fetch(upstreamUrl, init);
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetch(upstreamUrl, init);
+  } catch (err) {
+    // Upstream can temporarily fail (timeout / network issues). Returning a
+    // consistent JSON envelope prevents the client from crashing on `fetch failed`.
+    const message =
+      err instanceof Error ? err.message : "Upstream request failed";
+    return NextResponse.json(
+      { success: false, messages: [message], data: null, wsMessageType: 0 },
+      { status: 200 },
+    );
+  }
   const responseHeaders = new Headers();
   const contentType = upstreamResponse.headers.get("content-type");
 

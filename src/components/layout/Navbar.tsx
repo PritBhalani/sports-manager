@@ -164,17 +164,17 @@ export default function Navbar({
         <div className="hidden max-w-[min(52vw,28rem)] items-center gap-2 overflow-x-auto sm:flex md:max-w-none md:gap-3 lg:gap-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <BalanceStat label="Balance" value={balances.balance} />
           <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
-          <BalanceStat label="Bal. down" value={balances.balanceDown} />
+          <BalanceStat label="Balance down" value={balances.balanceDown} />
           <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
           <BalanceStat label="Credit limit" value={balances.creditLimit} />
           <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
-          <BalanceStat label="Avail. credit" value={balances.availableCredit} />
+          <BalanceStat label="Avilable credit" value={balances.availableCredit} />
         </div>
         {/* Compact: primary balance + available credit on very small screens */}
         <div className="flex max-w-[42vw] min-w-0 flex-col gap-0.5 rounded-lg bg-zinc-100 px-2 py-1.5 text-zinc-700 sm:hidden">
           <div className="flex items-baseline justify-between gap-2 text-[10px]">
             <span className="shrink-0 font-medium uppercase tracking-wide text-zinc-500">
-              Bal
+              Balance
             </span>
             <span className="truncate font-semibold tabular-nums text-zinc-900">
               {balances.balance}
@@ -182,7 +182,7 @@ export default function Navbar({
           </div>
           <div className="flex items-baseline justify-between gap-2 text-[10px]">
             <span className="shrink-0 font-medium uppercase tracking-wide text-zinc-500">
-              Avail
+              Avilable credit
             </span>
             <span className="truncate font-semibold tabular-nums text-zinc-900">
               {balances.availableCredit}
@@ -262,7 +262,7 @@ export default function Navbar({
               </div>
               <div className="flex flex-col items-center text-center">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  Bal. down
+                  Balance down
                 </span>
                 <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
                   {balances.balanceDown}
@@ -278,7 +278,7 @@ export default function Navbar({
               </div>
               <div className="flex flex-col items-center text-center">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  Avail. credit
+                  Avilable credit
                 </span>
                 <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
                   {balances.availableCredit}

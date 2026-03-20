@@ -12,6 +12,7 @@ import {
 } from "@/services/dashboard.service";
 import { getBalance } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { useAuth } from "@/hooks/useAuth";
 
 export type DashboardStats = {
   balance: string;
@@ -54,9 +55,11 @@ function sumNumber<T>(
 }
 
 export function useDashboardStats(): DashboardStats {
+  const { isAuthenticated } = useAuth();
   const [stats, setStats] = useState<DashboardStats>(initialStats);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     const load = async () => {
       try {
         const [bal, market, userSum, liveTotal, betSum, liveSum] = await Promise.allSettled([
@@ -118,7 +121,7 @@ export function useDashboardStats(): DashboardStats {
       }
     };
     load();
-  }, []);
+  }, [isAuthenticated]);
 
   return stats;
 }
