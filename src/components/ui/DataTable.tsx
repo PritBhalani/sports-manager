@@ -33,7 +33,7 @@ export default function DataTable<T extends Record<string, unknown>>({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3 sm:space-y-4">
       {loading && (
         <div className="rounded-md border border-dashed border-zinc-200 bg-zinc-50 px-4 py-2 text-xs text-zinc-500">
           Loading data…

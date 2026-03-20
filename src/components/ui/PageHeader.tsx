@@ -16,7 +16,7 @@ export default function PageHeader({
   action,
 }: PageHeaderProps) {
   return (
-    <div className="mb-4 flex min-w-0 flex-col gap-1 sm:mb-5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+    <div className="mb-5 flex min-w-0 flex-col gap-1.5 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <h1 className="break-words text-xl font-semibold text-zinc-900 sm:text-2xl">
           {title}

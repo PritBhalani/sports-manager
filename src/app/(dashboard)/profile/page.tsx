@@ -1,27 +1,34 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
-import { PageHeader, Card, Button, Input, Select } from "@/components";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  type FormEvent,
+} from "react";
+import { PageHeader, Button, Input, TablePagination } from "@/components";
 import {
   User,
   FileText,
-  ArrowRight,
   CheckCircle2,
   AlertCircle,
   Pencil,
   Copy,
   Check,
-  Calendar,
   Download,
 } from "lucide-react";
 import {
   getMyInfo,
-  updateMember,
   getMyInfoPathId,
   getSessionMemberId,
+  getLoginProfileFromSession,
 } from "@/services/user.service";
-import type { MyInfo, UpdateMemberBody } from "@/types/user.types";
+import { getAccountStatement } from "@/services/account.service";
+import { changePassword } from "@/services/auth.service";
+import type { MyInfo } from "@/types/user.types";
+import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 function formatNow(): string {
   try {
@@ -113,49 +120,6 @@ function ProfileFieldRow({
   );
 }
 
-function InlineEditBlock({
-  label,
-  initialValue,
-  onSave,
-  onCancel,
-  saving,
-  type = "text",
-}: {
-  label: string;
-  initialValue: string;
-  onSave: (v: string) => void;
-  onCancel: () => void;
-  saving: boolean;
-  type?: string;
-}) {
-  const [v, setV] = useState(initialValue);
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-      <Input
-        label={label}
-        type={type}
-        value={v}
-        onChange={(e) => setV(e.target.value)}
-        className="bg-white"
-      />
-      <div className="mt-3 flex gap-2">
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          disabled={saving}
-          onClick={() => onSave(v)}
-        >
-          {saving ? "Saving…" : "Save"}
-        </Button>
-        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function ProfileSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
@@ -172,15 +136,12 @@ function ProfileSkeleton() {
 export default function ProfilePage() {
   const [info, setInfo] = useState<MyInfo | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(
     null,
   );
   const [activeTab, setActiveTab] = useState("profile");
   const [now, setNow] = useState(formatNow);
-  const [editingField, setEditingField] = useState<
-    "name" | "email" | "phone" | "timezone" | null
-  >(null);
+  const [editingField, setEditingField] = useState<"timezone" | null>(null);
   const [timezone, setTimezone] = useState(() => {
     try {
       return Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Calcutta";
@@ -189,24 +150,40 @@ export default function ProfilePage() {
     }
   });
 
+  // Account statement state (Profile tab)
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementError, setStatementError] = useState<string | null>(null);
+  const [statementRows, setStatementRows] = useState<Record<string, unknown>[]>([]);
+  const [statementTotal, setStatementTotal] = useState(0);
+  const [statementPage, setStatementPage] = useState(1);
+  const [statementPageSize, setStatementPageSize] = useState(50);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+
   useEffect(() => {
     const t = setInterval(() => setNow(formatNow()), 1000);
     return () => clearInterval(t);
   }, []);
 
   useEffect(() => {
+    const range = todayRangeUTC();
+    setFromDate(range.fromDate.slice(0, 10));
+    setToDate(range.toDate.slice(0, 10));
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
-    // README §3 getmyinfo/{parentId} — use parent id from login payload
-    const pathId = getMyInfoPathId();
-    if (!pathId) {
-      setLoading(false);
-      setInfo(null);
-      setMessage({
-        type: "error",
-        text: "Session has no parent id. Log out and log in again to load profile.",
-      });
-      return;
-    }
+    // README §3 getmyinfo/{parentId}.
+    // Prefer parent id; fall back to current member id so we always hit backend.
+    const pathId =
+      getMyInfoPathId() ||
+      getSessionMemberId() ||
+      "69803a1fda70c5ee87bf0493";
     getMyInfo(pathId)
       .then((res) => {
         if (!cancelled) setInfo(res ?? null);
@@ -228,27 +205,6 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const handleSaveField = async (fields: Partial<UpdateMemberBody>) => {
-    setSaving(true);
-    setMessage(null);
-    try {
-      // README §3 POST /user/updatemember — member id + parentId when available
-      const memberId = info?.id || getSessionMemberId();
-      const body: UpdateMemberBody = {
-        ...fields,
-        ...(memberId ? { id: memberId } : {}),
-      };
-      await updateMember(body);
-      setInfo((prev) => (prev ? { ...prev, ...fields } : null));
-      setMessage({ type: "success", text: "Updated successfully." });
-      setEditingField(null);
-    } catch {
-      setMessage({ type: "error", text: "Update failed. Please try again." });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const tabs = [
     {
       id: "profile",
@@ -261,6 +217,91 @@ export default function ProfilePage() {
       icon: <FileText className="h-4 w-4 shrink-0" />,
     },
   ];
+
+  useEffect(() => {
+    if (activeTab !== "account-statement") return;
+    if (!fromDate || !toDate) return;
+
+    const userId =
+      getSessionMemberId() || info?.id || "69803a1fda70c5ee87bf0493";
+    const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
+
+    setStatementLoading(true);
+    setStatementError(null);
+    getAccountStatement(
+      {
+        page: statementPage,
+        pageSize: statementPageSize,
+        groupBy: "",
+        orderBy: "",
+        orderByDesc: false,
+      },
+      { fromDate: fromISO, toDate: toISO },
+      userId,
+    )
+      .then((res) => {
+        setStatementRows(Array.isArray(res?.data) ? res.data : []);
+        setStatementTotal(typeof res?.total === "number" ? res.total : 0);
+      })
+      .catch((e) => {
+        setStatementRows([]);
+        setStatementTotal(0);
+        setStatementError(e instanceof Error ? e.message : "Failed to load account statement.");
+      })
+      .finally(() => setStatementLoading(false));
+  }, [activeTab, fromDate, toDate, statementPage, statementPageSize, info?.id]);
+
+  const debitTotal = statementRows.reduce((sum, r) => {
+    const bal = Number((r as { balance?: unknown }).balance ?? 0);
+    return sum + (Number.isFinite(bal) && bal < 0 ? Math.abs(bal) : 0);
+  }, 0);
+  const creditTotal = statementRows.reduce((sum, r) => {
+    const bal = Number((r as { balance?: unknown }).balance ?? 0);
+    return sum + (Number.isFinite(bal) && bal > 0 ? bal : 0);
+  }, 0);
+
+  const { profileName, profileUsername, profilePhone } = useMemo(() => {
+    const fromLogin = getLoginProfileFromSession();
+    return {
+      profileName: fromLogin.name ?? info?.name,
+      profileUsername: fromLogin.username ?? info?.username,
+      profilePhone: fromLogin.phone ?? info?.phone,
+    };
+  }, [info?.name, info?.username, info?.phone]);
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+    if (!currentPassword.trim() || !newPassword.trim()) {
+      setMessage({ type: "error", text: "Enter current password and new password." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: "error", text: "New password and confirmation do not match." });
+      return;
+    }
+    const userId =
+      getSessionMemberId() || info?.id || "69803a1fda70c5ee87bf0493";
+    setPasswordSubmitting(true);
+    try {
+      const text = await changePassword({
+        currentPassword: currentPassword.trim(),
+        newPassword: newPassword.trim(),
+        userId,
+      });
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setMessage({ type: "success", text });
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Change password failed.",
+      });
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-w-0">
@@ -300,33 +341,38 @@ export default function ProfilePage() {
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span className="font-medium text-zinc-700">
                   Total Debit:{" "}
-                  <span className="font-semibold text-red-600">10,302,053</span>
+                  <span className="font-semibold text-red-600">
+                    {formatCurrency(debitTotal)}
+                  </span>
                 </span>
                 <span className="font-medium text-zinc-700">
                   Total Credit:{" "}
                   <span className="font-semibold text-emerald-600">
-                    10,445,818.06
+                    {formatCurrency(creditTotal)}
                   </span>
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Select
-                  aria-label="Time range"
-                  value="all"
-                  onChange={() => {}}
-                  options={[
-                    { label: "All Time", value: "all" },
-                    { label: "Today", value: "today" },
-                    { label: "Yesterday", value: "yesterday" },
-                  ]}
-                  className="h-9 min-w-[120px]"
+                <Input
+                  type="date"
+                  aria-label="From date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setStatementPage(1);
+                    setFromDate(e.target.value);
+                  }}
+                  className="h-9 w-[150px]"
                 />
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-                >
-                  <Calendar className="h-4 w-4" aria-hidden />
-                </button>
+                <Input
+                  type="date"
+                  aria-label="To date"
+                  value={toDate}
+                  onChange={(e) => {
+                    setStatementPage(1);
+                    setToDate(e.target.value);
+                  }}
+                  className="h-9 w-[150px]"
+                />
                 <Button
                   type="button"
                   variant="primary"
@@ -347,48 +393,90 @@ export default function ProfilePage() {
                 <span>Balance</span>
                 <span>Date</span>
               </div>
+              {statementError && (
+                <div className="px-4 py-3 text-sm text-red-600" role="alert">
+                  {statementError}
+                </div>
+              )}
               <div className="divide-y divide-zinc-100">
-                <div className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3">
-                  <div className="col-span-2">
-                    <p className="text-sm text-zinc-800">
-                      Withdrawal request of 2000 approved for Cbtc1 | 92SVSLGWP1LFP22V |
-                      Comment: 4151
-                    </p>
+                {statementLoading ? (
+                  <div className="px-4 py-8 text-center text-sm text-zinc-500">
+                    Loading…
                   </div>
-                  <div className="mt-2 text-xs text-red-600 sm:mt-0">0</div>
-                  <div className="mt-2 sm:mt-0">
-                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                      2,000
-                    </span>
+                ) : statementRows.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-sm text-zinc-500">
+                    No statement data.
                   </div>
-                  <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
-                    143,766
-                  </div>
-                  <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
-                    Sat 15 Jun 2024, 17:37:58
-                  </div>
-                </div>
-                <div className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3">
-                  <div className="col-span-2">
-                    <p className="text-sm text-zinc-800">
-                      Withdrawal request of 8000 approved for Cbtc1 | 11YPXI6USPX3IU3 |
-                      Comment: 0889
-                    </p>
-                  </div>
-                  <div className="mt-2 text-xs text-red-600 sm:mt-0">0</div>
-                  <div className="mt-2 sm:mt-0">
-                    <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                      8,000
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
-                    141,766
-                  </div>
-                  <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
-                    Sat 15 Jun 2024, 17:06:10
-                  </div>
-                </div>
+                ) : (
+                  statementRows.map((row, idx) => {
+                    const r = row as {
+                      id?: unknown;
+                      narration?: unknown;
+                      remarks?: unknown;
+                      comment?: unknown;
+                      createdOn?: unknown;
+                      balance?: unknown;
+                      total?: unknown;
+                      creditTotal?: unknown;
+                    };
+                    const delta = Number(r.balance ?? 0);
+                    const debit = Number.isFinite(delta) && delta < 0 ? Math.abs(delta) : 0;
+                    const credit = Number.isFinite(delta) && delta > 0 ? delta : 0;
+                    const created = r.createdOn ? new Date(String(r.createdOn)) : null;
+                    const dateText = created && !Number.isNaN(created.getTime())
+                      ? created.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                      : "—";
+                    return (
+                      <div
+                        key={String(r.id ?? idx)}
+                        className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3"
+                      >
+                        <div className="col-span-2">
+                          <p className="text-sm text-zinc-800">
+                            {String(r.narration ?? "—")}
+                            {r.remarks ? (
+                              <span className="text-zinc-500"> — {String(r.remarks)}</span>
+                            ) : null}
+                            {r.comment ? (
+                              <span className="text-zinc-500"> ({String(r.comment)})</span>
+                            ) : null}
+                          </p>
+                        </div>
+                        <div className="mt-2 text-xs text-red-600 sm:mt-0">
+                          {debit ? formatCurrency(debit) : "0"}
+                        </div>
+                        <div className="mt-2 sm:mt-0">
+                          {credit ? (
+                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                              {formatCurrency(credit)}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-zinc-500">0</span>
+                          )}
+                        </div>
+                        <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
+                          {formatCurrency(Number(r.total ?? r.creditTotal ?? 0))}
+                        </div>
+                        <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
+                          {dateText}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
+              <TablePagination
+                page={statementPage}
+                totalItems={statementTotal}
+                pageSize={statementPageSize}
+                onPageChange={setStatementPage}
+                onPageSizeChange={(size) => {
+                  if (!size) return;
+                  setStatementPage(1);
+                  setStatementPageSize(size);
+                }}
+                pageSizeOptions={[15, 30, 50]}
+              />
             </div>
           </div>
         )}
@@ -420,112 +508,72 @@ export default function ProfilePage() {
 
             {!loading && (
             <>
-            {/* Main profile card – light grey container, two columns */}
+            {/* Main profile card – name / username / phone (API + login session) */}
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
-              <div className="grid gap-0 p-4 sm:grid-cols-2 sm:gap-6 sm:p-6">
-                {/* Left column */}
-                <div className="space-y-0 border-zinc-100 sm:border-r sm:pr-6">
-                  {editingField === "name" ? (
-                    <div className="py-3">
-                      <InlineEditBlock
-                        label="Name"
-                        initialValue={info?.name ?? ""}
-                        saving={saving}
-                        onSave={(name) => handleSaveField({ name })}
-                        onCancel={() => setEditingField(null)}
-                      />
-                    </div>
-                  ) : (
-                    <ProfileFieldRow
-                      label="Name"
-                      value={info?.name || info?.username}
-                      editable={!loading}
-                      onEdit={() => setEditingField("name")}
-                    />
-                  )}
-
+              <div className="max-w-xl space-y-0 p-4 sm:p-6">
+                {profileName?.trim() ? (
                   <ProfileFieldRow
-                    label="Username"
-                    value={info?.username}
-                    copyable={Boolean(info?.username?.trim())}
+                    label="Name"
+                    value={profileName}
+                    editable={false}
                   />
+                ) : null}
+                <ProfileFieldRow
+                  label="Username"
+                  value={profileUsername}
+                  copyable={Boolean(profileUsername?.trim())}
+                  editable={false}
+                />
+                <ProfileFieldRow
+                  label="Phone"
+                  value={profilePhone}
+                  editable={false}
+                />
+              </div>
+            </div>
 
-                  {editingField === "phone" ? (
-                    <div className="py-3">
-                      <InlineEditBlock
-                        label="Phone"
-                        initialValue={info?.phone ?? ""}
-                        saving={saving}
-                        onSave={(phone) => handleSaveField({ phone })}
-                        onCancel={() => setEditingField(null)}
-                      />
-                    </div>
-                  ) : (
-                    <ProfileFieldRow
-                      label="Phone"
-                      value={info?.phone}
-                      emptyPlaceholder=""
-                      editable={!loading}
-                      onEdit={() => setEditingField("phone")}
-                    />
-                  )}
-
-                  <div className="flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-sm font-medium text-zinc-500">
-                      Password Auto
-                    </span>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      className="w-full bg-red-600 hover:bg-red-700 sm:w-auto"
-                      onClick={() =>
-                        setMessage({
-                          type: "success",
-                          text: "If your backend exposes this action, wire it here.",
-                        })
-                      }
-                    >
-                      Generate and Email new Password
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Right column */}
-                <div className="space-y-0 sm:pl-0">
-                  {editingField === "email" ? (
-                    <div className="py-3">
-                      <InlineEditBlock
-                        label="Email"
-                        type="email"
-                        initialValue={info?.email ?? ""}
-                        saving={saving}
-                        onSave={(email) => handleSaveField({ email })}
-                        onCancel={() => setEditingField(null)}
-                      />
-                    </div>
-                  ) : (
-                    <ProfileFieldRow
-                      label="Email"
-                      value={info?.email}
-                      editable={!loading}
-                      onEdit={() => setEditingField("email")}
-                    />
-                  )}
-
-                  <ProfileFieldRow label="Role" value={info?.role || "—"} editable={false} />
-
-                  <ProfileFieldRow
-                    label="Password"
-                    value="********"
-                    editable
-                    onEdit={() =>
-                      setMessage({
-                        type: "success",
-                        text: "Password change can be wired to your API when available.",
-                      })
-                    }
+            {/* Change password */}
+            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+              <div className="p-4 sm:p-6">
+                <h3 className="mb-4 text-sm font-semibold text-zinc-900">Password</h3>
+                <form
+                  onSubmit={handleChangePassword}
+                  className="max-w-md space-y-4"
+                  autoComplete="off"
+                >
+                  <Input
+                    type="password"
+                    label="Current password"
+                    value={currentPassword}
+                    onChange={(ev) => setCurrentPassword(ev.target.value)}
+                    className="bg-white"
+                    autoComplete="current-password"
                   />
-                </div>
+                  <Input
+                    type="password"
+                    label="New password"
+                    value={newPassword}
+                    onChange={(ev) => setNewPassword(ev.target.value)}
+                    className="bg-white"
+                    autoComplete="new-password"
+                  />
+                  <Input
+                    type="password"
+                    label="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(ev) => setConfirmPassword(ev.target.value)}
+                    className="bg-white"
+                    autoComplete="new-password"
+                  />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    disabled={passwordSubmitting}
+                  >
+                    {passwordSubmitting ? "Updating…" : "Change password"}
+                  </Button>
+                </form>
               </div>
             </div>
 

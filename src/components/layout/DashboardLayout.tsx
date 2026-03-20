@@ -7,18 +7,40 @@ import { LayoutProps } from "@/types/layout.types";
 import { LAYOUT_BREAKPOINT_MD } from "@/utils/constants";
 import { getBalance } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import type { BalanceResponse } from "@/types/account.types";
 
-function formatCoins(value: unknown): string {
-  if (value === undefined || value === null) return "0";
-  const n = typeof value === "number" ? value : parseInt(String(value), 10);
-  if (Number.isNaN(n)) return "0";
-  return n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
+/** Navbar strip — same GET /account/getbalance as dashboard / balance page */
+function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
+  if (!res || typeof res !== "object") {
+    return {
+      balance: "—",
+      balanceDown: "—",
+      creditLimit: "—",
+      availableCredit: "—",
+    };
+  }
+  const bal =
+    res.balance ??
+    res.cash ??
+    res.chips ??
+    res.balanceUp ??
+    0;
+  const down = res.balanceDown ?? res.give ?? 0;
+  const limit = res.creditLimit ?? 0;
+  const avail = res.availableCredit ?? 0;
+  return {
+    balance: formatCurrency(bal),
+    balanceDown: formatCurrency(down),
+    creditLimit: formatCurrency(limit),
+    availableCredit: formatCurrency(avail),
+  };
 }
 
 export default function DashboardLayout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [cashBalance, setCashBalance] = useState<string | undefined>();
-  const [coins, setCoins] = useState<string | undefined>();
+  const [navbarBalances, setNavbarBalances] = useState(() =>
+    mapBalanceToNavbar(undefined),
+  );
   const [showNotice, setShowNotice] = useState(true);
 
   useEffect(() => {
@@ -32,14 +54,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
     let cancelled = false;
     getBalance()
       .then((res) => {
-        if (cancelled || !res) return;
-        const cash = res.cash ?? res.balance ?? res.chips;
-        if (cash !== undefined && cash !== null) {
-          setCashBalance(formatCurrency(cash));
-        }
-        if (res.coins !== undefined && res.coins !== null) {
-          setCoins(formatCoins(res.coins));
-        }
+        if (cancelled) return;
+        setNavbarBalances(mapBalanceToNavbar(res));
       })
       .catch(() => {
         /* keep Navbar defaults if balance fails */
@@ -91,12 +107,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
             </button>
           </div>
         )}
-        <Navbar
-          onMenuClick={toggleSidebar}
-          cashBalance={cashBalance}
-          coins={coins}
-        />
-        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-zinc-100 p-4 sm:p-5 md:p-6">
+        <Navbar onMenuClick={toggleSidebar} balances={navbarBalances} />
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-zinc-100 p-4 sm:p-6 md:p-7">
           {children}
         </main>
       </div>

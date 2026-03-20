@@ -17,7 +17,7 @@ import {
   TablePagination,
 } from "@/components";
 import { getDownlineSummary } from "@/services/betHistory.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -32,7 +32,12 @@ export default function DownlineSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [parentId, setParentId] = useState(CURRENT_USER_ID);
+  const [parentId, setParentId] = useState("");
+
+  useEffect(() => {
+    const id = getSessionMemberId();
+    if (id) setParentId(id);
+  }, []);
 
   useEffect(() => {
     const range = todayRangeUTC();
@@ -42,13 +47,20 @@ export default function DownlineSummaryPage() {
 
   useEffect(() => {
     if (!fromDate || !toDate) return;
+    const scopeId = parentId.trim() || getSessionMemberId();
+    if (!scopeId) {
+      setData([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     const fromISO = new Date(fromDate + "T00:00:00.000Z").toISOString();
     const toISO = new Date(toDate + "T23:59:59.999Z").toISOString();
     setLoading(true);
     getDownlineSummary(
       { page, pageSize, orderByDesc: true },
       { fromDate: fromISO, toDate: toISO },
-      parentId.trim() || CURRENT_USER_ID
+      scopeId
     )
       .then((res) => {
         const list = res?.data ?? [];

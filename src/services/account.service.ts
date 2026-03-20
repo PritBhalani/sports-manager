@@ -14,6 +14,54 @@ import type {
 
 const ACCOUNT = "/account";
 
+type ApiEnvelope<T> = {
+  success?: boolean;
+  data?: T;
+  messages?: unknown;
+  [key: string]: unknown;
+};
+
+type PagedResult<T> = {
+  result?: T[];
+  pageIndex?: number;
+  pageSize?: number;
+  total?: number;
+  totalPages?: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
+  [key: string]: unknown;
+};
+
+function normalizeList<T>(raw: unknown): ApiListResponse<T> {
+  // Supports both:
+  // - { data: T[], total, page, pageSize }
+  // - { success, data: { result: T[], pageIndex, pageSize, total, ... } }
+  if (!raw || typeof raw !== "object") return { data: [] };
+
+  const direct = raw as ApiListResponse<T>;
+  if (Array.isArray(direct.data)) {
+    return {
+      data: direct.data,
+      total: typeof direct.total === "number" ? direct.total : undefined,
+      page: typeof direct.page === "number" ? direct.page : undefined,
+      pageSize: typeof direct.pageSize === "number" ? direct.pageSize : undefined,
+    };
+  }
+
+  const env = raw as ApiEnvelope<PagedResult<T> | T[]>;
+  if (Array.isArray(env.data)) {
+    return { data: env.data };
+  }
+  const paged = env.data as PagedResult<T> | undefined;
+  const list = Array.isArray(paged?.result) ? paged?.result : [];
+  return {
+    data: list,
+    total: typeof paged?.total === "number" ? paged.total : undefined,
+    page: typeof paged?.pageIndex === "number" ? paged.pageIndex : undefined,
+    pageSize: typeof paged?.pageSize === "number" ? paged.pageSize : undefined,
+  };
+}
+
 type BalanceEnvelope = {
   success?: boolean;
   data?: BalanceResponse;
@@ -82,11 +130,12 @@ export async function getAccountStatement(
   searchQuery: StatementSearchQuery,
   userId: string
 ): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${ACCOUNT}/getaccountstatement`, {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/getaccountstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
   });
+  return normalizeList<Record<string, unknown>>(raw);
 }
 
 /** POST /account/getplstatement – P&L statement (README §2) */
@@ -95,11 +144,12 @@ export async function getPlStatement(
   searchQuery: StatementSearchQuery,
   userId: string
 ): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${ACCOUNT}/getplstatement`, {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/getplstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
   });
+  return normalizeList<Record<string, unknown>>(raw);
 }
 
 /** POST /account/downline – paginated downline list (README §2) */
@@ -108,11 +158,25 @@ export async function getDownline(
   searchQuery: DownlineSearchQuery,
   parentId: string
 ): Promise<ApiListResponse<DownlineRecord>> {
-  return apiPost(`${ACCOUNT}/downline`, {
-    params: { pageSize: 15, ...params },
-    searchQuery,
+  const raw = await apiPost<unknown>(`${ACCOUNT}/downline`, {
+    params: {
+      pageSize: 200,
+      groupBy: "",
+      page: 1,
+      orderBy: "",
+      orderByDesc: false,
+      ...params,
+    },
     id: parentId,
+    searchQuery: {
+      userCode: searchQuery.userCode ?? "",
+      username: searchQuery.username ?? "",
+      status: searchQuery.status ?? "",
+      userId:
+        searchQuery.userId === undefined ? null : searchQuery.userId,
+    },
   });
+  return normalizeList<DownlineRecord>(raw);
 }
 
 /** POST /account/getCreditstatement – credit statement (README §2 Statements) */
@@ -121,11 +185,12 @@ export async function getCreditStatement(
   searchQuery: StatementSearchQuery,
   userId: string
 ): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${ACCOUNT}/getCreditstatement`, {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/getCreditstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
   });
+  return normalizeList<Record<string, unknown>>(raw);
 }
 
 /** GET /account/getparentstatus/{userId} – parent status for user (README §2 Downline) */

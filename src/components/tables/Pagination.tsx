@@ -22,11 +22,9 @@ export default function TablePagination({
   pageSizeOptions = [...PAGE_SIZE_OPTIONS],
 }: TablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const from = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, totalItems);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-white px-4 py-3">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-white px-5 py-3.5 sm:px-6">
       <div className="flex items-center gap-2">
         {onPageSizeChange && (
           <>
@@ -58,39 +56,15 @@ export default function TablePagination({
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
-        <span className="flex items-center gap-1 px-1">
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((p) => {
-              if (totalPages <= 7) return true;
-              if (p === 1 || p === totalPages) return true;
-              if (Math.abs(p - page) <= 1) return true;
-              return false;
-            })
-            .map((p, idx, arr) => {
-              const prev = arr[idx - 1];
-              const showEllipsis = prev !== undefined && p - prev > 1;
-              return (
-                <span key={p} className="flex items-center gap-0.5">
-                  {showEllipsis && (
-                    <span className="px-1 text-zinc-400">…</span>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => onPageChange(p)}
-                    className={`flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-sm font-medium transition-colors ${
-                      p === page
-                        ? "bg-blue-600 text-white"
-                        : "border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                    }`}
-                    aria-label={`Page ${p}`}
-                    aria-current={p === page ? "page" : undefined}
-                  >
-                    {p}
-                  </button>
-                </span>
-              );
-            })}
-        </span>
+        <button
+          type="button"
+          onClick={() => onPageChange(page)}
+          className="flex h-8 min-w-[2rem] items-center justify-center rounded-lg bg-blue-600 px-2 text-sm font-medium text-white"
+          aria-label={`Page ${page}`}
+          aria-current="page"
+        >
+          {page}
+        </button>
         <button
           type="button"
           onClick={() => onPageChange(page + 1)}

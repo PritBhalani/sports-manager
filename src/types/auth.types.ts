@@ -21,6 +21,26 @@ export type LoginBody = {
   password: string;
 };
 
+/** POST /changepassword — session auth */
+export type ChangePasswordBody = {
+  currentPassword: string;
+  newPassword: string;
+  userId: string;
+};
+
+export type ChangePasswordMessage = {
+  responseMessageType?: number;
+  text?: string;
+  numberOfItems?: number;
+};
+
+export type ChangePasswordResponse = {
+  messages?: (string | ChangePasswordMessage)[];
+  success?: boolean;
+  data?: boolean;
+  wsMessageType?: number;
+};
+
 export type AuthenticatedUser = {
   id?: string;
   parentId?: string;

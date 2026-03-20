@@ -8,18 +8,22 @@ import {
   Input,
   Select,
 } from "@/components";
-import { getNextUserCode, addMember, checkUsername } from "@/services/user.service";
+import { getNextUserCode, addMember, checkUsername, getSessionMemberId } from "@/services/user.service";
 import { useDebouncedCallback } from "@/hooks/useDebounce";
-import { CURRENT_USER_ID } from "@/utils/constants";
 
 export default function AddPlayerPage() {
   const [username, setUsername] = useState("");
   const [userCode, setUserCode] = useState("");
-  const [parentId, setParentId] = useState(CURRENT_USER_ID);
+  const [parentId, setParentId] = useState("");
   const [type, setType] = useState("player");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+
+  useEffect(() => {
+    const id = getSessionMemberId();
+    if (id) setParentId(id);
+  }, []);
 
   const doCheckUsername = useDebouncedCallback(
     ((value: string) => {
@@ -59,7 +63,7 @@ export default function AddPlayerPage() {
       await addMember({
         username: username.trim(),
         userCode: userCode.trim() || undefined,
-        parentId: parentId.trim() || CURRENT_USER_ID,
+        parentId: parentId.trim() || getSessionMemberId() || "",
         type,
       });
       setMessage({ type: "success", text: "Player added successfully." });

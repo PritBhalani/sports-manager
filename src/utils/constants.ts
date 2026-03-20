@@ -1,6 +1,3 @@
-/** Placeholder for authenticated user id until auth is wired (README APIs use id/userId) */
-export const CURRENT_USER_ID = "me";
-
 /** Default page size for list APIs and tables */
 export const DEFAULT_PAGE_SIZE = 15;
 

@@ -3,7 +3,14 @@
  * GET /authenticate/captcha, POST /authenticate/login (Basic Auth: username, password)
  */
 import { apiConfig } from "@/config/api.config";
-import type { CaptchaResponse, LoginBody, LoginResponse } from "@/types/auth.types";
+import { apiPost } from "./apiClient";
+import type {
+  CaptchaResponse,
+  ChangePasswordBody,
+  ChangePasswordResponse,
+  LoginBody,
+  LoginResponse,
+} from "@/types/auth.types";
 
 const AUTH = "/authenticate";
 
@@ -33,6 +40,21 @@ type LoginApiEnvelope = {
   };
 };
 
+function joinEnvelopeMessages(messages: unknown): string {
+  if (!Array.isArray(messages)) return "";
+  return messages
+    .map((item) => {
+      if (typeof item === "string" && item.trim()) return item.trim();
+      if (item && typeof item === "object" && "text" in item) {
+        const t = (item as { text?: unknown }).text;
+        return typeof t === "string" && t.trim() ? t.trim() : "";
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
 function getApiErrorMessage(
   payload: unknown,
   fallback: string,
@@ -41,6 +63,8 @@ function getApiErrorMessage(
 
   const maybeMessages = (payload as { messages?: unknown }).messages;
   if (Array.isArray(maybeMessages)) {
+    const fromObjects = joinEnvelopeMessages(maybeMessages);
+    if (fromObjects) return fromObjects;
     const text = maybeMessages
       .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
       .join(", ");
@@ -167,4 +191,23 @@ export async function login(
   }
 
   return normalized;
+}
+
+/**
+ * POST /changepassword
+ * Body: currentPassword, newPassword, userId — session headers (Primary-Token, Token, IMEI).
+ */
+export async function changePassword(body: ChangePasswordBody): Promise<string> {
+  const raw = await apiPost<ChangePasswordResponse>("/changepassword", body);
+  if (!raw || typeof raw !== "object" || raw === null) throw new Error("Invalid response from server.");
+
+  const env = raw as ChangePasswordResponse;
+  const msg = joinEnvelopeMessages(env.messages);
+
+  if (env.success === false) {
+    throw new Error(msg || "Change password failed.");
+  }
+
+  if (msg) return msg;
+  return "Updated successfully.";
 }

@@ -21,17 +21,22 @@ import {
   getCasinoActivity,
   getParentStatus,
 } from "@/services/account.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 export default function AccountActivityPage() {
-  const [userId, setUserId] = useState(CURRENT_USER_ID);
+  const [userId, setUserId] = useState("");
   const [activeTab, setActiveTab] = useState<"inout" | "casino" | "parent">("inout");
   const [inOutData, setInOutData] = useState<Record<string, unknown>[]>([]);
   const [casinoData, setCasinoData] = useState<Record<string, unknown>[]>([]);
   const [parentStatus, setParentStatus] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const id = getSessionMemberId();
+    if (id) setUserId(id);
+  }, []);
 
   const loadInOut = () => {
     if (!userId.trim()) return;

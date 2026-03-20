@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
 import { getDownline } from "@/services/account.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 type Row = Record<string, unknown>;
@@ -36,7 +36,12 @@ export default function DashboardUsersPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
-    getDownline({ page: 1, pageSize: 100, orderByDesc: true }, {}, CURRENT_USER_ID)
+    const userId = getSessionMemberId();
+    if (!userId) {
+      setRows([]);
+      return;
+    }
+    getDownline({ page: 1, pageSize: 100, orderByDesc: true }, {}, userId)
       .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
       .catch(() => setRows([]));
   }, []);

@@ -17,7 +17,7 @@ import {
   TablePagination,
 } from "@/components";
 import { getDownline } from "@/services/account.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { formatDateTime } from "@/utils/date";
 
 const PAGE_SIZE = 15;
@@ -31,11 +31,18 @@ export default function InactivePlayersPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    const userId = getSessionMemberId();
+    if (!userId) {
+      setData([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     getDownline(
       { page, pageSize, orderByDesc: true },
       { username: search.trim() || undefined, status: "-1" },
-      CURRENT_USER_ID
+      userId
     )
       .then((res) => {
         const list = res?.data ?? [];

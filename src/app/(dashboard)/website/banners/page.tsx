@@ -63,7 +63,7 @@ export default function WebsiteBannersPage() {
         }
       />
 
-      <Card className="border-none bg-transparent p-0 shadow-none">
+      <Card padded={false} className="border-none bg-transparent p-0 shadow-none">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {banners.map((banner) => (
             <div

@@ -6,12 +6,42 @@ import { Search, Menu, X, LogOut } from "lucide-react";
 import { getAuthSession } from "@/store/authStore";
 import { useAuth } from "@/hooks/useAuth";
 
+export type NavbarBalances = {
+  balance: string;
+  balanceDown: string;
+  creditLimit: string;
+  availableCredit: string;
+};
+
 type NavbarProps = {
   onMenuClick?: () => void;
-  cashBalance?: string;
-  coins?: string;
+  balances?: NavbarBalances;
   userInitial?: string;
 };
+
+const DEFAULT_BALANCES: NavbarBalances = {
+  balance: "—",
+  balanceDown: "—",
+  creditLimit: "—",
+  availableCredit: "—",
+};
+
+function BalanceStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-[4.25rem] shrink-0 text-right md:min-w-[5rem]">
+      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+        {label}
+      </p>
+      <p className="text-sm font-semibold tabular-nums text-zinc-900">{value}</p>
+    </div>
+  );
+}
 
 function roleLabel(session: ReturnType<typeof getAuthSession>): string {
   const claims = session.claims ?? [];
@@ -50,10 +80,10 @@ function timezoneLabel(): string {
 
 export default function Navbar({
   onMenuClick,
-  cashBalance = "—",
-  coins = "—",
+  balances: balancesProp,
   userInitial,
 }: NavbarProps) {
+  const balances = balancesProp ?? DEFAULT_BALANCES;
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -129,30 +159,35 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Right: balance (hidden on xs), coins, profile */}
-      <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
-        <div className="hidden items-center gap-4 sm:flex md:gap-6">
-          <div className="text-right">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-              Cash
-            </p>
-            <p className="text-sm font-semibold tabular-nums text-zinc-900">
-              {cashBalance}
-            </p>
-          </div>
-          <div className="h-8 w-px bg-zinc-200" />
-          <div className="text-right">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-              Coins
-            </p>
-            <p className="text-sm font-semibold tabular-nums text-zinc-900">
-              {coins}
-            </p>
-          </div>
+      {/* Right: balance strip (GET /account/getbalance), profile */}
+      <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="hidden max-w-[min(52vw,28rem)] items-center gap-2 overflow-x-auto sm:flex md:max-w-none md:gap-3 lg:gap-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <BalanceStat label="Balance" value={balances.balance} />
+          <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
+          <BalanceStat label="Bal. down" value={balances.balanceDown} />
+          <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
+          <BalanceStat label="Credit limit" value={balances.creditLimit} />
+          <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
+          <BalanceStat label="Avail. credit" value={balances.availableCredit} />
         </div>
-        {/* Compact balance on very small screens */}
-        <div className="flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2 py-1.5 text-zinc-700 sm:hidden">
-          <span className="text-xs font-medium tabular-nums">{cashBalance}</span>
+        {/* Compact: primary balance + available credit on very small screens */}
+        <div className="flex max-w-[42vw] min-w-0 flex-col gap-0.5 rounded-lg bg-zinc-100 px-2 py-1.5 text-zinc-700 sm:hidden">
+          <div className="flex items-baseline justify-between gap-2 text-[10px]">
+            <span className="shrink-0 font-medium uppercase tracking-wide text-zinc-500">
+              Bal
+            </span>
+            <span className="truncate font-semibold tabular-nums text-zinc-900">
+              {balances.balance}
+            </span>
+          </div>
+          <div className="flex items-baseline justify-between gap-2 text-[10px]">
+            <span className="shrink-0 font-medium uppercase tracking-wide text-zinc-500">
+              Avail
+            </span>
+            <span className="truncate font-semibold tabular-nums text-zinc-900">
+              {balances.availableCredit}
+            </span>
+          </div>
         </div>
         <button
           ref={triggerRef}
@@ -216,21 +251,37 @@ export default function Navbar({
               </Link>
             </div>
 
-            <div className="mt-4 flex divide-x divide-zinc-200 rounded-lg bg-zinc-100 px-3 py-3">
-              <div className="flex flex-1 flex-col items-center pr-3 text-center">
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-zinc-100 px-3 py-3">
+              <div className="flex flex-col items-center text-center">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  Cash
+                  Balance
                 </span>
                 <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
-                  {cashBalance}
+                  {balances.balance}
                 </span>
               </div>
-              <div className="flex flex-1 flex-col items-center pl-3 text-center">
+              <div className="flex flex-col items-center text-center">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  Coins
+                  Bal. down
                 </span>
                 <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
-                  {coins}
+                  {balances.balanceDown}
+                </span>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                  Credit limit
+                </span>
+                <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
+                  {balances.creditLimit}
+                </span>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                  Avail. credit
+                </span>
+                <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
+                  {balances.availableCredit}
                 </span>
               </div>
             </div>

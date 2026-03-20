@@ -18,9 +18,9 @@ import {
 } from "@/components";
 import { getAccountStatement } from "@/services/account.service";
 import { usePagination } from "@/hooks/usePagination";
-import { CURRENT_USER_ID } from "@/utils/constants";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { getMyInfoPathId, getSessionMemberId } from "@/services/user.service";
 
 export default function AccountStatementPage() {
   const { page, pageSize, setPage, setPageSize, pageSizeOptions } = usePagination();
@@ -30,6 +30,9 @@ export default function AccountStatementPage() {
   const [error, setError] = useState<string | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
+  const userId =
+        getSessionMemberId() || "69803a1fda70c5ee87bf0493";  
 
   useEffect(() => {
     const range = todayRangeUTC();
@@ -45,7 +48,7 @@ export default function AccountStatementPage() {
     getAccountStatement(
       { page, pageSize, orderByDesc: true },
       { fromDate: fromISO, toDate: toISO },
-      CURRENT_USER_ID
+      userId
     )
       .then((res) => {
         const list = res?.data ?? [];

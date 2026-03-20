@@ -45,7 +45,7 @@ export function TableHead({
         : "text-left";
   return (
     <th
-      className={`px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-600 ${alignClass} ${className}`}
+      className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-600 sm:px-5 sm:py-4 ${alignClass} ${className}`}
     >
       {children}
     </th>
@@ -107,7 +107,7 @@ export function TableEmpty({
     <tr>
       <td
         colSpan={colSpan}
-        className="px-4 py-12 text-center text-sm text-zinc-500"
+        className="px-5 py-14 text-center text-sm text-zinc-500"
       >
         {message}
       </td>

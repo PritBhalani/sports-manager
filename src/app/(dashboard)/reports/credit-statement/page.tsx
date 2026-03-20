@@ -17,7 +17,7 @@ import {
   TablePagination,
 } from "@/components";
 import { getCreditStatement } from "@/services/account.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -41,13 +41,20 @@ export default function CreditStatementPage() {
 
   useEffect(() => {
     if (!fromDate || !toDate) return;
+    const userId = getSessionMemberId();
+    if (!userId) {
+      setData([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     const fromISO = new Date(fromDate + "T00:00:00.000Z").toISOString();
     const toISO = new Date(toDate + "T23:59:59.999Z").toISOString();
     setLoading(true);
     getCreditStatement(
       { page, pageSize, orderByDesc: true },
       { fromDate: fromISO, toDate: toISO },
-      CURRENT_USER_ID
+      userId
     )
       .then((res) => {
         const list = res?.data ?? [];

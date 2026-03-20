@@ -77,6 +77,7 @@ export type DownlineSearchQuery = {
   userCode?: string;
   username?: string;
   status?: string;
-  userId?: string;
+  /** API accepts `null` for “no filter” */
+  userId?: string | null;
 };
 export type DownlineRecord = Record<string, unknown>;

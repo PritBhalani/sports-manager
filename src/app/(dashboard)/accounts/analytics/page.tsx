@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
 import { getAccountStatement } from "@/services/account.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
 
@@ -26,11 +26,13 @@ export default function AccountsAnalyticsPage() {
 
   useEffect(() => {
     if (!fromDate || !toDate) return;
+    const userId = getSessionMemberId();
+    if (!userId) return;
     const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
     getAccountStatement(
       { page: 1, pageSize: 100, orderByDesc: true },
       { fromDate: fromISO, toDate: toISO },
-      CURRENT_USER_ID,
+      userId,
     )
       .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
       .catch(() => setRows([]));

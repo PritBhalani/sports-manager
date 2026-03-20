@@ -18,7 +18,7 @@ import {
 } from "@/components";
 import { getPlStatement } from "@/services/account.service";
 import { usePagination } from "@/hooks/usePagination";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
 
@@ -39,13 +39,19 @@ export default function ProfitLossPage() {
 
   useEffect(() => {
     if (!fromDate || !toDate) return;
+    const userId = getSessionMemberId();
+    if (!userId) {
+      setError("Not logged in or missing user id.");
+      setLoading(false);
+      return;
+    }
     const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
     setError(null);
     setLoading(true);
     getPlStatement(
       { page, pageSize, orderByDesc: true },
       { fromDate: fromISO, toDate: toISO },
-      CURRENT_USER_ID
+      userId
     )
       .then((res) => {
         const list = res?.data ?? [];

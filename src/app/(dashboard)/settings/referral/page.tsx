@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { PageHeader, Card, Button, Input } from "@/components";
-import { getReferralSetting, updateReferralSetting } from "@/services/user.service";
-import { CURRENT_USER_ID } from "@/utils/constants";
+import { getReferralSetting, getSessionMemberId, updateReferralSetting } from "@/services/user.service";
 
 export default function ReferralSettingsPage() {
   const [data, setData] = useState<Record<string, unknown>>({});
@@ -20,7 +19,12 @@ export default function ReferralSettingsPage() {
   });
 
   useEffect(() => {
-    getReferralSetting(CURRENT_USER_ID)
+    const userId = getSessionMemberId();
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    getReferralSetting(userId)
       .then((res) => {
         setData(res ?? {});
         setForm({
@@ -41,8 +45,13 @@ export default function ReferralSettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
+      const userId = getSessionMemberId();
+      if (!userId) {
+        setMessage({ type: "error", text: "Not logged in." });
+        return;
+      }
       await updateReferralSetting({
-        userId: CURRENT_USER_ID,
+        userId,
         applyAll: form.applyAll,
         bonus: form.bonus ? Number(form.bonus) : undefined,
         lockingDays: form.lockingDays ? Number(form.lockingDays) : undefined,

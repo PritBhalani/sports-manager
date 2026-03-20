@@ -52,6 +52,87 @@ export function getSessionMemberId(): string | null {
 }
 
 /**
+ * Same as {@link getSessionMemberId} — use for API `userId` / `id` fields from the logged-in session.
+ * Replaces placeholder `CURRENT_USER_ID` / `"me"`.
+ */
+export function getCurrentUserId(): string | null {
+  return getSessionMemberId();
+}
+
+export type LoginProfileFields = {
+  name?: string;
+  username?: string;
+  phone?: string;
+};
+
+function strField(v: unknown): string | undefined {
+  if (v == null) return undefined;
+  const s = String(v).trim();
+  return s || undefined;
+}
+
+function pickDisplayNameFromUser(
+  obj: Record<string, unknown> | undefined,
+): string | undefined {
+  if (!obj) return undefined;
+  return strField(obj.name) ?? strField(obj.fullName) ?? strField(obj.displayName);
+}
+
+function pickUsernameFromUser(obj: Record<string, unknown> | undefined): string | undefined {
+  if (!obj) return undefined;
+  return strField(obj.username) ?? strField(obj.userName) ?? strField(obj.userCode);
+}
+
+function pickPhoneFromUser(obj: Record<string, unknown> | undefined): string | undefined {
+  if (!obj) return undefined;
+  return (
+    strField(obj.phone) ??
+    strField(obj.mobile) ??
+    strField(obj.phoneNumber) ??
+    strField(obj.contactNumber) ??
+    strField(obj.telephone)
+  );
+}
+
+/**
+ * Name / username / phone from the persisted login session (`user` + `loginData.user`).
+ * Use on Profile before or alongside GET /user/getmyinfo.
+ */
+export function getLoginProfileFromSession(): LoginProfileFields {
+  const s = getAuthSession();
+  const loginData = s.loginData as Record<string, unknown> | undefined;
+
+  const fromSessionUser =
+    s.user && typeof s.user === "object"
+      ? (s.user as Record<string, unknown>)
+      : undefined;
+  const fromLoginDataUser =
+    loginData?.user && typeof loginData.user === "object"
+      ? (loginData.user as Record<string, unknown>)
+      : undefined;
+
+  const username =
+    pickUsernameFromUser(fromSessionUser) ??
+    pickUsernameFromUser(fromLoginDataUser) ??
+    strField(loginData?.username);
+
+  const phone =
+    pickPhoneFromUser(fromSessionUser) ??
+    pickPhoneFromUser(fromLoginDataUser) ??
+    pickPhoneFromUser(
+      loginData && typeof loginData === "object"
+        ? (loginData as Record<string, unknown>)
+        : undefined,
+    );
+
+  const name =
+    pickDisplayNameFromUser(fromSessionUser) ??
+    pickDisplayNameFromUser(fromLoginDataUser);
+
+  return { name, username, phone };
+}
+
+/**
  * @deprecated Use getMyInfoPathId() — README getmyinfo path is parentId.
  * Kept for any code still importing the old name.
  */
