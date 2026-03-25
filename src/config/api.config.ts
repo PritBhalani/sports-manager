@@ -10,7 +10,7 @@ const isBrowser = typeof window !== "undefined";
  */
 const upstreamBaseUrl =
   (env?.NEXT_PUBLIC_API_BASE as string) ||
-  "https://29abc00c5a14.one247.io";
+  "https://5043ee2d3639.igamingpro.app";
 
 /**
  * Browser requests go through the local Next.js proxy to avoid CORS.
