@@ -39,7 +39,7 @@ export default function MarketsManagePage() {
     <div className="min-w-0">
       <PageHeader
         title="Manage Market"
-        breadcrumbs={["Markets", "Manage"]}
+        breadcrumbs={["Casino", "Games"]}
       />
       <FilterBar className="mb-4">
         <Input

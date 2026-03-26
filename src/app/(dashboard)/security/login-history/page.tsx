@@ -69,7 +69,7 @@ export default function LoginHistoryPage() {
     <div className="min-w-0">
       <PageHeader
         title="Login History"
-        breadcrumbs={["Security", "Login History"]}
+        breadcrumbs={["Security", "User Groups"]}
       />
       {error && (
         <p className="mb-2 text-sm text-red-600" role="alert">

@@ -12,16 +12,25 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-sm border border-zinc-200 bg-white">
       <table className={`${tableBase} ${className}`}>{children}</table>
     </div>
   );
 }
 
-export function TableHeader({ children }: { children: ReactNode }) {
+export function TableHeader({
+  children,
+  className = "",
+}: {
+  children: ReactNode;
+  /** Applied to the header row (e.g. `bg-white` for a white header bar). */
+  className?: string;
+}) {
   return (
     <thead>
-      <tr className="border-b border-zinc-200 bg-zinc-50/80">
+      <tr
+        className={`border-b border-zinc-200 ${className || "bg-zinc-50/80"}`}
+      >
         {children}
       </tr>
     </thead>

@@ -49,7 +49,7 @@ export default function WithdrawPage() {
     <div className="min-w-0">
       <PageHeader
         title="Manual Withdraw"
-        breadcrumbs={["Transactions", "Manual Withdraw"]}
+        breadcrumbs={["Transactions", "Manual"]}
       />
 
       <Card title="Withdraw chips (POST /account/out)" className="max-w-lg">

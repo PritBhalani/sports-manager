@@ -62,12 +62,60 @@ function normalizeList<T>(raw: unknown): ApiListResponse<T> {
   };
 }
 
+export type OffPayInSearchQuery = {
+  status: string;
+  fromDate: string;
+  toDate: string;
+  userId: string;
+};
+
+export type OffPayInRecord = {
+  id: string;
+  amount: number;
+  bonusAmount?: number;
+  acNo?: string;
+  detailType?: number;
+  utrNo?: string;
+  createdOn?: string;
+  updatedOn?: string;
+  comment?: string;
+  status?: number;
+  user?: {
+    id?: string;
+    username?: string;
+    parent?: {
+      username?: string;
+    };
+  };
+};
+
 type BalanceEnvelope = {
   success?: boolean;
   data?: BalanceResponse;
   messages?: unknown;
   [key: string]: unknown;
 };
+
+function readEnvelopeErrorMessage(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "Request failed.";
+  const p = payload as { messages?: unknown; message?: unknown };
+  if (Array.isArray(p.messages) && p.messages.length > 0) {
+    const joined = p.messages
+      .map((m) => {
+        if (typeof m === "string") return m;
+        if (m && typeof m === "object" && "text" in m) {
+          const t = (m as { text?: unknown }).text;
+          return typeof t === "string" ? t : "";
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join(", ");
+    if (joined) return joined;
+  }
+  if (typeof p.message === "string" && p.message.trim()) return p.message;
+  return "Request failed.";
+}
 
 /** GET /account/getbalance – balance for authenticated user */
 export async function getBalance(): Promise<BalanceResponse> {
@@ -158,6 +206,8 @@ export async function getDownline(
   searchQuery: DownlineSearchQuery,
   parentId: string
 ): Promise<ApiListResponse<DownlineRecord>> {
+  const normalizedUsername =
+    (searchQuery.username ?? "").trim() || (searchQuery.userCode ?? "").trim();
   const raw = await apiPost<unknown>(`${ACCOUNT}/downline`, {
     params: {
       pageSize: 200,
@@ -169,8 +219,9 @@ export async function getDownline(
     },
     id: parentId,
     searchQuery: {
-      userCode: searchQuery.userCode ?? "",
-      username: searchQuery.username ?? "",
+      // API search currently resolves both username and userCode input via username.
+      userCode: "",
+      username: normalizedUsername,
       status: searchQuery.status ?? "",
       userId:
         searchQuery.userId === undefined ? null : searchQuery.userId,
@@ -200,16 +251,74 @@ export async function getParentStatus(userId: string): Promise<Record<string, un
 
 /** GET /account/getinoutactivity/{userId} – in/out activity (README §2) */
 export async function getInOutActivity(userId: string): Promise<Record<string, unknown>[]> {
-  const res = await apiGet<Record<string, unknown>[] | { data?: Record<string, unknown>[] }>(
+  const res = await apiGet<
+    Record<string, unknown>[] | { data?: Record<string, unknown>[]; success?: boolean; messages?: unknown }
+  >(
     `${ACCOUNT}/getinoutactivity/${encodeURIComponent(userId)}`
   );
-  return Array.isArray(res) ? res : res?.data ?? [];
+  if (Array.isArray(res)) return res;
+  if (res && typeof res === "object" && "success" in res && res.success === false) {
+    throw new Error(readEnvelopeErrorMessage(res));
+  }
+  return res?.data ?? [];
 }
 
 /** GET /account/getcasinoactivity/{userId} – casino activity (README §2) */
 export async function getCasinoActivity(userId: string): Promise<Record<string, unknown>[]> {
-  const res = await apiGet<Record<string, unknown>[] | { data?: Record<string, unknown>[] }>(
+  const res = await apiGet<
+    Record<string, unknown>[] | { data?: Record<string, unknown>[]; success?: boolean; messages?: unknown }
+  >(
     `${ACCOUNT}/getcasinoactivity/${encodeURIComponent(userId)}`
   );
-  return Array.isArray(res) ? res : res?.data ?? [];
+  if (Array.isArray(res)) return res;
+  if (res && typeof res === "object" && "success" in res && res.success === false) {
+    throw new Error(readEnvelopeErrorMessage(res));
+  }
+  return res?.data ?? [];
+}
+
+/**
+ * POST /payment/getoffpayin
+ * Deposit request list used in the "Request Deposit" page.
+ */
+export async function getOffPayIn(
+  params: ListParams,
+  searchQuery: OffPayInSearchQuery
+): Promise<ApiListResponse<OffPayInRecord>> {
+  const raw = await apiPost<unknown>("/payment/getoffpayin", {
+    params: {
+      pageSize: 50,
+      groupBy: "",
+      page: 1,
+      orderBy: "",
+      orderByDesc: false,
+      ...params,
+    },
+    searchQuery,
+  });
+
+  return normalizeList<OffPayInRecord>(raw);
+}
+
+/**
+ * POST /payment/getoffpayout
+ * Withdraw request list — same body shape and row shape as payin.
+ */
+export async function getOffPayOut(
+  params: ListParams,
+  searchQuery: OffPayInSearchQuery
+): Promise<ApiListResponse<OffPayInRecord>> {
+  const raw = await apiPost<unknown>("/payment/getoffpayout", {
+    params: {
+      pageSize: 50,
+      groupBy: "",
+      page: 1,
+      orderBy: "",
+      orderByDesc: false,
+      ...params,
+    },
+    searchQuery,
+  });
+
+  return normalizeList<OffPayInRecord>(raw);
 }

@@ -125,7 +125,7 @@ function DetailContent() {
   if (!userId) {
     return (
       <div className="min-w-0">
-        <PageHeader title="User Detail" breadcrumbs={["Players", "Detail"]} />
+        <PageHeader title="User Detail" breadcrumbs={["Reports", "Losing Commission"]} />
         <Card>
           <p className="text-sm text-zinc-500">Add ?userId=... to the URL or open from Players list.</p>
         </Card>
@@ -137,7 +137,7 @@ function DetailContent() {
     <div className="min-w-0">
       <PageHeader
         title="User Detail"
-        breadcrumbs={["Players", "Detail"]}
+        breadcrumbs={["Reports", "Losing Commission"]}
         description={`User ID: ${userId}`}
       />
       {loadError && (

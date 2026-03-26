@@ -139,7 +139,7 @@ export default function DataGrid<T extends Record<string, unknown>>({
   return (
     <div className="space-y-4 sm:space-y-5">
       {enableSearch && (
-        <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2">
+        <div className="flex items-center gap-2 rounded-sm border border-zinc-200 bg-white px-3 py-2">
           <Search className="h-4 w-4 text-zinc-400" aria-hidden />
           <input
             type="text"

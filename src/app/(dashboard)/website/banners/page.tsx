@@ -51,7 +51,7 @@ export default function WebsiteBannersPage() {
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Website Banners"
-        breadcrumbs={["Web", "Banners"]}
+        breadcrumbs={["Website", "Banners"]}
         action={
           <Button
             variant="primary"
@@ -119,7 +119,7 @@ export default function WebsiteBannersPage() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-900"
                     aria-label="Edit banner"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden />
@@ -151,7 +151,7 @@ export default function WebsiteBannersPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-zinc-200 bg-white text-xs font-medium text-zinc-600 disabled:opacity-40"
+              className="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-sm border border-zinc-200 bg-white text-xs font-medium text-zinc-600 disabled:opacity-40"
               disabled
             >
               {"<"}
@@ -159,7 +159,7 @@ export default function WebsiteBannersPage() {
             <span className="text-xs font-medium text-zinc-700">1</span>
             <button
               type="button"
-              className="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-md border border-zinc-200 bg-white text-xs font-medium text-zinc-600 disabled:opacity-40"
+              className="inline-flex h-8 min-w-[2rem] items-center justify-center rounded-sm border border-zinc-200 bg-white text-xs font-medium text-zinc-600 disabled:opacity-40"
               disabled
             >
               {">"}

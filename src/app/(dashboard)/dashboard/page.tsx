@@ -56,17 +56,20 @@ export default function DashboardPage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <h1 className="truncate text-xl font-bold text-zinc-900 sm:text-2xl">
-          Welcome Back, Sports Manager#1
-        </h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold text-zinc-900 sm:text-2xl">
+            Welcome Back, Sports Manager#1
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500">Dashboard</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex rounded-lg border border-zinc-200 bg-white p-0.5" role="tablist">
+          <div className="flex rounded-sm border border-zinc-200 bg-white p-0.5" role="tablist">
             <button
               type="button"
               role="tab"
               aria-selected={activeTab === "details"}
               onClick={() => setActiveTab("details")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === "details"
                   ? "bg-zinc-900 text-white"
                   : "text-zinc-600 hover:bg-zinc-100"
@@ -79,7 +82,7 @@ export default function DashboardPage() {
               role="tab"
               aria-selected={activeTab === "visual"}
               onClick={() => setActiveTab("visual")}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === "visual"
                   ? "bg-zinc-900 text-white"
                   : "text-zinc-600 hover:bg-zinc-100"
@@ -88,7 +91,7 @@ export default function DashboardPage() {
               Visual
             </button>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2">
+          <div className="flex items-center gap-2 rounded-sm border border-zinc-200 bg-white px-3 py-2">
             <Calendar className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
             <select
               value={period}

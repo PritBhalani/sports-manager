@@ -22,9 +22,9 @@ const variantStyles: Record<
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "h-8 gap-1.5 rounded-lg px-3 text-xs",
-  md: "h-9 gap-2 rounded-lg px-4 text-sm",
-  lg: "h-10 gap-2.5 rounded-lg px-5 text-sm",
+  sm: "h-8 gap-1.5 rounded-sm px-3 text-xs",
+  md: "h-9 gap-2 rounded-sm px-4 text-sm",
+  lg: "h-10 gap-2.5 rounded-sm px-5 text-sm",
 };
 
 const iconSizeStyles: Record<ButtonSize, string> = {

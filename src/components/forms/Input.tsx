@@ -3,7 +3,7 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
 
 const baseClass =
-  "h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:bg-zinc-50 disabled:text-zinc-500";
+  "h-9 w-full rounded-sm border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:bg-zinc-50 disabled:text-zinc-500";
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;

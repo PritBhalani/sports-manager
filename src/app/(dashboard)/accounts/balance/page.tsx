@@ -6,6 +6,8 @@ import { Search } from "lucide-react";
 import StatsCard from "@/components/cards/StatsCard";
 import { getBalance, getBalanceDetail } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { getAuthSession } from "@/store/authStore";
+import type { LoginResponse } from "@/types/auth.types";
 
 export default function BalancePage() {
   const [balance, setBalance] = useState<{ balance?: number; chips?: number; cash?: number } | null>(null);
@@ -13,6 +15,14 @@ export default function BalancePage() {
   const [detailBalance, setDetailBalance] = useState<typeof balance>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
+  // Important: don't read localStorage-backed session during initial render.
+  // Otherwise server renders "—" and client immediately updates to "INR",
+  // causing a hydration mismatch.
+  const [currency, setCurrency] = useState<LoginResponse["currency"] | undefined>(undefined);
+
+  useEffect(() => {
+    setCurrency(getAuthSession().currency);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,7 +54,7 @@ export default function BalancePage() {
     <div className="min-w-0">
       <PageHeader
         title="Balance"
-        breadcrumbs={["Accounts", "Balance"]}
+        breadcrumbs={["Website", "Currency"]}
       />
 
       <FilterBar className="mb-4">
@@ -83,10 +93,57 @@ export default function BalancePage() {
         )}
       </div>
 
-      <Card title="Balance info" className="mt-4">
-        <p className="text-sm text-zinc-600">
-          Use the lookup to check balance for a specific user. Main card shows the authenticated user’s balance from{" "}
-          <code className="rounded bg-zinc-100 px-1 text-xs">GET /account/getbalance</code>.
+      <Card title="Currency info" className="mt-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Currency
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">
+              {currency?.code ?? currency?.name ?? "—"}
+            </p>
+            {currency?.name &&
+              currency?.code &&
+              currency.name !== currency.code && (
+                <p className="mt-1 text-xs text-zinc-600">{currency.name}</p>
+              )}
+          </div>
+
+          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Rate
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">
+              {typeof currency?.rate === "number" && currency.rate !== 0
+                ? formatCurrency(currency.rate)
+                : "—"}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Fractional
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">
+              {typeof (currency as any)?.fractional === "number" &&
+              (currency as any).fractional !== 0
+                ? String((currency as any).fractional)
+                : "—"}
+            </p>
+          </div>
+
+          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+              Primary
+            </p>
+            <p className="mt-1 text-sm font-semibold text-zinc-900">
+              {(currency as any)?.isPrimary ? "Yes" : "—"}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-zinc-600">
+          Currency object shown is from the login response (<code className="rounded bg-zinc-100 px-1 text-xs">POST /authenticate/login</code>).
         </p>
       </Card>
     </div>

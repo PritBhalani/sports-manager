@@ -60,7 +60,7 @@ export default function InactivePlayersPage() {
     <div className="min-w-0">
       <PageHeader
         title="Inactive Players"
-        breadcrumbs={["Players", "Inactive"]}
+        breadcrumbs={["Reports", "Inactive Players"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       <FilterBar className="mb-4">

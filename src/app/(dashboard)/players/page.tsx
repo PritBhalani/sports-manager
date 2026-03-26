@@ -2,12 +2,34 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { PageHeader, Card, Button, Input, Select, TablePagination } from "@/components";
-import { Download, Filter } from "lucide-react";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
+  Select,
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TablePagination,
+} from "@/components";
+import {
+  Download,
+  Filter,
+  Eye,
+  GitBranch,
+  LockOpen,
+  Landmark,
+  Code2,
+  Percent,
+  Settings,
+} from "lucide-react";
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatDateTime } from "@/utils/date";
-import { formatCurrency } from "@/utils/formatCurrency";
 import type { DownlineRecord } from "@/types/account.types";
 
 /** Map UI filter to API `searchQuery.status` (empty = no filter / all). */
@@ -22,6 +44,12 @@ function rowStatusLabel(status: unknown): { text: string; active: boolean } {
   if (n === 2 || n === 1) return { text: "ACTIVE", active: true };
   if (n === -1 || Number.isNaN(n)) return { text: "INACTIVE", active: false };
   return { text: String(status ?? "—"), active: false };
+}
+
+function formatUiNumber(value: unknown): string {
+  const n = typeof value === "number" ? value : Number(value ?? 0);
+  if (!Number.isFinite(n)) return "0";
+  return Math.round(n).toLocaleString("en-IN");
 }
 
 export default function PlayersPage() {
@@ -154,7 +182,7 @@ export default function PlayersPage() {
             </Button>
             <Link
               href="/players/add"
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border-transparent bg-blue-600 px-3 text-xs font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-sm border-transparent bg-blue-600 px-3 text-xs font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
               Create
             </Link>
@@ -163,15 +191,6 @@ export default function PlayersPage() {
 
         {/* Table */}
         <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-          <div className="hidden bg-zinc-50 px-4 py-3 text-xs font-semibold text-zinc-500 sm:grid sm:grid-cols-8 sm:px-5">
-            <span className="col-span-2">Names/Username</span>
-            <span>User code</span>
-            <span>Status</span>
-            <span>Wallets</span>
-            <span>Mobile</span>
-            <span>Last login</span>
-            <span>Registered</span>
-          </div>
           {loading ? (
             <div className="px-4 py-8 text-center text-sm text-zinc-500">Loading…</div>
           ) : rows.length === 0 ? (
@@ -179,74 +198,99 @@ export default function PlayersPage() {
               No players yet.
             </div>
           ) : (
-            <div className="divide-y divide-zinc-100">
-              {rows.map((row) => {
-                const id = String(row.id ?? "");
-                const uname = String(row.username ?? "—");
-                const code = String(row.userCode ?? "—");
-                const { text: statusText, active: statusActive } = rowStatusLabel(row.status);
-                const bal = row.balanceInfo as Record<string, unknown> | undefined;
-                const cash = typeof bal?.balance === "number" ? bal.balance : Number(bal?.balance ?? 0);
-                const credit =
-                  typeof bal?.availableCredit === "number"
-                    ? bal.availableCredit
-                    : Number(bal?.availableCredit ?? 0);
-                const mobile = String(row.mobile ?? "—");
-                return (
-                  <div
-                    key={id || uname}
-                    className="px-4 py-4 text-sm text-zinc-800 sm:grid sm:grid-cols-8 sm:items-center sm:gap-3 sm:px-5"
-                  >
-                    <div className="col-span-2 space-y-1">
-                      <div className="font-medium text-zinc-900">{uname}</div>
-                      {code !== "—" ? (
-                        <button
-                          type="button"
-                          className="text-left text-xs font-medium text-blue-600 hover:underline"
-                        >
-                          {code}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-zinc-400">—</span>
-                      )}
-                    </div>
-                    <div className="hidden text-sm text-zinc-700 sm:block">{code}</div>
-                    <div className="mt-1 sm:mt-0">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          statusActive
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-red-50 text-red-700"
-                        }`}
-                      >
-                        {statusText}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-col gap-2 text-xs text-zinc-700 sm:mt-0 sm:flex-row sm:flex-wrap sm:items-center">
-                      <span className="inline-flex items-center rounded-full border border-zinc-200 px-2 py-0.5">
-                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                          Balance
-                        </span>
-                        <span className="tabular-nums">{formatCurrency(cash)}</span>
-                      </span>
-                      <span className="inline-flex items-center rounded-full border border-zinc-200 px-2 py-0.5">
-                        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                          Avail.
-                        </span>
-                        <span className="tabular-nums">{formatCurrency(credit)}</span>
-                      </span>
-                    </div>
-                    <div className="mt-2 text-xs text-zinc-600 sm:mt-0">{mobile}</div>
-                    <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
-                      {formatDateTime(row.lastLogin)}
-                    </div>
-                    <div className="mt-2 space-y-1 text-xs text-zinc-700 sm:mt-0">
-                      {formatDateTime(row.createdOn)}
-                      <div className="text-[11px] leading-relaxed text-zinc-400">signup</div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-white">
+                  <TableHead className="font-bold text-zinc-700">Username</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Downline</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Betting Status</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Status</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Details</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Net Exposure</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Take</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Give</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Balance</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Credit Limit</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Available Credit</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Actions</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Created</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Last Login</TableHead>
+                  <TableHead className="font-bold text-zinc-700">Last IP</TableHead>
+                </TableHeader>
+                <TableBody>
+                  {rows.map((row) => {
+                    const id = String(row.id ?? "");
+                    const uname = String(row.username ?? "—");
+                    const { text: statusText, active: statusActive } = rowStatusLabel(row.status);
+                    const bal = row.balanceInfo as Record<string, unknown> | undefined;
+                    const bettingStatus = String(row.bettingStatus ?? row.betStatus ?? "—");
+                    const exposure = Number(
+                      bal?.exposure ?? row.exposure ?? row.netExposure ?? 0,
+                    );
+                    const take = Number(bal?.take ?? row.take ?? 0);
+                    const give = Number(bal?.give ?? row.give ?? 0);
+                    const balance = Number(bal?.balance ?? row.balance ?? 0);
+                    const creditLimit = Number(
+                      bal?.creditLimit ?? row.creditLimit ?? 0,
+                    );
+                    const availableCredit = Number(
+                      bal?.availableCredit ?? row.availableCredit ?? 0,
+                    );
+                    const lastIp = String(row.remoteIp ?? row.ip ?? row.lastIp ?? "—");
+                    const mobile = String(row.mobile ?? "");
+
+                    return (
+                      <TableRow key={id || uname}>
+                        <TableCell className="font-medium text-zinc-900">
+                          <div>{uname}</div>
+                          <div className="text-xs text-zinc-500">
+                            {mobile ? `(${mobile})` : "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <GitBranch className="h-4 w-4 text-zinc-500" aria-hidden />
+                        </TableCell>
+                        <TableCell>
+                          <LockOpen className="h-4 w-4 text-zinc-500" aria-hidden />
+                        </TableCell>
+                        <TableCell className={statusActive ? "font-semibold text-emerald-600" : "font-semibold text-red-600"}>
+                          {statusText}
+                        </TableCell>
+                        <TableCell>
+                          {id ? (
+                            <Link href={`/players/${id}`} className="text-blue-600 hover:underline">
+                              <Eye className="h-4 w-4" aria-hidden />
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </TableCell>
+                        <TableCell className="tabular-nums font-semibold text-emerald-600">{formatUiNumber(exposure)}</TableCell>
+                        <TableCell className="tabular-nums font-semibold text-emerald-600">{formatUiNumber(take)}</TableCell>
+                        <TableCell className="tabular-nums font-semibold text-red-600">{formatUiNumber(give)}</TableCell>
+                        <TableCell className="tabular-nums font-semibold text-zinc-900">{formatUiNumber(balance)}</TableCell>
+                        <TableCell className="tabular-nums font-semibold text-zinc-900">{formatUiNumber(creditLimit)}</TableCell>
+                        <TableCell className="tabular-nums font-semibold text-zinc-900">{formatUiNumber(availableCredit)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-blue-600">
+                            <Landmark className="h-4 w-4" aria-hidden />
+                            <Code2 className="h-4 w-4" aria-hidden />
+                            <Percent className="h-4 w-4" aria-hidden />
+                            <Settings className="h-4 w-4" aria-hidden />
+                          </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-zinc-700">
+                          {formatDateTime(row.createdOn)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-xs text-zinc-700">
+                          {formatDateTime(row.lastLogin)}
+                        </TableCell>
+                        <TableCell className="text-zinc-700">{lastIp}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
             </div>
           )}
           <TablePagination

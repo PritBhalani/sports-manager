@@ -1,155 +1,158 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
-import { getAccountStatement } from "@/services/account.service";
-import { getSessionMemberId } from "@/services/user.service";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { dateRangeToISO, formatDateTime, todayRangeUTC } from "@/utils/date";
+import { useMemo, useState } from "react";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
+  Select,
+  Badge,
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableEmpty,
+} from "@/components";
+import { Pencil, Plus } from "lucide-react";
 
-type Row = Record<string, unknown>;
+type BankingRow = {
+  id: string;
+  accountNo: string;
+  bank: string;
+  accountHolder: string;
+  ifsc: string;
+  type: string;
+  whatsapp: string;
+  telegram: string;
+  status: "active" | "inactive";
+};
 
-const getAmount = (row: Row) =>
-  Number(row.amount ?? row.credit ?? row.debit ?? row.chips ?? 0);
-
-const columns = [
+const MOCK_ROWS: BankingRow[] = [
   {
-    id: "createdAt",
-    header: "Date / Time",
-    sortable: true,
-    cell: (row: Row) => formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
-    sortValue: (row: Row) => Date.parse(String(row.createdAt ?? row.date ?? row.timestamp ?? 0)),
+    id: "1",
+    accountNo: "123456789012",
+    bank: "HDFC Bank",
+    accountHolder: "Ravi Kumar",
+    ifsc: "HDFC0001234",
+    type: "Savings",
+    whatsapp: "9876543210",
+    telegram: "@ravikumar",
+    status: "active",
   },
   {
-    id: "type",
-    header: "Type",
-    sortable: true,
-    cell: (row: Row) => String(row.type ?? row.dwType ?? row.description ?? "—"),
-  },
-  {
-    id: "username",
-    header: "User",
-    sortable: true,
-    cell: (row: Row) => String(row.username ?? row.userCode ?? row.userId ?? "—"),
-  },
-  {
-    id: "amount",
-    header: "Amount",
-    sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(getAmount(row))}`,
-    sortValue: (row: Row) => getAmount(row),
-  },
-  {
-    id: "balanceAfter",
-    header: "Balance After",
-    sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(row.balance ?? row.balanceAfter)}`,
-    sortValue: (row: Row) => Number(row.balance ?? row.balanceAfter ?? 0),
+    id: "2",
+    accountNo: "001122334455",
+    bank: "ICICI Bank",
+    accountHolder: "Amit Shah",
+    ifsc: "ICIC0003321",
+    type: "Current",
+    whatsapp: "9898989898",
+    telegram: "@amitshah",
+    status: "inactive",
   },
 ];
 
 export default function AccountsHistoryPage() {
-  const [rows, setRows] = useState<Row[]>([]);
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
 
-  useEffect(() => {
-    const range = todayRangeUTC();
-    setFromDate(range.fromDate.slice(0, 10));
-    setToDate(range.toDate.slice(0, 10));
-  }, []);
+  const rows = useMemo(() => {
+    return MOCK_ROWS.filter((row) => {
+      const statusOk = status === "all" || row.status === status;
+      const q = search.trim().toLowerCase();
+      if (!q) return statusOk;
+      const text =
+        `${row.accountNo} ${row.bank} ${row.accountHolder} ${row.ifsc} ${row.type} ${row.whatsapp} ${row.telegram}`.toLowerCase();
+      return statusOk && text.includes(q);
+    });
+  }, [search, status]);
 
-  useEffect(() => {
-    if (!fromDate || !toDate) return;
-    const userId = getSessionMemberId();
-    if (!userId) return;
-    const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
-    getAccountStatement(
-      { page: 1, pageSize: 100, orderByDesc: true },
-      { fromDate: fromISO, toDate: toISO },
-      userId,
-    )
-      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
-      .catch(() => setRows([]));
-  }, [fromDate, toDate]);
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
-        title="Account History"
-        breadcrumbs={["Account", "History"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        title="Website Banking"
+        breadcrumbs={["Website", "Banking"]}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" aria-hidden />}
+          >
+            Add Account
+          </Button>
+        }
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatsCard title="Total Entries" value={rows.length.toString()} />
-        <StatsCard
-          title="Total In"
-          value={`₹ ${formatCurrency(
-            rows
-              .filter((t) => {
-                const label = String(t.type ?? t.dwType ?? "").toLowerCase();
-                return label === "deposit" || label === "transferin" || label === "transfer in" || label === "d";
-              })
-              .reduce((sum, t) => sum + getAmount(t), 0),
-          )}`}
-        />
-        <StatsCard
-          title="Total Out"
-          value={`₹ ${formatCurrency(
-            rows
-              .filter((t) => {
-                const label = String(t.type ?? t.dwType ?? "").toLowerCase();
-                return label === "withdraw" || label === "transferout" || label === "transfer out" || label === "w";
-              })
-              .reduce((sum, t) => sum + getAmount(t), 0),
-          )}`}
-        />
-        <StatsCard
-          title="Net In/Out"
-          value={`₹ ${formatCurrency(
-            rows.reduce(
-              (sum, t) =>
-                sum +
-                (["deposit", "transferin", "transfer in", "d"].includes(
-                  String(t.type ?? t.dwType ?? "").toLowerCase(),
-                )
-                  ? getAmount(t)
-                  : -getAmount(t)),
-              0,
-            ),
-          )}`}
-        />
-      </div>
+      <Card padded={false} className="overflow-hidden">
+        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-5 py-4 sm:px-6">
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search account, bank, holder, IFSC"
+            className="h-9 w-full sm:w-[300px]"
+          />
+          <Select
+            aria-label="Status filter"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            options={[
+              { label: "All Status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ]}
+            className="h-9 w-[180px]"
+          />
+        </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="max-w-[160px]"
-          />
-          <Input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="max-w-[160px]"
-          />
-          <Input placeholder="Filter by user or type" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="createdAt"
-          initialSortDirection="desc"
-          enableSearch
-          searchPlaceholder="Search account history…"
-          getSearchText={(row: Row) =>
-            `${row.type ?? ""} ${row.username ?? ""} ${row.userCode ?? ""} ${row.referenceId ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No account history."
-        />
+        <Table>
+          <TableHeader className="bg-white">
+            <TableHead className="font-bold text-zinc-700">A/C Number</TableHead>
+            <TableHead className="font-bold text-zinc-700">Bank</TableHead>
+            <TableHead className="font-bold text-zinc-700">A/C Holder</TableHead>
+            <TableHead className="font-bold text-zinc-700">IFSC</TableHead>
+            <TableHead className="font-bold text-zinc-700">Type</TableHead>
+            <TableHead className="font-bold text-zinc-700">Whatsapp</TableHead>
+            <TableHead className="font-bold text-zinc-700">Telegram</TableHead>
+            <TableHead className="font-bold text-zinc-700">Status</TableHead>
+            <TableHead align="center" className="font-bold text-zinc-700">
+              Action
+            </TableHead>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableEmpty colSpan={9} message="No banking accounts found." />
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium text-zinc-900">{row.accountNo}</TableCell>
+                  <TableCell>{row.bank}</TableCell>
+                  <TableCell>{row.accountHolder}</TableCell>
+                  <TableCell className="font-mono text-xs">{row.ifsc}</TableCell>
+                  <TableCell>{row.type}</TableCell>
+                  <TableCell>{row.whatsapp}</TableCell>
+                  <TableCell>{row.telegram}</TableCell>
+                  <TableCell>
+                    <Badge variant={row.status === "active" ? "success" : "default"}>
+                      {row.status === "active" ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell align="center">
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                      aria-label="Edit account"
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden />
+                    </button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );

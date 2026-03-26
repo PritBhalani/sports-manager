@@ -15,6 +15,30 @@ export function formatDateTime(value: unknown): string {
   });
 }
 
+/** Time between last update and original create (updatedOn − createdOn). */
+export function formatUpdateMinusCreateGap(
+  createdIso: unknown,
+  updatedIso: unknown
+): string {
+  if (createdIso == null || updatedIso == null) return "—";
+  const createdMs = Date.parse(String(createdIso));
+  const updatedMs = Date.parse(String(updatedIso));
+  if (Number.isNaN(createdMs) || Number.isNaN(updatedMs)) return "—";
+  let diff = Math.max(0, Math.floor((updatedMs - createdMs) / 1000));
+  const days = Math.floor(diff / 86400);
+  diff -= days * 86400;
+  const hours = Math.floor(diff / 3600);
+  diff -= hours * 3600;
+  const minutes = Math.floor(diff / 60);
+  const seconds = diff - minutes * 60;
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0 || days > 0) parts.push(`${hours}h`);
+  if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}m`);
+  parts.push(`${seconds}s`);
+  return parts.join(" ");
+}
+
 /** Return current timestamp as string (ms since epoch) for API */
 export function timestampMs(): string {
   return String(Date.now());

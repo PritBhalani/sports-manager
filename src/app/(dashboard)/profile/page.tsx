@@ -7,7 +7,7 @@ import {
   useMemo,
   type FormEvent,
 } from "react";
-import { PageHeader, Button, Input, TablePagination } from "@/components";
+import { PageHeader, Button, Input, Modal, TablePagination } from "@/components";
 import {
   User,
   FileText,
@@ -93,7 +93,7 @@ function ProfileFieldRow({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-blue-600 transition-colors hover:bg-blue-50"
                 aria-label="Copy"
               >
                 {copied ? (
@@ -107,7 +107,7 @@ function ProfileFieldRow({
               <button
                 type="button"
                 onClick={onEdit}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-blue-600 transition-colors hover:bg-blue-50"
                 aria-label={`Edit ${label}`}
               >
                 <Pencil className="h-4 w-4" />
@@ -164,6 +164,7 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setNow(formatNow()), 1000);
@@ -292,6 +293,7 @@ export default function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setPasswordModalOpen(false);
       setMessage({ type: "success", text });
     } catch (err) {
       setMessage({
@@ -303,8 +305,8 @@ export default function ProfilePage() {
     }
   };
 
-  return (
-    <div className="min-w-0">
+    return (
+      <div className="min-w-0">
       <PageHeader title="My Profile" breadcrumbs={["Profile"]} />
 
       {/* Tab bar – blue underline on active (matches reference) */}
@@ -490,7 +492,7 @@ export default function ProfilePage() {
             )}
             {!loading && message && (
               <div
-                className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+                className={`flex items-center gap-2 rounded-sm border px-4 py-3 text-sm ${
                   message.type === "success"
                     ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                     : "border-red-200 bg-red-50 text-red-800"
@@ -536,44 +538,14 @@ export default function ProfilePage() {
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
               <div className="p-4 sm:p-6">
                 <h3 className="mb-4 text-sm font-semibold text-zinc-900">Password</h3>
-                <form
-                  onSubmit={handleChangePassword}
-                  className="max-w-md space-y-4"
-                  autoComplete="off"
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setPasswordModalOpen(true)}
                 >
-                  <Input
-                    type="password"
-                    label="Current password"
-                    value={currentPassword}
-                    onChange={(ev) => setCurrentPassword(ev.target.value)}
-                    className="bg-white"
-                    autoComplete="current-password"
-                  />
-                  <Input
-                    type="password"
-                    label="New password"
-                    value={newPassword}
-                    onChange={(ev) => setNewPassword(ev.target.value)}
-                    className="bg-white"
-                    autoComplete="new-password"
-                  />
-                  <Input
-                    type="password"
-                    label="Confirm new password"
-                    value={confirmPassword}
-                    onChange={(ev) => setConfirmPassword(ev.target.value)}
-                    className="bg-white"
-                    autoComplete="new-password"
-                  />
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={passwordSubmitting}
-                  >
-                    {passwordSubmitting ? "Updating…" : "Change password"}
-                  </Button>
-                </form>
+                  Change password
+                </Button>
               </div>
             </div>
 
@@ -585,7 +557,7 @@ export default function ProfilePage() {
               <div className="p-4 sm:p-6">
                 <h3 className="mb-3 text-sm font-semibold text-zinc-900">Time</h3>
                 {editingField === "timezone" ? (
-                  <div className="rounded-lg border border-zinc-200 bg-white p-3">
+                  <div className="rounded-sm border border-zinc-200 bg-white p-3">
                     <Input
                       label="Time Zone"
                       value={timezone}
@@ -633,6 +605,65 @@ export default function ProfilePage() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
+
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => {
+          if (passwordSubmitting) return;
+          setPasswordModalOpen(false);
+        }}
+        title="Change password"
+      >
+        <form
+          onSubmit={handleChangePassword}
+          className="space-y-4"
+          autoComplete="off"
+        >
+          <Input
+            type="password"
+            label="Current password"
+            value={currentPassword}
+            onChange={(ev) => setCurrentPassword(ev.target.value)}
+            className="bg-white"
+            autoComplete="current-password"
+          />
+          <Input
+            type="password"
+            label="New password"
+            value={newPassword}
+            onChange={(ev) => setNewPassword(ev.target.value)}
+            className="bg-white"
+            autoComplete="new-password"
+          />
+          <Input
+            type="password"
+            label="Confirm new password"
+            value={confirmPassword}
+            onChange={(ev) => setConfirmPassword(ev.target.value)}
+            className="bg-white"
+            autoComplete="new-password"
+          />
+          <div className="flex items-center gap-2 pt-1">
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={passwordSubmitting}
+            >
+              {passwordSubmitting ? "Updating…" : "Change password"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={passwordSubmitting}
+              onClick={() => setPasswordModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      </div>
+    );
+  }

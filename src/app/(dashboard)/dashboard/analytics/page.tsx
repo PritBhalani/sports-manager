@@ -27,8 +27,8 @@ export default function DashboardAnalyticsPage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6 px-6 py-6">
       <PageHeader
-        title="Dashboard Analytics"
-        breadcrumbs={["Dashboard", "Analytics"]}
+        title="GGR"
+        breadcrumbs={["Reports", "GGR"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
 

@@ -72,7 +72,7 @@ export default function CreditStatementPage() {
     <div className="min-w-0">
       <PageHeader
         title="Credit Statement"
-        breadcrumbs={["Reports", "Credit Statement"]}
+        breadcrumbs={["Bonus", "Statement"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       <FilterBar className="mb-4">

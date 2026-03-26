@@ -78,7 +78,7 @@ export default function DownlineSummaryPage() {
     <div className="min-w-0">
       <PageHeader
         title="Downline Summary"
-        breadcrumbs={["Reports", "Downline Summary"]}
+        breadcrumbs={["Bonus", "Claims"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       <FilterBar className="mb-4">

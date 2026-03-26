@@ -35,7 +35,7 @@ export default function SecurityAnalyticsPage() {
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Security Analytics"
-        breadcrumbs={["Token / Login History", "Analytics"]}
+        breadcrumbs={["Casino", "Stats"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
 

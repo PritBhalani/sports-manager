@@ -60,7 +60,7 @@ export default function PlayerMasterPage() {
     <div className="min-w-0">
       <PageHeader
         title="Player Master"
-        breadcrumbs={["Players", "Master"]}
+        breadcrumbs={["Reports", "Player Master"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       <FilterBar className="mb-4">

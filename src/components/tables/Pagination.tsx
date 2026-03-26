@@ -51,7 +51,7 @@ export default function TablePagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
+          className="flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
           aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -59,7 +59,7 @@ export default function TablePagination({
         <button
           type="button"
           onClick={() => onPageChange(page)}
-          className="flex h-8 min-w-[2rem] items-center justify-center rounded-lg bg-blue-600 px-2 text-sm font-medium text-white"
+          className="flex h-8 min-w-[2rem] items-center justify-center rounded-sm bg-blue-600 px-2 text-sm font-medium text-white"
           aria-label={`Page ${page}`}
           aria-current="page"
         >
@@ -69,7 +69,7 @@ export default function TablePagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
+          className="flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-600 transition-colors hover:bg-zinc-50 disabled:opacity-50 disabled:pointer-events-none"
           aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />

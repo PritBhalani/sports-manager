@@ -71,7 +71,7 @@ export default function ReferralSettingsPage() {
     <div className="min-w-0">
       <PageHeader
         title="Referral Settings"
-        breadcrumbs={["Settings", "Referral"]}
+        breadcrumbs={["Referrals"]}
         description="Referral settings for your account (GET/POST /user/getreferralsetting, updatereferralsetting)"
       />
       <Card title="Referral settings" className="max-w-lg">

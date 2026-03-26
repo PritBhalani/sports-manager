@@ -67,7 +67,7 @@ export default function AccountStatementPage() {
     <div className="min-w-0">
       <PageHeader
         title="Account Statement"
-        breadcrumbs={["Reports", "Account Statement"]}
+        breadcrumbs={["Bonus", "Bonus"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       {error && (

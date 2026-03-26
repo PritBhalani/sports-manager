@@ -1,8 +1,33 @@
 "use client";
 
-import { useState } from "react";
-import { PageHeader, Card, Button, Input, Select } from "@/components";
-import { Calendar, Download, MoreHorizontal } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Input,
+  Select,
+  Badge,
+  Table,
+  TableHeader,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableEmpty,
+} from "@/components";
+import {
+  ArrowUpFromLine,
+  ArrowUpDown,
+  Calendar,
+  FileSpreadsheet,
+  HandCoins,
+} from "lucide-react";
+import { getOffPayOut, type OffPayInRecord } from "@/services/account.service";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { formatDateTime, formatUpdateMinusCreateGap, todayRangeUTC } from "@/utils/date";
 
 const STATUS_OPTIONS = [
   { label: "All Status", value: "all" },
@@ -19,146 +44,288 @@ const TIME_RANGE_OPTIONS = [
   { label: "Last 30 days", value: "last30" },
 ];
 
+const fieldClass =
+  "h-10 rounded-sm border border-zinc-200 bg-white shadow-sm";
+
 export default function RequestWithdrawPage() {
-  const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("withdraw");
+  const pathname = usePathname();
   const [status, setStatus] = useState("all");
   const [timeRange, setTimeRange] = useState("all");
   const [username, setUsername] = useState("");
+  const [rows, setRows] = useState<OffPayInRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+
+  const computeDateRangeISO = (range: string): { fromDate: string; toDate: string } => {
+    const now = new Date();
+    const utcNowMs = now.getTime();
+    const dayMs = 86400000;
+    if (range === "today") return todayRangeUTC();
+    if (range === "yesterday") {
+      const start = new Date(utcNowMs - dayMs);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setUTCDate(end.getUTCDate() + 1);
+      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+    }
+    if (range === "last7") {
+      const from = new Date(utcNowMs - 7 * dayMs);
+      return { fromDate: from.toISOString(), toDate: now.toISOString() };
+    }
+    if (range === "last30" || range === "all") {
+      const from = new Date(utcNowMs - 30 * dayMs);
+      return { fromDate: from.toISOString(), toDate: now.toISOString() };
+    }
+    const fallback = new Date(utcNowMs - 30 * dayMs);
+    return { fromDate: fallback.toISOString(), toDate: now.toISOString() };
+  };
+
+  const statusBadgeVariant = (s: number | undefined): "success" | "error" | "warning" | "default" | "info" => {
+    if (s === 2) return "error";
+    if (s === 3) return "warning";
+    if (s === 1) return "info";
+    if (s === 4) return "success";
+    return "default";
+  };
+
+  const fetchWithdrawals = async () => {
+    const { fromDate, toDate } = computeDateRangeISO(timeRange);
+
+    setLoading(true);
+    setListError(null);
+
+    try {
+      const res = await getOffPayOut(
+        {
+          pageSize: 50,
+          groupBy: "",
+          page: 1,
+          orderBy: "",
+          orderByDesc: false,
+        },
+        {
+          status: status === "all" ? "" : status,
+          fromDate,
+          toDate,
+          userId: "",
+        },
+      );
+
+      setRows(Array.isArray(res.data) ? res.data : []);
+    } catch (e) {
+      setRows([]);
+      setListError(e instanceof Error ? e.message : "Failed to load withdraw requests.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchWithdrawals();
+  }, []);
+
+  const onSearch = () => {
+    fetchWithdrawals();
+  };
 
   const onExport = () => {
-    // TODO: wire to export API later
+    // TODO: wire to export API
   };
+
+  const tabClass = (active: boolean) =>
+    `flex items-center gap-2 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
+      active
+        ? "border-blue-600 text-blue-600"
+        : "border-transparent text-zinc-500 hover:text-zinc-700"
+    }`;
 
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Request Withdraw"
-        breadcrumbs={["Transactions", "Requests", "Withdraw"]}
+        breadcrumbs={["Transactions", "Request"]}
       />
 
-      <Card className="space-y-4 sm:space-y-5">
-        {/* Tabs – Deposit Request / Withdraw Request */}
-        <div className="flex items-center justify-between border-b border-zinc-200 pb-2 sm:pb-3">
-          <div className="flex gap-6 text-sm font-medium">
-            <button
-              type="button"
-              onClick={() => setActiveTab("deposit")}
-              className={`flex items-center gap-2 border-b-2 pb-2 transition-colors ${
-                activeTab === "deposit"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700"
-              }`}
-            >
+      <Card padded={false} className="overflow-hidden">
+        <div className="border-b border-zinc-200 px-5 pt-5 sm:px-6">
+          <div className="flex gap-8">
+            <Link href="/accounts/requests/deposit" className={tabClass(false)}>
+              <HandCoins className="h-4 w-4 shrink-0" aria-hidden />
               Deposit Request
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("withdraw")}
-              className={`flex items-center gap-2 border-b-2 pb-2 transition-colors ${
-                activeTab === "withdraw"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-zinc-500 hover:text-zinc-700"
-              }`}
+            </Link>
+            <Link
+              href="/accounts/requests/withdraw"
+              className={tabClass(pathname?.includes("/withdraw") ?? false)}
             >
+              <ArrowUpFromLine className="h-4 w-4 shrink-0" aria-hidden />
               Withdraw Request
-            </button>
+            </Link>
           </div>
         </div>
 
-        {/* Filters row */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <Input
-            placeholder="Search username / withdraw phone"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="h-10"
-          />
-          <Input
-            placeholder="Search account name, account"
-            className="h-10"
-          />
-          <Select
-            aria-label="Request modes filter"
-            value="allRequestModes"
-            onChange={() => {}}
-            options={[{ label: "All Request Modes", value: "allRequestModes" }]}
-            className="h-10"
-          />
-          <Select
-            aria-label="Request accounts filter"
-            value="allRequestAccounts"
-            onChange={() => {}}
-            options={[{ label: "All Request Accounts", value: "allRequestAccounts" }]}
-            className="h-10"
-          />
-          <Select
-            aria-label="Payout modes filter"
-            value="allPayoutModes"
-            onChange={() => {}}
-            options={[{ label: "All Payout Modes", value: "allPayoutModes" }]}
-            className="h-10"
-          />
-        </div>
+        <div className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
+          <div className="-mx-5 rounded-sm bg-gray-100 px-4 py-4 sm:-mx-6 sm:px-5 sm:py-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <Input
+                placeholder="Search username, txn/utr code"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className={fieldClass}
+              />
+              <Select
+                aria-label="Depositors filter"
+                value="allDepositors"
+                onChange={() => {}}
+                options={[
+                  { label: "All Depositors", value: "allDepositors" },
+                ]}
+                className={fieldClass}
+              />
+              <Select
+                aria-label="Modes filter"
+                value="allModes"
+                onChange={() => {}}
+                options={[{ label: "All Modes", value: "allModes" }]}
+                className={fieldClass}
+              />
+              <Select
+                aria-label="Accounts filter"
+                value="allAccounts"
+                onChange={() => {}}
+                options={[{ label: "All Accounts", value: "allAccounts" }]}
+                className={fieldClass}
+              />
+              <Select
+                aria-label="Status filter"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                options={STATUS_OPTIONS}
+                className={fieldClass}
+              />
+            </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Select
-              aria-label="Status filter"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              options={STATUS_OPTIONS}
-              className="h-10 min-w-[140px]"
-            />
-            <Select
-              aria-label="Time range"
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              options={TIME_RANGE_OPTIONS}
-              className="h-10 min-w-[130px]"
-            />
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-            >
-              <Calendar className="h-4 w-4" aria-hidden />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
-            >
-              <MoreHorizontal className="h-4 w-4" aria-hidden />
-            </button>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  aria-label="Time range"
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  options={TIME_RANGE_OPTIONS}
+                  className={`${fieldClass} min-w-[140px]`}
+                />
+                <button
+                  type="button"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50"
+                  aria-label="Open date range"
+                >
+                  <Calendar className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="rounded-sm px-6"
+                  onClick={onSearch}
+                >
+                  Search
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="lg"
+                  className="rounded-sm px-5"
+                  leftIcon={<FileSpreadsheet className="h-4 w-4" aria-hidden />}
+                  onClick={onExport}
+                >
+                  Export
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              type="button"
-              variant="primary"
-              leftIcon={<Download className="h-4 w-4" aria-hidden />}
-              onClick={onExport}
-            >
-              Export
-            </Button>
-          </div>
-        </div>
 
-        {/* Table stub / empty state */}
-        <div className="mt-2 overflow-hidden rounded-xl border border-zinc-200 bg-white">
-          <div className="hidden bg-zinc-50 px-4 py-2.5 text-xs font-semibold text-zinc-500 sm:grid sm:grid-cols-9">
-            <span className="col-span-2">Username</span>
-            <span>Receipt</span>
-            <span>Account / Mode</span>
-            <span>Payout Mode</span>
-            <span>Amount</span>
-            <span>Status</span>
-            <span>Created</span>
-            <span>Updated At</span>
-          </div>
-          <div className="px-4 py-8 text-center text-sm text-zinc-500">
-            No transactions yet.
-          </div>
+          {listError ? (
+            <p className="text-sm text-red-600" role="alert">
+              {listError}
+            </p>
+          ) : null}
+
+          <Table>
+            <TableHeader className="bg-white">
+              <TableHead className="font-bold text-zinc-700">Name</TableHead>
+              <TableHead className="font-bold text-zinc-700">Amount</TableHead>
+              <TableHead className="font-bold text-zinc-700">Bonus</TableHead>
+              <TableHead className="font-bold text-zinc-700">UTR</TableHead>
+              <TableHead className="font-bold text-zinc-700">A/C</TableHead>
+              <TableHead className="font-bold text-zinc-700">Status</TableHead>
+              <TableHead className="font-bold text-zinc-700">
+                <span className="inline-flex items-center gap-1">
+                  Created
+                  <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" aria-hidden />
+                </span>
+              </TableHead>
+              <TableHead className="min-w-[11rem] font-bold text-zinc-700">Updated</TableHead>
+              <TableHead className="font-bold text-zinc-700">Timer</TableHead>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableEmpty colSpan={9} message="Loading…" />
+              ) : rows.length === 0 ? (
+                <TableEmpty colSpan={9} message="No transactions yet." />
+              ) : (
+                rows.map((row) => {
+                  const statusLabel =
+                    String(row.comment ?? "").trim() ||
+                    (row.status != null ? `Status ${row.status}` : "—");
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell>
+                        <Link
+                          href="#"
+                          className="font-medium text-blue-600 hover:underline"
+                          onClick={(e) => e.preventDefault()}
+                        >
+                          {row.user?.username ?? "—"}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="tabular-nums text-zinc-900">
+                        {formatCurrency(row.amount)}
+                      </TableCell>
+                      <TableCell className="tabular-nums text-zinc-800">
+                        {formatCurrency(row.bonusAmount ?? 0)}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-zinc-800">
+                        {row.utrNo ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-zinc-800">
+                        {row.acNo ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={statusBadgeVariant(row.status)}
+                          className="rounded-sm px-2 py-1 text-[11px] font-semibold uppercase tracking-wide"
+                        >
+                          {statusLabel}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-zinc-700">
+                        {formatDateTime(row.createdOn)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-zinc-700">
+                        {formatDateTime(row.updatedOn)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap font-mono text-xs tabular-nums text-zinc-700">
+                        {formatUpdateMinusCreateGap(row.createdOn, row.updatedOn)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>
   );
 }
-

@@ -9,6 +9,10 @@ import { getBalance } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import type { BalanceResponse } from "@/types/account.types";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  NotificationBannerProvider,
+  useNotificationBanner,
+} from "@/context/NotificationBannerContext";
 
 /** Navbar strip — same GET /account/getbalance as dashboard / balance page */
 function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
@@ -16,6 +20,7 @@ function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
     return {
       balance: "—",
       balanceDown: "—",
+      netExposure: "—",
       creditLimit: "—",
       availableCredit: "—",
     };
@@ -27,23 +32,26 @@ function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
     res.balanceUp ??
     0;
   const down = res.balanceDown ?? res.give ?? 0;
+  const netExposure =
+    res.exposure ?? (res as BalanceResponse & { netExposure?: number }).netExposure ?? 0;
   const limit = res.creditLimit ?? 0;
   const avail = res.availableCredit ?? 0;
   return {
     balance: formatCurrency(bal),
     balanceDown: formatCurrency(down),
+    netExposure: formatCurrency(netExposure),
     creditLimit: formatCurrency(limit),
     availableCredit: formatCurrency(avail),
   };
 }
 
-export default function DashboardLayout({ children }: LayoutProps) {
+function DashboardLayoutInner({ children }: LayoutProps) {
   const { isAuthenticated } = useAuth();
+  const banner = useNotificationBanner();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
   );
-  const [showNotice, setShowNotice] = useState(true);
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth >= LAYOUT_BREAKPOINT_MD) {
@@ -51,7 +59,6 @@ export default function DashboardLayout({ children }: LayoutProps) {
     }
   }, []);
 
-  // README §2 GET /account/getbalance — balance for authenticated user
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
@@ -75,12 +82,8 @@ export default function DashboardLayout({ children }: LayoutProps) {
   };
   const toggleSidebar = () => setSidebarOpen((o) => !o);
 
-  // Do not pass userInitial from render: getAuthSession() differs SSR vs client
-  // and causes hydration mismatch in Navbar avatar. Navbar resolves initial after mount.
-
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Backdrop on mobile when sidebar is open */}
       {sidebarOpen && (
         <button
           type="button"
@@ -93,18 +96,31 @@ export default function DashboardLayout({ children }: LayoutProps) {
       <div
         className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? "md:ml-[260px]" : ""}`}
       >
-        {showNotice && (
+        {banner.text1 && banner.notice1Visible && (
           <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs text-amber-900 sm:px-5 sm:py-2.5 md:px-6">
-            <span className="inline-flex h-6 items-center rounded-full bg-amber-200 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-900">
+            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-amber-200 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-900">
               Notice
             </span>
-            <p className="flex-1 truncate text-[11px] sm:text-xs">
-              Ezugi Maintenance Notice: Live Table Services will undergo scheduled maintenance as per the details below: Date: 11 Mar 2026 (Wednesday) 10:30 AM – 1:30 PM India Standard Time (IST).
-            </p>
+            <p className="min-w-0 flex-1 text-[11px] leading-relaxed sm:text-xs">{banner.text1}</p>
             <button
               type="button"
-              className="ml-2 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:underline"
-              onClick={() => setShowNotice(false)}
+              className="ml-2 shrink-0 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:underline"
+              onClick={banner.dismissNotice1}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+        {banner.text2 && banner.notice2Visible && (
+          <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs text-amber-900 sm:px-5 sm:py-2.5 md:px-6">
+            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-amber-200 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-900">
+              Notice
+            </span>
+            <p className="min-w-0 flex-1 text-[11px] leading-relaxed sm:text-xs">{banner.text2}</p>
+            <button
+              type="button"
+              className="ml-2 shrink-0 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:underline"
+              onClick={banner.dismissNotice2}
             >
               Dismiss
             </button>
@@ -116,5 +132,14 @@ export default function DashboardLayout({ children }: LayoutProps) {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardLayout({ children }: LayoutProps) {
+  const { isAuthenticated } = useAuth();
+  return (
+    <NotificationBannerProvider enabled={isAuthenticated}>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
+    </NotificationBannerProvider>
   );
 }

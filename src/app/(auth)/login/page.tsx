@@ -126,6 +126,16 @@ export default function LoginPage() {
   const [captchaInput, setCaptchaInput] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpiredNotice, setSessionExpiredNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("reason") === "session_expired") {
+      setSessionExpiredNotice("Your session has expired. Please sign in again.");
+      window.history.replaceState(null, "", "/login");
+    }
+  }, []);
 
   const loadCaptcha = useCallback(async () => {
     setCaptchaLoading(true);
@@ -197,9 +207,29 @@ export default function LoginPage() {
 
       <Card className="w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {sessionExpiredNotice && (
+            <div
+              className="flex items-start gap-3 rounded-sm border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900"
+              role="status"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">Session ended</p>
+                <p className="mt-1 text-amber-800">{sessionExpiredNotice}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSessionExpiredNotice(null)}
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-amber-600 transition-colors hover:bg-amber-100"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           {error && (
             <div
-              className="sticky top-3 z-10 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800 shadow-sm"
+              className="sticky top-3 z-10 flex items-start gap-3 rounded-sm border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800 shadow-sm"
               role="alert"
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -237,7 +267,7 @@ export default function LoginPage() {
           />
 
           {captchaLoading ? (
-            <div className="flex h-20 items-center justify-center rounded-lg bg-zinc-100 text-sm text-zinc-500">
+            <div className="flex h-20 items-center justify-center rounded-sm bg-zinc-100 text-sm text-zinc-500">
               Loading captcha…
             </div>
           ) : captcha?.image ? (
@@ -248,7 +278,7 @@ export default function LoginPage() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div
-                    className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-md border border-zinc-300 bg-white"
+                    className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-sm border border-zinc-300 bg-white"
                     style={{
                       backgroundImage: captcha.image.startsWith("data:")
                         ? `url(${captcha.image})`
@@ -268,7 +298,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={loadCaptcha}
                     disabled={submitLoading || captchaLoading}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-zinc-300 bg-[#7a8b12] text-white transition-colors hover:bg-[#68770f] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-zinc-300 bg-[#7a8b12] text-white transition-colors hover:bg-[#68770f] disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label="Refresh captcha"
                     title="Refresh captcha"
                   >

@@ -29,7 +29,7 @@ export default function EventTypesPage() {
     <div className="min-w-0">
       <PageHeader
         title="Event Types"
-        breadcrumbs={["Settings", "Event Types"]}
+        breadcrumbs={["Website", "External Integrations"]}
         description="Sports / event types (GET /eventtype/geteventtype)"
       />
       <Card>

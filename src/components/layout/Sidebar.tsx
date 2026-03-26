@@ -3,23 +3,62 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
+import type { ComponentType } from "react";
 import {
-  LayoutDashboard,
-  Wallet,
-  TrendingUp,
-  Store,
-  Users,
-  Shield,
-  Settings,
-  LogOut,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
+  IconAuto,
+  IconBarChart3,
+  IconBanknote,
+  IconClipboardCheck,
+  IconBetlist,
+  IconCasino,
+  IconCurrency,
+  IconGateways,
+  IconAdmins,
+  IconAnnouncement,
+  IconReports,
+  IconReferrals,
+  IconSecurity,
+  IconWebsite,
+  IconLosingCommission,
+  IconGGR,
+  IconBlockedPlayers,
+  IconBlockedPlayerHistory,
+  IconDemoPlayers,
+  IconNthDeposit,
+  IconFTD,
+  IconZeroDepositPlayers,
+  IconSettings,
+  IconWallets,
+  IconMyProfile,
+  IconFlags,
+  IconPlayerMaster,
+  IconInactivePlayers,
+  IconRoles,
+  IconActivity as IconDashboardActivity,
+  IconFraudLogs,
+  IconDashboard,
+  IconFileCheck2,
+  IconFileText,
+  IconDatabase,
+  IconGamepad2,
+  IconGift,
+  IconImageIcon,
+  IconGlobe,
+  IconManual,
+  IconFlag,
+  IconLink2,
+  IconPlayer,
+  IconTrophy,
+  IconRequest,
+  IconTransaction,
+  IconUsers,
+} from "@/components/layout/SidebarSvgIcons";
 
 type MenuLink = {
   href: string;
   label: string;
-  icon: typeof LayoutDashboard;
+  icon: ComponentType<{ className?: string }>;
   badge?: "beta";
   children?: never;
 };
@@ -27,105 +66,152 @@ type MenuLink = {
 type MenuDropdown = {
   href?: never;
   label: string;
-  icon: typeof LayoutDashboard;
-  children: { href: string; label: string; badge?: "beta" }[];
+  icon: ComponentType<{ className?: string }>;
+  children: {
+    href: string;
+    label: string;
+    badge?: "beta";
+    icon?: ComponentType<{ className?: string }>;
+  }[];
 };
 
 type MenuItem = MenuLink | MenuDropdown;
 
 const menuConfig: MenuItem[] = [
   // Dashboard
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: IconDashboard },
 
   // Transactions
   {
     label: "Transactions",
-    icon: Wallet,
+    icon: IconTransaction,
     children: [
-      { href: "/accounts/requests/deposit", label: "Request" },
-      { href: "/accounts/deposit", label: "Auto" },
-      { href: "/accounts/withdraw", label: "Manual" },
+      { href: "/accounts/requests/deposit", label: "Request", icon: IconRequest },
+      { href: "/accounts/deposit", label: "Auto", icon: IconAuto },
+      { href: "/accounts/withdraw", label: "Manual", icon: IconManual },
     ],
   },
 
   // Players
-  { href: "/players", label: "Players", icon: Users },
+  { href: "/players", label: "Players", icon: IconPlayer },
+
+  // Settings / profile shortcuts
+  { href: "/settings/referral", label: "Settings", icon: IconSettings },
+  { href: "/accounts/balance", label: "Wallets", icon: IconWallets },
+  { href: "/profile", label: "My Profile", icon: IconMyProfile },
 
   // Admins
-  { href: "/admins", label: "Admins", icon: Users },
+  { href: "/admins", label: "Admins", icon: IconAdmins },
 
   // Sports
   {
     label: "Sports",
-    icon: TrendingUp,
+    icon: IconTrophy,
     children: [
-      { href: "/bets/history", label: "Betlist", badge: "beta" },
-      { href: "/bets/markets", label: "SPM Sports" },
-      { href: "/bets/markets", label: "Betfair" },
-      { href: "/bets/markets", label: "Betby" },
-      { href: "/bets/markets", label: "Atlas" },
-      { href: "/bets/markets", label: "IG Pixel" },
-      { href: "/bets/markets", label: "Alt Gaming" },
+      { href: "/bets/history", label: "Betlist", badge: "beta", icon: IconBetlist },
+      { href: "/bets/markets", label: "SPM Sports", icon: IconTrophy },
+      { href: "/bets/markets", label: "Betfair", icon: IconGamepad2 },
+      { href: "/bets/markets", label: "Betby", icon: IconLink2 },
+      { href: "/bets/markets", label: "Atlas", icon: IconGlobe },
+      { href: "/bets/markets", label: "IG Pixel", icon: IconFlag },
+      { href: "/bets/markets", label: "Alt Gaming", icon: IconGamepad2 },
     ],
   },
 
   // Casino
   {
     label: "Casino",
-    icon: Store,
+    icon: IconCasino,
     children: [
-      { href: "/security/analytics", label: "Stats", badge: "beta" },
-      { href: "/bets/history", label: "Bet List" },
-      { href: "/markets/manage", label: "Games" },
+      { href: "/security/analytics", label: "Stats", badge: "beta", icon: IconBarChart3 },
+      { href: "/bets/history", label: "Bet List", icon: IconBetlist },
+      { href: "/markets/manage", label: "Games", icon: IconGamepad2 },
     ],
   },
 
   // Bonus
   {
     label: "Bonus",
-    icon: Store,
+    icon: IconGift,
     children: [
-      { href: "/reports/account-statement", label: "Bonus" },
-      { href: "/reports/credit-statement", label: "Statement" },
-      { href: "/reports/downline-summary", label: "Claims" },
+      { href: "/reports/account-statement", label: "Bonus", icon: IconGift },
+      { href: "/reports/credit-statement", label: "Statement", icon: IconFileText },
+      { href: "/reports/downline-summary", label: "Claims", icon: IconClipboardCheck },
     ],
   },
 
   // Referrals (link)
-  { href: "/settings/referral", label: "Referrals", icon: Settings },
+  { href: "/settings/referral", label: "Referrals", icon: IconReferrals },
 
   // Website
   {
     label: "Website",
-    icon: Store,
+    icon: IconWebsite,
     children: [
-      { href: "/dashboard/analytics", label: "Analytics" },
-      { href: "/website/banners", label: "Banners" },
-      { href: "/accounts/history", label: "Banking" },
-      { href: "/accounts/deposit", label: "Gateways" },
-      { href: "/accounts/balance", label: "Currency" },
-      { href: "/settings/notifications", label: "Forms", badge: "beta" },
+      { href: "/dashboard/analytics", label: "Analytics", icon: IconBarChart3 },
+      { href: "/website/banners", label: "Banners", icon: IconImageIcon },
+      { href: "/website/banking", label: "Banking", icon: IconBanknote },
+      { href: "/accounts/deposit", label: "Gateways", icon: IconGateways },
+      { href: "/accounts/balance", label: "Currency", icon: IconCurrency },
+      { href: "/settings/notifications", label: "Forms", badge: "beta", icon: IconFileCheck2 },
       {
         href: "/settings/event-types",
         label: "External Integrations",
+        icon: IconGateways,
       },
       {
         href: "/settings/event-types",
         label: "Data Integrations",
+        icon: IconDatabase,
       },
     ],
   },
 
-  // Reports (link)
-  { href: "/reports/profit-loss", label: "Reports", icon: Store },
+  // Reports
+  {
+    label: "Reports",
+    icon: IconReports,
+    children: [
+      { href: "/reports/profit-loss", label: "Profit & Loss", icon: IconReports },
+      { href: "/players/detail", label: "Losing Commission", icon: IconLosingCommission },
+      { href: "/dashboard/analytics", label: "GGR", icon: IconGGR },
+      { href: "/players/blocked", label: "Blocked Players", icon: IconBlockedPlayers },
+      {
+        href: "/players/blocked-history",
+        label: "Blocked Player History",
+        icon: IconBlockedPlayerHistory,
+      },
+      { href: "/players/demo", label: "Demo Players", icon: IconDemoPlayers },
+      { href: "/players/nth-deposit", label: "Nth Deposit", icon: IconNthDeposit },
+      { href: "/players/ftd", label: "FTD", icon: IconFTD },
+      {
+        href: "/players/zero-deposit",
+        label: "Zero Deposit Players",
+        icon: IconZeroDepositPlayers,
+      },
+      { href: "/players/inactive", label: "Inactive Players", icon: IconInactivePlayers },
+      { href: "/players/master", label: "Player Master", badge: "beta", icon: IconPlayerMaster },
+    ],
+  },
 
   // Security
   {
     label: "Security",
-    icon: Shield,
+    icon: IconSecurity,
     children: [
-      { href: "/security/login-history", label: "User Groups" },
-      { href: "/settings/notifications", label: "Announcement" },
+      { href: "/security/token-history", label: "Roles", icon: IconRoles },
+      { href: "/security/activity", label: "Activity", icon: IconDashboardActivity },
+      { href: "/security/token-history", label: "Fraud Logs", icon: IconFraudLogs },
+    ],
+  },
+
+  // User Groups + Flags
+  {
+    label: "User Groups",
+    icon: IconUsers,
+    children: [
+      { href: "/security/login-history", label: "User Groups", icon: IconUsers },
+      { href: "/players/blocked-history", label: "Flags", icon: IconFlags },
     ],
   },
 ];
@@ -205,7 +291,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
+                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
                       active ? "bg-zinc-700/90 text-white" : ""
                     }`}
                   >
@@ -226,7 +312,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <button
                     type="button"
                     onClick={() => toggleDropdown(item.label)}
-                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
+                    className={`flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
                       activeChild ? "bg-zinc-700/90 text-white" : ""
                     }`}
                   >
@@ -244,18 +330,24 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     <ul className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-zinc-700 pl-3">
                       {children.map((child) => {
                         const childActive = pathname.startsWith(child.href);
+                        const ChildIcon = child.icon;
                         return (
-                          <li key={child.href}>
+                          <li
+                            key={`${item.label}:${child.label}:${child.href}`}
+                          >
                             <Link
                               href={child.href}
                               onClick={onClose}
-                              className={`block rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-zinc-800 hover:text-white ${
+                              className={`block rounded-sm px-2.5 py-2 text-sm transition-colors hover:bg-zinc-800 hover:text-white ${
                                 childActive
                                   ? "bg-zinc-800/80 text-white ring-1 ring-zinc-600"
                                   : "text-zinc-400"
                               }`}
                             >
                             <div className="flex items-center gap-2">
+                        {ChildIcon ? (
+                          <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                        ) : null}
                               <span>{child.label}</span>
                               {child.badge === "beta" && (
                                 <span className="rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-semibold text-zinc-900">
@@ -283,7 +375,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
         <Link
           href="/logout"
           onClick={onClose}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           <span>Log Out</span>

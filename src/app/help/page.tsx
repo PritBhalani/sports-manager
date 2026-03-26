@@ -27,7 +27,7 @@ export default function HelpPage() {
             Sign in
           </Link>
         </div>
-        <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="rounded-sm border border-zinc-200 bg-white p-6 shadow-sm">
           {loading ? (
             <p className="text-sm text-zinc-500">Loading…</p>
           ) : data && Object.keys(data).length > 0 ? (
