@@ -35,11 +35,11 @@ export default function DataTable<T extends Record<string, unknown>>({
   return (
     <div className="space-y-3 sm:space-y-4">
       {loading && (
-        <div className="rounded-sm border border-dashed border-zinc-200 bg-zinc-50 px-4 py-2 text-xs text-zinc-500">
+        <div className="rounded-sm border border-dashed border-border bg-surface-muted px-4 py-2 text-xs text-muted">
           Loading data…
         </div>
       )}
-      <div className="rounded-sm border border-zinc-200 bg-white">
+      <div className="rounded-sm border border-border bg-surface">
         <div className="px-3 pt-2">
           <DataGrid
             {...rest}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -71,7 +71,7 @@ export default function AccountStatementPage() {
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       {error && (
-        <p className="mb-2 text-sm text-red-600" role="alert">
+        <p className="mb-2 text-sm text-error" role="alert">
           {error}
         </p>
       )}

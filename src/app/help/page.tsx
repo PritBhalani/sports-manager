@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -16,20 +16,20 @@ export default function HelpPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-6">
+    <div className="min-h-screen bg-surface-muted p-6">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-zinc-900">Help</h1>
+          <h1 className="text-2xl font-semibold text-foreground">Help</h1>
           <Link
             href="/login"
-            className="text-sm font-medium text-blue-600 hover:underline"
+            className="text-sm font-medium text-primary hover:underline"
           >
             Sign in
           </Link>
         </div>
-        <div className="rounded-sm border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="rounded-sm border border-border bg-surface p-6 shadow-sm">
           {loading ? (
-            <p className="text-sm text-zinc-500">Loading…</p>
+            <p className="text-sm text-muted">Loading…</p>
           ) : data && Object.keys(data).length > 0 ? (
             <div className="prose prose-sm max-w-none">
               {typeof data.content === "string" && (
@@ -37,13 +37,13 @@ export default function HelpPage() {
               )}
               {typeof data.text === "string" && <p>{String(data.text)}</p>}
               {!data.content && !data.text && (
-                <pre className="overflow-auto rounded bg-zinc-50 p-4 text-sm">
+                <pre className="overflow-auto rounded bg-surface-muted p-4 text-sm">
                   {JSON.stringify(data, null, 2)}
                 </pre>
               )}
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">No help content available.</p>
+            <p className="text-sm text-muted">No help content available.</p>
           )}
         </div>
       </div>

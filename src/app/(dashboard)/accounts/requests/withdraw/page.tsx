@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -45,7 +45,7 @@ const TIME_RANGE_OPTIONS = [
 ];
 
 const fieldClass =
-  "h-10 rounded-sm border border-zinc-200 bg-white shadow-sm";
+  "h-10 rounded-sm border border-border bg-surface shadow-sm";
 
 export default function RequestWithdrawPage() {
   const pathname = usePathname();
@@ -135,8 +135,8 @@ export default function RequestWithdrawPage() {
   const tabClass = (active: boolean) =>
     `flex items-center gap-2 border-b-2 pb-2.5 text-sm font-medium transition-colors ${
       active
-        ? "border-blue-600 text-blue-600"
-        : "border-transparent text-zinc-500 hover:text-zinc-700"
+        ? "border-primary text-primary"
+        : "border-transparent text-muted hover:text-foreground-secondary"
     }`;
 
   return (
@@ -147,7 +147,7 @@ export default function RequestWithdrawPage() {
       />
 
       <Card padded={false} className="overflow-hidden">
-        <div className="border-b border-zinc-200 px-5 pt-5 sm:px-6">
+        <div className="border-b border-border px-5 pt-5 sm:px-6">
           <div className="flex gap-8">
             <Link href="/accounts/requests/deposit" className={tabClass(false)}>
               <HandCoins className="h-4 w-4 shrink-0" aria-hidden />
@@ -164,7 +164,7 @@ export default function RequestWithdrawPage() {
         </div>
 
         <div className="space-y-6 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="-mx-5 rounded-sm bg-gray-100 px-4 py-4 sm:-mx-6 sm:px-5 sm:py-5">
+          <div className="-mx-5 rounded-sm bg-surface-2 px-4 py-4 sm:-mx-6 sm:px-5 sm:py-5">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Input
                 placeholder="Search username, txn/utr code"
@@ -215,7 +215,7 @@ export default function RequestWithdrawPage() {
                 />
                 <button
                   type="button"
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-sm border border-border bg-surface text-foreground-tertiary shadow-sm transition-colors hover:bg-surface-muted"
                   aria-label="Open date range"
                 >
                   <Calendar className="h-4 w-4" aria-hidden />
@@ -246,27 +246,27 @@ export default function RequestWithdrawPage() {
           </div>
 
           {listError ? (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-sm text-error" role="alert">
               {listError}
             </p>
           ) : null}
 
           <Table>
-            <TableHeader className="bg-white">
-              <TableHead className="font-bold text-zinc-700">Name</TableHead>
-              <TableHead className="font-bold text-zinc-700">Amount</TableHead>
-              <TableHead className="font-bold text-zinc-700">Bonus</TableHead>
-              <TableHead className="font-bold text-zinc-700">UTR</TableHead>
-              <TableHead className="font-bold text-zinc-700">A/C</TableHead>
-              <TableHead className="font-bold text-zinc-700">Status</TableHead>
-              <TableHead className="font-bold text-zinc-700">
+            <TableHeader className="bg-surface">
+              <TableHead className="font-bold text-foreground-secondary">Name</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">Amount</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">Bonus</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">UTR</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">A/C</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">Status</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">
                 <span className="inline-flex items-center gap-1">
                   Created
-                  <ArrowUpDown className="h-3.5 w-3.5 text-zinc-400" aria-hidden />
+                  <ArrowUpDown className="h-3.5 w-3.5 text-placeholder" aria-hidden />
                 </span>
               </TableHead>
-              <TableHead className="min-w-[11rem] font-bold text-zinc-700">Updated</TableHead>
-              <TableHead className="font-bold text-zinc-700">Timer</TableHead>
+              <TableHead className="min-w-[11rem] font-bold text-foreground-secondary">Updated</TableHead>
+              <TableHead className="font-bold text-foreground-secondary">Timer</TableHead>
             </TableHeader>
             <TableBody>
               {loading ? (
@@ -283,22 +283,22 @@ export default function RequestWithdrawPage() {
                       <TableCell>
                         <Link
                           href="#"
-                          className="font-medium text-blue-600 hover:underline"
+                          className="font-medium text-primary hover:underline"
                           onClick={(e) => e.preventDefault()}
                         >
                           {row.user?.username ?? "—"}
                         </Link>
                       </TableCell>
-                      <TableCell className="tabular-nums text-zinc-900">
+                      <TableCell className="tabular-nums text-foreground">
                         {formatCurrency(row.amount)}
                       </TableCell>
-                      <TableCell className="tabular-nums text-zinc-800">
+                      <TableCell className="tabular-nums text-foreground">
                         {formatCurrency(row.bonusAmount ?? 0)}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-zinc-800">
+                      <TableCell className="font-mono text-xs text-foreground">
                         {row.utrNo ?? "—"}
                       </TableCell>
-                      <TableCell className="text-sm text-zinc-800">
+                      <TableCell className="text-sm text-foreground">
                         {row.acNo ?? "—"}
                       </TableCell>
                       <TableCell>
@@ -309,13 +309,13 @@ export default function RequestWithdrawPage() {
                           {statusLabel}
                         </Badge>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-zinc-700">
+                      <TableCell className="whitespace-nowrap text-foreground-secondary">
                         {formatDateTime(row.createdOn)}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-zinc-700">
+                      <TableCell className="whitespace-nowrap text-foreground-secondary">
                         {formatDateTime(row.updatedOn)}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap font-mono text-xs tabular-nums text-zinc-700">
+                      <TableCell className="whitespace-nowrap font-mono text-xs tabular-nums text-foreground-secondary">
                         {formatUpdateMinusCreateGap(row.createdOn, row.updatedOn)}
                       </TableCell>
                     </TableRow>

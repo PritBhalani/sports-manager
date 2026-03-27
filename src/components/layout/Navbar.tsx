@@ -52,10 +52,10 @@ function BalanceStat({
 }) {
   return (
     <div className="min-w-[4.25rem] shrink-0 text-right md:min-w-[5rem]">
-      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+      <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted">
         {label}
       </p>
-      <p className="text-sm font-semibold tabular-nums text-zinc-900">{value}</p>
+      <p className="text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
 }
@@ -109,7 +109,7 @@ export default function Navbar({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const { logout } = useAuth();
   const [session, setSession] = useState(getAuthSession);
-
+console.log(balances);
   // Avoid hydration mismatch: server has no localStorage session; client may have
   // a different user initial. Render a stable placeholder until after mount.
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function Navbar({
   }, [logout]);
 
   return (
-    <header className="relative flex h-14 flex-shrink-0 items-center justify-between gap-2 border-b border-zinc-200 bg-white px-3 sm:gap-4 sm:px-4 md:h-16">
+    <header className="relative flex h-14 flex-shrink-0 items-center justify-between gap-2 border-b border-border bg-surface px-3 sm:gap-4 sm:px-4 md:h-16">
       <CommandPalette
         open={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
@@ -183,7 +183,7 @@ export default function Navbar({
         <button
           type="button"
           onClick={onMenuClick}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm text-zinc-600 transition-colors hover:bg-zinc-100 hover:text-zinc-900 sm:h-9 sm:w-9"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-sm text-foreground-tertiary transition-colors hover:bg-surface-2 hover:text-foreground sm:h-9 sm:w-9"
           aria-label="Toggle sidebar"
         >
           <Menu className="h-5 w-5" />
@@ -191,7 +191,7 @@ export default function Navbar({
         <button
           type="button"
           onClick={() => setCommandPaletteOpen(true)}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-sm bg-gray-100 px-3 py-1.5 text-neutral-700 transition-colors hover:bg-gray-200 max-w-[min(100%,7rem)] sm:max-w-32 md:max-w-36 lg:max-w-[9.5rem] xl:w-[160px] xl:max-w-none xl:flex-none"
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-sm bg-surface-2 px-3 py-1.5 text-foreground-secondary transition-colors hover:bg-surface-muted max-w-[min(100%,7rem)] sm:max-w-32 md:max-w-36 lg:max-w-[9.5rem] xl:w-[160px] xl:max-w-none xl:flex-none"
           aria-label="Search pages"
         >
           <div className="shrink-0 text-xs leading-none" aria-hidden>
@@ -217,7 +217,7 @@ export default function Navbar({
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 md:gap-4">
         {(() => {
           const items = [
-            { key: "balance", label: "Balance", value: balances.balance },
+            { key: "balance", label: "Balance Up", value: balances.balance },
             { key: "balanceDown", label: "Balance down", value: balances.balanceDown },
             { key: "netExposure", label: "Net Exposure", value: balances.netExposure },
             { key: "creditLimit", label: "Credit limit", value: balances.creditLimit },
@@ -230,7 +230,7 @@ export default function Navbar({
                 <Fragment key={it.key}>
                   <BalanceStat label={it.label} value={it.value} />
                   {idx < items.length - 1 && (
-                    <div className="h-8 w-px shrink-0 bg-zinc-200" aria-hidden />
+                    <div className="h-8 w-px shrink-0 bg-border" aria-hidden />
                   )}
                 </Fragment>
               ))}
@@ -246,16 +246,16 @@ export default function Navbar({
           ].filter((x) => shouldShowBalanceField(x.value));
 
           return (
-            <div className="flex max-w-[42vw] min-w-0 flex-col gap-0.5 rounded-sm bg-zinc-100 px-2 py-1.5 text-zinc-700 sm:hidden">
+            <div className="flex max-w-[42vw] min-w-0 flex-col gap-0.5 rounded-sm bg-surface-2 px-2 py-1.5 text-foreground-secondary sm:hidden">
               {mobileOrder.map((it) => (
                 <div
                   key={it.key}
                   className="flex items-baseline justify-between gap-2 text-[10px]"
                 >
-                  <span className="shrink-0 font-medium uppercase tracking-wide text-zinc-500">
+                  <span className="shrink-0 font-medium uppercase tracking-wide text-muted">
                     {it.label}
                   </span>
-                  <span className="truncate font-semibold tabular-nums text-zinc-900">
+                  <span className="truncate font-semibold tabular-nums text-foreground">
                     {it.value}
                   </span>
                 </div>
@@ -267,7 +267,7 @@ export default function Navbar({
           ref={triggerRef}
           type="button"
           onClick={() => setProfileMenuOpen((o) => !o)}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-zinc-200 text-xs font-semibold text-zinc-700 transition-colors hover:bg-zinc-300 sm:h-9 sm:w-9 sm:text-sm"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-2 text-xs font-semibold text-foreground-secondary transition-colors hover:bg-border sm:h-9 sm:w-9 sm:text-sm"
           aria-expanded={profileMenuOpen}
           aria-haspopup="dialog"
           aria-label="Open profile menu"
@@ -282,28 +282,28 @@ export default function Navbar({
           ref={panelRef}
           role="dialog"
           aria-label="Profile menu"
-          className="absolute right-3 top-full z-50 mt-2 w-[min(calc(100vw-1.5rem),20rem)] rounded-xl border border-zinc-200 bg-white shadow-lg sm:right-4"
+          className="absolute right-3 top-full z-50 mt-2 w-[min(calc(100vw-1.5rem),20rem)] rounded-xl border border-border bg-surface shadow-lg sm:right-4"
         >
           <div className="relative px-4 pb-4 pt-3">
             <button
               type="button"
               onClick={() => setProfileMenuOpen(false)}
-              className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-sm bg-zinc-100 text-zinc-600 transition-colors hover:bg-zinc-200 hover:text-zinc-900"
+              className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-sm bg-surface-2 text-foreground-tertiary transition-colors hover:bg-border hover:text-foreground"
               aria-label="Close"
             >
               <X className="h-4 w-4" />
             </button>
 
             <div className="flex flex-col items-center pt-2 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-200 text-lg font-semibold text-zinc-700">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-2 text-lg font-semibold text-foreground-secondary">
                 {initial}
               </div>
-              <p className="mt-3 text-sm font-bold text-zinc-900">
+              <p className="mt-3 text-sm font-bold text-foreground">
                 {displayName(session)}
               </p>
-              <p className="mt-0.5 text-sm text-zinc-700">{roleLabel(session)}</p>
-              <p className="mt-1 text-xs text-zinc-600">{timezoneLabel()}</p>
-              <p className="mt-0.5 text-xs text-zinc-600">
+              <p className="mt-0.5 text-sm text-foreground-secondary">{roleLabel(session)}</p>
+              <p className="mt-1 text-xs text-foreground-tertiary">{timezoneLabel()}</p>
+              <p className="mt-0.5 text-xs text-foreground-tertiary">
                 {currencyLabel(session)}
               </p>
             </div>
@@ -312,22 +312,22 @@ export default function Navbar({
               <Link
                 href="/profile"
                 onClick={() => setProfileMenuOpen(false)}
-                className="flex flex-1 items-center justify-center rounded-sm bg-blue-600 px-3 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="flex flex-1 items-center justify-center rounded-sm bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
               >
                 My Profile
               </Link>
               <Link
                 href="/reports/account-statement"
                 onClick={() => setProfileMenuOpen(false)}
-                className="flex flex-1 items-center justify-center rounded-sm bg-blue-600 px-3 py-2.5 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                className="flex flex-1 items-center justify-center rounded-sm bg-primary px-3 py-2.5 text-center text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-hover"
               >
                 A/c Statement
               </Link>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-sm bg-zinc-100 px-3 py-3">
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-sm bg-surface-2 px-3 py-3">
               {[
-                { key: "balance", label: "Balance", value: balances.balance },
+                { key: "balance", label: "Balance Up", value: balances.balance },
                 { key: "balanceDown", label: "Balance down", value: balances.balanceDown },
                 { key: "netExposure", label: "Net Exposure", value: balances.netExposure },
                 { key: "creditLimit", label: "Credit limit", value: balances.creditLimit },
@@ -336,10 +336,10 @@ export default function Navbar({
                 .filter((x) => shouldShowBalanceField(x.value))
                 .map((it) => (
                   <div key={it.key} className="flex flex-col items-center text-center">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted">
                       {it.label}
                     </span>
-                    <span className="mt-1 text-sm font-bold tabular-nums text-zinc-900">
+                    <span className="mt-1 text-sm font-bold tabular-nums text-foreground">
                       {it.value}
                     </span>
                   </div>
@@ -349,7 +349,7 @@ export default function Navbar({
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-red-600 px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-sm bg-error px-3 py-2.5 text-sm font-medium text-white transition-colors hover:bg-error-hover"
             >
               <LogOut className="h-4 w-4" />
               Log Out

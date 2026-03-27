@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader, Card, Button, Input } from "@/components";
@@ -76,12 +76,12 @@ export default function ReferralSettingsPage() {
       />
       <Card title="Referral settings" className="max-w-lg">
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <p className="text-sm text-muted">Loading…</p>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {message && (
               <p
-                className={`text-sm ${message.type === "success" ? "text-emerald-600" : "text-red-600"}`}
+                className={`text-sm ${message.type === "success" ? "text-success" : "text-error"}`}
               >
                 {message.text}
               </p>
@@ -121,7 +121,7 @@ export default function ReferralSettingsPage() {
                 type="checkbox"
                 checked={form.applyAll}
                 onChange={(e) => setForm((f) => ({ ...f, applyAll: e.target.checked }))}
-                className="rounded border-zinc-300"
+                className="rounded border-border-strong"
               />
               Apply to all
             </label>

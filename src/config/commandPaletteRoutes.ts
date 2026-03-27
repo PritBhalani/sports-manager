@@ -4,7 +4,6 @@ import {
   BarChart3,
   PiggyBank,
   Users,
-  UserCog,
   TrendingUp,
   Dice5,
   Gift,
@@ -64,14 +63,6 @@ export const COMMAND_PALETTE_ROUTES: CommandPaletteRoute[] = [
     description: "View all players",
     Icon: Users,
     keywords: ["users", "downline"],
-  },
-  {
-    id: "admins",
-    href: "/admins",
-    title: "Admins",
-    description: "View all admins",
-    Icon: UserCog,
-    keywords: ["administrators"],
   },
   {
     id: "bonus-root",

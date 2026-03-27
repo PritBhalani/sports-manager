@@ -139,12 +139,12 @@ export default function DataGrid<T extends Record<string, unknown>>({
   return (
     <div className="space-y-4 sm:space-y-5">
       {enableSearch && (
-        <div className="flex items-center gap-2 rounded-sm border border-zinc-200 bg-white px-3 py-2">
-          <Search className="h-4 w-4 text-zinc-400" aria-hidden />
+        <div className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2">
+          <Search className="h-4 w-4 text-placeholder" aria-hidden />
           <input
             type="text"
             placeholder={searchPlaceholder}
-            className="h-7 w-full bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none"
+            className="h-7 w-full bg-transparent text-sm text-foreground placeholder:text-placeholder focus:outline-none"
             onChange={(e) => debouncedSetSearch(e.target.value)}
           />
         </div>
@@ -168,7 +168,7 @@ export default function DataGrid<T extends Record<string, unknown>>({
                   >
                     {col.header}
                     {col.sortable && (
-                      <span aria-hidden className="text-[10px] text-zinc-400">
+                      <span aria-hidden className="text-[10px] text-placeholder">
                         {isActive ? (direction === "asc" ? "▲" : "▼") : "⇵"}
                       </span>
                     )}
@@ -185,7 +185,7 @@ export default function DataGrid<T extends Record<string, unknown>>({
             pageRows.map((row, index) => {
               const key = resolveRowId(row, start + index);
               return (
-                <TableRow key={key} className="hover:bg-zinc-50">
+                <TableRow key={key} className="hover:bg-surface-muted">
                   {columns.map((col) => (
                     <TableCell key={col.id} align={col.align}>
                       {col.cell(row)}

@@ -26,7 +26,7 @@ export default function Tabs({
 
   return (
     <div className={className}>
-      <div className="border-b border-zinc-200">
+      <div className="border-b border-border">
         <nav className="-mb-px flex gap-6" aria-label="Tabs">
           {tabs.map((tab) => {
             const isActive = tab.id === activeId;
@@ -37,8 +37,8 @@ export default function Tabs({
                 onClick={() => onTabChange(tab.id)}
                 className={`flex items-center gap-2 border-b-2 py-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted hover:border-border-strong hover:text-foreground-secondary"
                 }`}
                 aria-selected={isActive}
                 role="tab"

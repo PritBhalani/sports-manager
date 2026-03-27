@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -52,7 +52,7 @@ export default function PlByMarketDetailsPage() {
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       {error && (
-        <p className="mb-2 text-sm text-red-600" role="alert">{error}</p>
+        <p className="mb-2 text-sm text-error" role="alert">{error}</p>
       )}
       <FilterBar className="mb-4">
         <Input

@@ -201,26 +201,26 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold text-zinc-900">Sports Manager</h1>
-        <p className="mt-1 text-sm text-zinc-500">Sign in to your account</p>
+        <h1 className="text-2xl font-semibold text-foreground">Sports Manager</h1>
+        <p className="mt-1 text-sm text-muted">Sign in to your account</p>
       </div>
 
       <Card className="w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {sessionExpiredNotice && (
             <div
-              className="flex items-start gap-3 rounded-sm border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900"
+              className="flex items-start gap-3 rounded-sm border border-warning/40 bg-warning-subtle px-3 py-3 text-sm text-warning-foreground"
               role="status"
             >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">Session ended</p>
-                <p className="mt-1 text-amber-800">{sessionExpiredNotice}</p>
+                <p className="mt-1 text-warning-foreground">{sessionExpiredNotice}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setSessionExpiredNotice(null)}
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-amber-600 transition-colors hover:bg-amber-100"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-warning transition-colors hover:bg-warning/15"
                 aria-label="Dismiss"
               >
                 <X className="h-4 w-4" />
@@ -229,18 +229,18 @@ export default function LoginPage() {
           )}
           {error && (
             <div
-              className="sticky top-3 z-10 flex items-start gap-3 rounded-sm border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-800 shadow-sm"
+              className="sticky top-3 z-10 flex items-start gap-3 rounded-sm border border-error/30 bg-error-subtle px-3 py-3 text-sm text-error-foreground shadow-sm"
               role="alert"
             >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-error" />
               <div className="min-w-0 flex-1">
                 <p className="font-medium">Unable to sign in</p>
-                <p className="mt-1 text-red-700">{error}</p>
+                <p className="mt-1 text-error-foreground">{error}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setError(null)}
-                className="inline-flex h-6 w-6 items-center justify-center rounded text-red-500 transition-colors hover:bg-red-100 hover:text-red-700"
+                className="inline-flex h-6 w-6 items-center justify-center rounded text-error transition-colors hover:bg-error/15 hover:text-error-foreground"
                 aria-label="Dismiss login error"
               >
                 <X className="h-4 w-4" />
@@ -267,18 +267,18 @@ export default function LoginPage() {
           />
 
           {captchaLoading ? (
-            <div className="flex h-20 items-center justify-center rounded-sm bg-zinc-100 text-sm text-zinc-500">
+            <div className="flex h-20 items-center justify-center rounded-sm bg-surface-2 text-sm text-muted">
               Loading captcha…
             </div>
           ) : captcha?.image ? (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-700">
+              <label className="block text-sm font-medium text-foreground-secondary">
                 Captcha
               </label>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <div
-                    className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-sm border border-zinc-300 bg-white"
+                    className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-sm border border-border-strong bg-surface"
                     style={{
                       backgroundImage: captcha.image.startsWith("data:")
                         ? `url(${captcha.image})`
@@ -289,7 +289,7 @@ export default function LoginPage() {
                     }}
                   >
                     {!captcha.image.startsWith("data:") && (
-                      <span className="flex h-full w-full items-center justify-center text-xs text-zinc-400">
+                      <span className="flex h-full w-full items-center justify-center text-xs text-placeholder">
                         Image
                       </span>
                     )}
@@ -298,7 +298,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={loadCaptcha}
                     disabled={submitLoading || captchaLoading}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-zinc-300 bg-[#7a8b12] text-white transition-colors hover:bg-[#68770f] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-border-strong bg-[#7a8b12] text-white transition-colors hover:bg-[#68770f] disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label="Refresh captcha"
                     title="Refresh captcha"
                   >

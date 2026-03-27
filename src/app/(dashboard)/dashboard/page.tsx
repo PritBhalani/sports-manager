@@ -57,13 +57,13 @@ export default function DashboardPage() {
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="truncate text-xl font-bold text-zinc-900 sm:text-2xl">
+          <h1 className="truncate text-xl font-bold text-foreground sm:text-2xl">
             Welcome Back, Sports Manager#1
           </h1>
-          <p className="mt-0.5 text-sm text-zinc-500">Dashboard</p>
+          <p className="mt-0.5 text-sm text-muted">Dashboard</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="flex rounded-sm border border-zinc-200 bg-white p-0.5" role="tablist">
+          <div className="flex rounded-sm border border-border bg-surface p-0.5" role="tablist">
             <button
               type="button"
               role="tab"
@@ -71,8 +71,8 @@ export default function DashboardPage() {
               onClick={() => setActiveTab("details")}
               className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === "details"
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  ? "bg-sidebar-bg text-white"
+                  : "text-foreground-tertiary hover:bg-surface-2"
               }`}
             >
               Details
@@ -84,19 +84,19 @@ export default function DashboardPage() {
               onClick={() => setActiveTab("visual")}
               className={`rounded-sm px-3 py-1.5 text-sm font-medium transition-colors ${
                 activeTab === "visual"
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:bg-zinc-100"
+                  ? "bg-sidebar-bg text-white"
+                  : "text-foreground-tertiary hover:bg-surface-2"
               }`}
             >
               Visual
             </button>
           </div>
-          <div className="flex items-center gap-2 rounded-sm border border-zinc-200 bg-white px-3 py-2">
-            <Calendar className="h-4 w-4 shrink-0 text-zinc-500" aria-hidden />
+          <div className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2">
+            <Calendar className="h-4 w-4 shrink-0 text-muted" aria-hidden />
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="bg-transparent text-sm font-medium text-zinc-900 focus:outline-none"
+              className="bg-transparent text-sm font-medium text-foreground focus:outline-none"
               aria-label="Report period"
             >
               <option value="Today">Today</option>

@@ -1,19 +1,63 @@
 @import "tailwindcss";
 
 :root {
+  /* Typography — single stack for the whole app */
+  --font-family-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+
+  /* Surfaces */
   --background: #ffffff;
   --foreground: #171717;
+  --foreground-secondary: #3f3f46;
+  --foreground-tertiary: #52525b;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-muted: #fafafa;
 
-  /* Brand / UI colors */
+  /* Text */
+  --muted: #71717a;
+  --placeholder: #a1a1aa;
+
+  /* Borders & focus */
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --ring: #a1a1aa;
+
+  /* Brand */
   --primary: #2563eb;
   --primary-hover: #1d4ed8;
+  --primary-foreground: #ffffff;
+
+  /* Secondary (dark actions) */
+  --secondary: #27272a;
+  --secondary-hover: #3f3f46;
+  --secondary-foreground: #ffffff;
+
+  /* Semantic */
+  --success: #059669;
+  --success-subtle: #d1fae5;
+  --success-foreground: #065f46;
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+  --error-subtle: #fee2e2;
+  --error-foreground: #991b1b;
+  --warning: #d97706;
+  --warning-subtle: #fef3c7;
+  --warning-foreground: #92400e;
+  --info: #2563eb;
+  --info-subtle: #dbeafe;
+  --info-foreground: #1e40af;
+
+  /* Sidebar (dark rail) */
   --sidebar-bg: #18181b;
   --sidebar-text: #d4d4d8;
-  --border: #e4e4e7;
-  --muted: #71717a;
-  --success: #059669;
-  --error: #dc2626;
-  --warning: #d97706;
+  --sidebar-border: #27272a;
+  --sidebar-hover: #27272a;
+  --sidebar-active: rgba(63, 63, 70, 0.9);
+  --sidebar-muted: #a1a1aa;
+  --sidebar-ring: #52525b;
 
   /* Radius */
   --radius: 0.5rem;
@@ -21,35 +65,75 @@
   --radius-xl: 1rem;
 }
 
+/* Tailwind v4 theme tokens (editor may warn: @theme). */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-tertiary: var(--foreground-tertiary);
+  --color-muted: var(--muted);
+  --color-placeholder: var(--placeholder);
+
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-muted: var(--surface-muted);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-success: var(--success);
+  --color-success-subtle: var(--success-subtle);
+  --color-success-foreground: var(--success-foreground);
+
+  --color-error: var(--error);
+  --color-error-hover: var(--error-hover);
+  --color-error-subtle: var(--error-subtle);
+  --color-error-foreground: var(--error-foreground);
+
+  --color-warning: var(--warning);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-info: var(--info);
+  --color-info-subtle: var(--info-subtle);
+  --color-info-foreground: var(--info-foreground);
+
   --color-sidebar-bg: var(--sidebar-bg);
   --color-sidebar-text: var(--sidebar-text);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-success: var(--success);
-  --color-error: var(--error);
-  --color-warning: var(--warning);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-ring: var(--sidebar-ring);
+
   --radius-md: var(--radius);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-family: var(--font-family-sans);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: inherit;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }

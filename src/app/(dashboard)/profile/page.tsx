@@ -7,7 +7,15 @@ import {
   useMemo,
   type FormEvent,
 } from "react";
-import { PageHeader, Button, Input, Modal, TablePagination } from "@/components";
+import {
+  PageHeader,
+  Button,
+  Input,
+  Modal,
+  DialogActions,
+  DialogSection,
+  TablePagination,
+} from "@/components";
 import {
   User,
   FileText,
@@ -77,14 +85,14 @@ function ProfileFieldRow({
   }, [value]);
 
   return (
-    <div className="flex flex-col gap-1 border-b border-zinc-100 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-      <span className="shrink-0 text-sm font-medium text-zinc-500">{label}</span>
+    <div className="flex flex-col gap-1 border-b border-border py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <span className="shrink-0 text-sm font-medium text-muted">{label}</span>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:justify-end">
         {children ?? (
           <>
             <span
               className={`truncate text-right text-sm ${
-                isEmpty ? "text-zinc-400" : "text-zinc-900"
+                isEmpty ? "text-placeholder" : "text-foreground"
               }`}
             >
               {display}
@@ -93,7 +101,7 @@ function ProfileFieldRow({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-blue-600 transition-colors hover:bg-blue-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-primary transition-colors hover:bg-info-subtle"
                 aria-label="Copy"
               >
                 {copied ? (
@@ -107,7 +115,7 @@ function ProfileFieldRow({
               <button
                 type="button"
                 onClick={onEdit}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-blue-600 transition-colors hover:bg-blue-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm text-primary transition-colors hover:bg-info-subtle"
                 aria-label={`Edit ${label}`}
               >
                 <Pencil className="h-4 w-4" />
@@ -124,9 +132,9 @@ function ProfileSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
       {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div key={i} className="flex justify-between border-b border-zinc-100 py-3">
-          <div className="h-4 w-20 rounded bg-zinc-200" />
-          <div className="h-4 w-40 rounded bg-zinc-100" />
+        <div key={i} className="flex justify-between border-b border-border py-3">
+          <div className="h-4 w-20 rounded bg-surface-2" />
+          <div className="h-4 w-40 rounded bg-surface-2" />
         </div>
       ))}
     </div>
@@ -310,7 +318,7 @@ export default function ProfilePage() {
       <PageHeader title="My Profile" breadcrumbs={["Profile"]} />
 
       {/* Tab bar – blue underline on active (matches reference) */}
-      <div className="border-b border-zinc-200">
+      <div className="border-b border-border">
         <nav className="-mb-px flex gap-8" aria-label="Tabs">
           {tabs.map((tab) => {
             const isActive = tab.id === activeTab;
@@ -321,8 +329,8 @@ export default function ProfilePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 border-b-2 py-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-zinc-500 hover:border-zinc-300 hover:text-zinc-700"
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted hover:border-border-strong hover:text-foreground-secondary"
                 }`}
                 aria-selected={isActive}
                 role="tab"
@@ -339,17 +347,17 @@ export default function ProfilePage() {
         {activeTab === "account-statement" && (
           <div className="space-y-4">
             {/* Totals strip */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-4 text-sm">
-                <span className="font-medium text-zinc-700">
+                <span className="font-medium text-foreground-secondary">
                   Total Debit:{" "}
-                  <span className="font-semibold text-red-600">
+                  <span className="font-semibold text-error">
                     {formatCurrency(debitTotal)}
                   </span>
                 </span>
-                <span className="font-medium text-zinc-700">
+                <span className="font-medium text-foreground-secondary">
                   Total Credit:{" "}
-                  <span className="font-semibold text-emerald-600">
+                  <span className="font-semibold text-success">
                     {formatCurrency(creditTotal)}
                   </span>
                 </span>
@@ -387,8 +395,8 @@ export default function ProfilePage() {
             </div>
 
             {/* Statement table mock */}
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-              <div className="hidden bg-zinc-50 px-4 py-2.5 text-xs font-semibold text-zinc-500 sm:grid sm:grid-cols-6">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface">
+              <div className="hidden bg-surface-muted px-4 py-2.5 text-xs font-semibold text-muted sm:grid sm:grid-cols-6">
                 <span className="col-span-2">Narration</span>
                 <span>Debit</span>
                 <span>Credit</span>
@@ -396,17 +404,17 @@ export default function ProfilePage() {
                 <span>Date</span>
               </div>
               {statementError && (
-                <div className="px-4 py-3 text-sm text-red-600" role="alert">
+                <div className="px-4 py-3 text-sm text-error" role="alert">
                   {statementError}
                 </div>
               )}
-              <div className="divide-y divide-zinc-100">
+              <div className="divide-y divide-border">
                 {statementLoading ? (
-                  <div className="px-4 py-8 text-center text-sm text-zinc-500">
+                  <div className="px-4 py-8 text-center text-sm text-muted">
                     Loading…
                   </div>
                 ) : statementRows.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-sm text-zinc-500">
+                  <div className="px-4 py-8 text-center text-sm text-muted">
                     No statement data.
                   </div>
                 ) : (
@@ -431,35 +439,35 @@ export default function ProfilePage() {
                     return (
                       <div
                         key={String(r.id ?? idx)}
-                        className="px-4 py-3 text-sm text-zinc-800 sm:grid sm:grid-cols-6 sm:items-center sm:gap-3"
+                        className="px-4 py-3 text-sm text-foreground sm:grid sm:grid-cols-6 sm:items-center sm:gap-3"
                       >
                         <div className="col-span-2">
-                          <p className="text-sm text-zinc-800">
+                          <p className="text-sm text-foreground">
                             {String(r.narration ?? "—")}
                             {r.remarks ? (
-                              <span className="text-zinc-500"> — {String(r.remarks)}</span>
+                              <span className="text-muted"> — {String(r.remarks)}</span>
                             ) : null}
                             {r.comment ? (
-                              <span className="text-zinc-500"> ({String(r.comment)})</span>
+                              <span className="text-muted"> ({String(r.comment)})</span>
                             ) : null}
                           </p>
                         </div>
-                        <div className="mt-2 text-xs text-red-600 sm:mt-0">
+                        <div className="mt-2 text-xs text-error sm:mt-0">
                           {debit ? formatCurrency(debit) : "0"}
                         </div>
                         <div className="mt-2 sm:mt-0">
                           {credit ? (
-                            <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                            <span className="inline-flex rounded-full bg-success-subtle px-2 py-0.5 text-xs font-semibold text-success-foreground">
                               {formatCurrency(credit)}
                             </span>
                           ) : (
-                            <span className="text-xs text-zinc-500">0</span>
+                            <span className="text-xs text-muted">0</span>
                           )}
                         </div>
-                        <div className="mt-2 text-xs tabular-nums text-zinc-800 sm:mt-0">
+                        <div className="mt-2 text-xs tabular-nums text-foreground sm:mt-0">
                           {formatCurrency(Number(r.total ?? r.creditTotal ?? 0))}
                         </div>
-                        <div className="mt-2 text-xs text-zinc-700 sm:mt-0">
+                        <div className="mt-2 text-xs text-foreground-secondary sm:mt-0">
                           {dateText}
                         </div>
                       </div>
@@ -486,7 +494,7 @@ export default function ProfilePage() {
         {activeTab === "profile" && (
           <div className="flex flex-col gap-6">
             {loading && (
-              <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 p-6 shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface-muted/80 p-6 shadow-sm">
                 <ProfileSkeleton />
               </div>
             )}
@@ -494,8 +502,8 @@ export default function ProfilePage() {
               <div
                 className={`flex items-center gap-2 rounded-sm border px-4 py-3 text-sm ${
                   message.type === "success"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                    : "border-red-200 bg-red-50 text-red-800"
+                    ? "border-success/30 bg-success-subtle text-success-foreground"
+                    : "border-error/30 bg-error-subtle text-error-foreground"
                 }`}
                 role="alert"
               >
@@ -511,7 +519,7 @@ export default function ProfilePage() {
             {!loading && (
             <>
             {/* Main profile card – name / username / phone (API + login session) */}
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface-muted/80 shadow-sm">
               <div className="max-w-xl space-y-0 p-4 sm:p-6">
                 {profileName?.trim() ? (
                   <ProfileFieldRow
@@ -535,9 +543,9 @@ export default function ProfilePage() {
             </div>
 
             {/* Change password */}
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface-muted/80 shadow-sm">
               <div className="p-4 sm:p-6">
-                <h3 className="mb-4 text-sm font-semibold text-zinc-900">Password</h3>
+                <h3 className="mb-4 text-sm font-semibold text-foreground">Password</h3>
                 <Button
                   type="button"
                   variant="primary"
@@ -550,20 +558,20 @@ export default function ProfilePage() {
             </div>
 
             {/* Date/time line */}
-            <p className="text-sm text-zinc-700">{now}</p>
+            <p className="text-sm text-foreground-secondary">{now}</p>
 
             {/* Time zone card */}
-            <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80 shadow-sm">
+            <div className="overflow-hidden rounded-xl border border-border bg-surface-muted/80 shadow-sm">
               <div className="p-4 sm:p-6">
-                <h3 className="mb-3 text-sm font-semibold text-zinc-900">Time</h3>
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Time</h3>
                 {editingField === "timezone" ? (
-                  <div className="rounded-sm border border-zinc-200 bg-white p-3">
+                  <div className="rounded-sm border border-border bg-surface p-3">
                     <Input
                       label="Time Zone"
                       value={timezone}
                       onChange={(e) => setTimezone(e.target.value)}
                       placeholder="e.g. Asia/Calcutta"
-                      className="bg-white"
+                      className="bg-surface"
                     />
                     <div className="mt-3 flex gap-2">
                       <Button
@@ -614,17 +622,14 @@ export default function ProfilePage() {
         }}
         title="Change password"
       >
-        <form
-          onSubmit={handleChangePassword}
-          className="space-y-4"
-          autoComplete="off"
-        >
+        <form onSubmit={handleChangePassword} className="space-y-4" autoComplete="off">
+          <DialogSection>
           <Input
             type="password"
             label="Current password"
             value={currentPassword}
             onChange={(ev) => setCurrentPassword(ev.target.value)}
-            className="bg-white"
+            className="bg-surface"
             autoComplete="current-password"
           />
           <Input
@@ -632,7 +637,7 @@ export default function ProfilePage() {
             label="New password"
             value={newPassword}
             onChange={(ev) => setNewPassword(ev.target.value)}
-            className="bg-white"
+            className="bg-surface"
             autoComplete="new-password"
           />
           <Input
@@ -640,10 +645,11 @@ export default function ProfilePage() {
             label="Confirm new password"
             value={confirmPassword}
             onChange={(ev) => setConfirmPassword(ev.target.value)}
-            className="bg-white"
+            className="bg-surface"
             autoComplete="new-password"
           />
-          <div className="flex items-center gap-2 pt-1">
+          </DialogSection>
+          <DialogActions>
             <Button
               type="submit"
               variant="primary"
@@ -661,7 +667,7 @@ export default function ProfilePage() {
             >
               Cancel
             </Button>
-          </div>
+          </DialogActions>
         </form>
       </Modal>
       </div>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { type ReactNode } from "react";
 
@@ -12,7 +12,7 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-sm border border-zinc-200 bg-white">
+    <div className="overflow-x-auto rounded-sm border border-border bg-surface">
       <table className={`${tableBase} ${className}`}>{children}</table>
     </div>
   );
@@ -23,13 +23,13 @@ export function TableHeader({
   className = "",
 }: {
   children: ReactNode;
-  /** Applied to the header row (e.g. `bg-white` for a white header bar). */
+  /** Applied to the header row (e.g. `bg-surface` for a white header bar). */
   className?: string;
 }) {
   return (
     <thead>
       <tr
-        className={`border-b border-zinc-200 ${className || "bg-zinc-50/80"}`}
+        className={`border-b border-border ${className || "bg-surface-muted/80"}`}
       >
         {children}
       </tr>
@@ -54,7 +54,7 @@ export function TableHead({
         : "text-left";
   return (
     <th
-      className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-zinc-600 sm:px-5 sm:py-4 ${alignClass} ${className}`}
+      className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-foreground-tertiary sm:px-5 sm:py-4 ${alignClass} ${className}`}
     >
       {children}
     </th>
@@ -62,7 +62,7 @@ export function TableHead({
 }
 
 export function TableBody({ children }: { children: ReactNode }) {
-  return <tbody className="divide-y divide-zinc-200">{children}</tbody>;
+  return <tbody className="divide-y divide-border">{children}</tbody>;
 }
 
 export function TableRow({
@@ -74,7 +74,7 @@ export function TableRow({
 }) {
   return (
     <tr
-      className={`bg-white transition-colors hover:bg-zinc-50/80 even:bg-zinc-50/50 ${className}`}
+      className={`bg-surface transition-colors hover:bg-surface-muted/80 even:bg-surface-muted/50 ${className}`}
     >
       {children}
     </tr>
@@ -98,7 +98,7 @@ export function TableCell({
         : "text-left";
   return (
     <td
-      className={`px-4 py-3 text-sm text-zinc-900 ${alignClass} ${className}`}
+      className={`px-4 py-3 text-sm text-foreground ${alignClass} ${className}`}
     >
       {children}
     </td>
@@ -116,7 +116,7 @@ export function TableEmpty({
     <tr>
       <td
         colSpan={colSpan}
-        className="px-5 py-14 text-center text-sm text-zinc-500"
+        className="px-5 py-14 text-center text-sm text-muted"
       >
         {message}
       </td>

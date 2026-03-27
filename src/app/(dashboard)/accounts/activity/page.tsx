@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -165,11 +165,11 @@ export default function AccountActivityPage() {
               <Card>
                 <div className="p-4">
                   {loading ? (
-                    <p className="text-sm text-zinc-500">Loading…</p>
+                    <p className="text-sm text-muted">Loading…</p>
                   ) : parentStatus === null ? (
-                    <p className="text-sm text-zinc-500">No parent status or enter User ID and Load.</p>
+                    <p className="text-sm text-muted">No parent status or enter User ID and Load.</p>
                   ) : (
-                    <pre className="overflow-auto rounded bg-zinc-50 p-4 text-sm">
+                    <pre className="overflow-auto rounded bg-surface-muted p-4 text-sm">
                       {JSON.stringify(parentStatus, null, 2)}
                     </pre>
                   )}

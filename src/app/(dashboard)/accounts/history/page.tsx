@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import {
@@ -87,7 +87,7 @@ export default function AccountsHistoryPage() {
       />
 
       <Card padded={false} className="overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 border-b border-zinc-200 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-5 py-4 sm:px-6">
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -108,16 +108,16 @@ export default function AccountsHistoryPage() {
         </div>
 
         <Table>
-          <TableHeader className="bg-white">
-            <TableHead className="font-bold text-zinc-700">A/C Number</TableHead>
-            <TableHead className="font-bold text-zinc-700">Bank</TableHead>
-            <TableHead className="font-bold text-zinc-700">A/C Holder</TableHead>
-            <TableHead className="font-bold text-zinc-700">IFSC</TableHead>
-            <TableHead className="font-bold text-zinc-700">Type</TableHead>
-            <TableHead className="font-bold text-zinc-700">Whatsapp</TableHead>
-            <TableHead className="font-bold text-zinc-700">Telegram</TableHead>
-            <TableHead className="font-bold text-zinc-700">Status</TableHead>
-            <TableHead align="center" className="font-bold text-zinc-700">
+          <TableHeader className="bg-surface">
+            <TableHead className="font-bold text-foreground-secondary">A/C Number</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">Bank</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">A/C Holder</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">IFSC</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">Type</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">Whatsapp</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">Telegram</TableHead>
+            <TableHead className="font-bold text-foreground-secondary">Status</TableHead>
+            <TableHead align="center" className="font-bold text-foreground-secondary">
               Action
             </TableHead>
           </TableHeader>
@@ -127,7 +127,7 @@ export default function AccountsHistoryPage() {
             ) : (
               rows.map((row) => (
                 <TableRow key={row.id}>
-                  <TableCell className="font-medium text-zinc-900">{row.accountNo}</TableCell>
+                  <TableCell className="font-medium text-foreground">{row.accountNo}</TableCell>
                   <TableCell>{row.bank}</TableCell>
                   <TableCell>{row.accountHolder}</TableCell>
                   <TableCell className="font-mono text-xs">{row.ifsc}</TableCell>
@@ -142,7 +142,7 @@ export default function AccountsHistoryPage() {
                   <TableCell align="center">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border text-foreground-tertiary hover:bg-surface-muted hover:text-foreground"
                       aria-label="Edit account"
                     >
                       <Pencil className="h-4 w-4" aria-hidden />

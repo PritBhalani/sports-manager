@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -127,7 +127,7 @@ function DetailContent() {
       <div className="min-w-0">
         <PageHeader title="User Detail" breadcrumbs={["Reports", "Losing Commission"]} />
         <Card>
-          <p className="text-sm text-zinc-500">Add ?userId=... to the URL or open from Players list.</p>
+          <p className="text-sm text-muted">Add ?userId=... to the URL or open from Players list.</p>
         </Card>
       </div>
     );
@@ -141,13 +141,13 @@ function DetailContent() {
         description={`User ID: ${userId}`}
       />
       {loadError && (
-        <p className="mb-4 text-sm text-red-600" role="alert">
+        <p className="mb-4 text-sm text-error" role="alert">
           {loadError}
         </p>
       )}
       {message && (
         <p
-          className={`mb-4 text-sm ${message.type === "success" ? "text-emerald-600" : "text-red-600"}`}
+          className={`mb-4 text-sm ${message.type === "success" ? "text-success" : "text-error"}`}
           role="alert"
         >
           {message.text}
@@ -163,14 +163,14 @@ function DetailContent() {
             content: (
               <Card>
                 {loading ? (
-                  <p className="text-sm text-zinc-500">Loading…</p>
+                  <p className="text-sm text-muted">Loading…</p>
                 ) : loadError ? (
-                  <p className="text-sm text-red-600">{loadError}</p>
+                  <p className="text-sm text-error">{loadError}</p>
                 ) : user === null ? (
-                  <p className="text-sm text-zinc-500">User not found.</p>
+                  <p className="text-sm text-muted">User not found.</p>
                 ) : (
                   <div className="space-y-4">
-                    <pre className="overflow-auto rounded bg-zinc-50 p-4 text-sm">
+                    <pre className="overflow-auto rounded bg-surface-muted p-4 text-sm">
                       {JSON.stringify(user, null, 2)}
                     </pre>
                     <div className="flex gap-2">
@@ -193,9 +193,9 @@ function DetailContent() {
             content: (
               <Card>
                 {referral === null ? (
-                  <p className="text-sm text-zinc-500">No referral settings for this user.</p>
+                  <p className="text-sm text-muted">No referral settings for this user.</p>
                 ) : (
-                  <pre className="overflow-auto rounded bg-zinc-50 p-4 text-sm">
+                  <pre className="overflow-auto rounded bg-surface-muted p-4 text-sm">
                     {JSON.stringify(referral, null, 2)}
                   </pre>
                 )}
@@ -208,9 +208,9 @@ function DetailContent() {
             content: (
               <Card>
                 {activity === null ? (
-                  <p className="text-sm text-zinc-500">No activity data.</p>
+                  <p className="text-sm text-muted">No activity data.</p>
                 ) : (
-                  <pre className="overflow-auto rounded bg-zinc-50 p-4 text-sm">
+                  <pre className="overflow-auto rounded bg-surface-muted p-4 text-sm">
                     {JSON.stringify(activity, null, 2)}
                   </pre>
                 )}
@@ -222,18 +222,18 @@ function DetailContent() {
             label: "Commission",
             content: (
               <Card>
-                <p className="mb-3 text-sm text-zinc-600">
+                <p className="mb-3 text-sm text-foreground-tertiary">
                   Set commission for this user. Body: id (userId), commissions (JSON array), applyAll.
                 </p>
                 <form onSubmit={handleSetCommission} className="space-y-4">
-                  <label className="block text-sm font-medium text-zinc-700">
+                  <label className="block text-sm font-medium text-foreground-secondary">
                     Commissions (JSON array)
                   </label>
                   <textarea
                     value={commissionJson}
                     onChange={(e) => setCommissionJson(e.target.value)}
                     rows={4}
-                    className="w-full rounded border border-zinc-300 px-3 py-2 font-mono text-sm"
+                    className="w-full rounded border border-border-strong px-3 py-2 font-mono text-sm"
                     placeholder='[{"key": "value"}, ...]'
                   />
                   <label className="flex items-center gap-2 text-sm">
@@ -241,7 +241,7 @@ function DetailContent() {
                       type="checkbox"
                       checked={applyAll}
                       onChange={(e) => setApplyAll(e.target.checked)}
-                      className="rounded border-zinc-300"
+                      className="rounded border-border-strong"
                     />
                     Apply to all
                   </label>
@@ -302,7 +302,7 @@ function DetailContent() {
 
 export default function PlayerDetailPage() {
   return (
-    <Suspense fallback={<div className="text-sm text-zinc-500">Loading…</div>}>
+    <Suspense fallback={<div className="text-sm text-muted">Loading…</div>}>
       <DetailContent />
     </Suspense>
   );

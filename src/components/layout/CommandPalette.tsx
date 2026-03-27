@@ -7,9 +7,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { Dialog } from "@/components";
 import {
   COMMAND_PALETTE_ROUTES,
   filterCommandRoutes,
@@ -54,11 +54,6 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
-        return;
-      }
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelected((i) =>
@@ -78,7 +73,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, filtered, selected, go, onClose]);
+  }, [open, filtered, selected, go]);
 
   useEffect(() => {
     if (!open || !listRef.current) return;
@@ -86,24 +81,16 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
     el?.scrollIntoView({ block: "nearest" });
   }, [open, selected]);
 
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-[8vh] px-4">
-      <button
-        type="button"
-        aria-label="Close search"
-        className="absolute inset-0 bg-zinc-900/45 backdrop-blur-md"
-        onClick={onClose}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Search pages"
-        className="relative z-10 w-full max-w-xl overflow-hidden rounded-xl border border-zinc-200/80 bg-white shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)]"
-      >
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3.5">
-          <Search className="h-5 w-5 shrink-0 text-zinc-400" aria-hidden />
+  return (
+    <Dialog
+      isOpen={open}
+      onClose={onClose}
+      title="Search pages"
+      maxWidthClassName="max-w-xl"
+    >
+      <div className="-mx-4 -mt-2 sm:-mx-5 sm:-mt-3">
+        <div className="flex items-center gap-3 border-b border-border px-4 py-3.5 sm:px-5">
+          <Search className="h-5 w-5 shrink-0 text-placeholder" aria-hidden />
           <input
             ref={inputRef}
             type="text"
@@ -113,7 +100,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
             placeholder="Search..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="h-9 w-full border-0 bg-transparent text-[15px] text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0"
+            className="h-9 w-full border-0 bg-transparent text-[15px] text-foreground placeholder:text-placeholder focus:outline-none focus:ring-0"
           />
         </div>
         <ul
@@ -121,7 +108,7 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
           className="max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain py-1"
         >
           {filtered.length === 0 ? (
-            <li className="px-4 py-10 text-center text-sm text-zinc-500">
+            <li className="px-4 py-10 text-center text-sm text-muted">
               No matching pages
             </li>
           ) : (
@@ -136,18 +123,18 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
                     onMouseEnter={() => setSelected(i)}
                     onClick={() => go(item)}
                     className={`flex w-full gap-3 px-4 py-3.5 text-left transition-colors ${
-                      active ? "bg-zinc-100" : "hover:bg-zinc-50"
+                      active ? "bg-surface-2" : "hover:bg-surface-muted"
                     }`}
                   >
                     <Icon
-                      className="mt-0.5 h-5 w-5 shrink-0 text-zinc-500"
+                      className="mt-0.5 h-5 w-5 shrink-0 text-muted"
                       aria-hidden
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[15px] font-semibold text-zinc-900">
+                      <p className="text-[15px] font-semibold text-foreground">
                         {item.title}
                       </p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-zinc-500">
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted">
                         {item.description}
                       </p>
                     </div>
@@ -158,7 +145,6 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
           )}
         </ul>
       </div>
-    </div>,
-    document.body,
+    </Dialog>
   );
 }

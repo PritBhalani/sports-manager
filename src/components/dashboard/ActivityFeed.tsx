@@ -25,8 +25,8 @@ export default function ActivityFeed() {
   return (
     <Card className="space-y-3 p-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-zinc-900">Recent Activity</h3>
-        <span className="text-xs text-zinc-500">
+        <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
+        <span className="text-xs text-muted">
           Last {items.length} events
         </span>
       </div>
@@ -34,26 +34,26 @@ export default function ActivityFeed() {
         {items.map((item) => (
           <div
             key={String(item.id ?? item.sessionId ?? item.tokenId ?? item.createdAt)}
-            className="flex items-start justify-between gap-3 rounded-sm border border-zinc-100 bg-zinc-50 px-3 py-2"
+            className="flex items-start justify-between gap-3 rounded-sm border border-border bg-surface-muted px-3 py-2"
           >
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="truncate text-sm font-medium text-zinc-900">
+                <span className="truncate text-sm font-medium text-foreground">
                   {String(item.username ?? item.userCode ?? item.userId ?? "Unknown")}
                 </span>
                 <Badge variant="info" className="shrink-0">
                   {String(item.type ?? item.eventType ?? "Login")}
                 </Badge>
               </div>
-              <p className="truncate text-xs text-zinc-600">
+              <p className="truncate text-xs text-foreground-tertiary">
                 {String(item.description ?? item.comment ?? "Recent authenticated activity")}
               </p>
-              <p className="mt-0.5 text-[11px] text-zinc-400">
+              <p className="mt-0.5 text-[11px] text-placeholder">
                 {String(item.module ?? "Security")} • {String(item.ipAddress ?? item.ip ?? "—")} • {String(item.device ?? item.userAgent ?? "—")}
               </p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-[11px] text-zinc-400">
+              <p className="text-[11px] text-placeholder">
                 {formatDateTime(item.createdAt ?? item.date ?? item.timestamp)}
               </p>
             </div>
@@ -63,4 +63,3 @@ export default function ActivityFeed() {
     </Card>
   );
 }
-

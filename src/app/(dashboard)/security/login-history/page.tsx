@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -72,13 +72,13 @@ export default function LoginHistoryPage() {
         breadcrumbs={["Security", "User Groups"]}
       />
       {error && (
-        <p className="mb-2 text-sm text-red-600" role="alert">
+        <p className="mb-2 text-sm text-error" role="alert">
           {error}
         </p>
       )}
       <Card>
         {loading ? (
-          <p className="px-4 py-6 text-sm text-zinc-500">Loading…</p>
+          <p className="px-4 py-6 text-sm text-muted">Loading…</p>
         ) : (
           <DataGrid
             columns={columns}

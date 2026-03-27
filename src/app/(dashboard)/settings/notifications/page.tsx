@@ -64,15 +64,15 @@ export default function NotificationsPage() {
       />
       <Card title="Maintenance / announcement messages" className="max-w-xl">
         {loading ? (
-          <p className="text-sm text-zinc-500">Loading…</p>
+          <p className="text-sm text-muted">Loading…</p>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {!isAuthenticated && (
-              <p className="text-sm text-amber-700">Log in to load and save notification text.</p>
+              <p className="text-sm text-warning-foreground">Log in to load and save notification text.</p>
             )}
             {message && (
               <p
-                className={`text-sm ${message.type === "success" ? "text-emerald-600" : "text-red-600"}`}
+                className={`text-sm ${message.type === "success" ? "text-success" : "text-error"}`}
                 role="alert"
               >
                 {message.text}
@@ -95,7 +95,7 @@ export default function NotificationsPage() {
                 {saving ? "Saving…" : "Save"}
               </Button>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-muted">
               Both messages must be non-empty for the dashboard to show the two notice banners. After Save, banners
               update immediately on this tab; other open tabs pick up changes via browser sync (no polling).
             </p>

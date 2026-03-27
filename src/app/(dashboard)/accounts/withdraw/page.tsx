@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import {
@@ -80,7 +80,7 @@ export default function WithdrawPage() {
           {message && (
             <p
               className={`text-sm ${
-                message.type === "success" ? "text-emerald-600" : "text-red-600"
+                message.type === "success" ? "text-success" : "text-error"
               }`}
             >
               {message.text}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -16,8 +16,8 @@ export default function LogoutPage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100">
-      <p className="text-sm text-zinc-500">Signing out…</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface-2">
+      <p className="text-sm text-muted">Signing out…</p>
     </div>
   );
 }

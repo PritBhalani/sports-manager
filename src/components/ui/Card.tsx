@@ -26,11 +26,11 @@ export default function Card({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] ${className}`}
+      className={`overflow-hidden rounded-xl border border-border bg-surface shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] ${className}`}
     >
       {title && (
-        <div className="border-b border-zinc-100 px-5 py-3.5 sm:px-6">
-          <h2 className="text-sm font-semibold text-zinc-900">{title}</h2>
+        <div className="border-b border-border px-5 py-3.5 sm:px-6">
+          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
         </div>
       )}
       <div className={body}>{children}</div>

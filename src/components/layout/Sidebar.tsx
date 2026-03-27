@@ -14,7 +14,6 @@ import {
   IconCasino,
   IconCurrency,
   IconGateways,
-  IconAdmins,
   IconAnnouncement,
   IconReports,
   IconReferrals,
@@ -94,14 +93,6 @@ const menuConfig: MenuItem[] = [
 
   // Players
   { href: "/players", label: "Players", icon: IconPlayer },
-
-  // Settings / profile shortcuts
-  { href: "/settings/referral", label: "Settings", icon: IconSettings },
-  { href: "/accounts/balance", label: "Wallets", icon: IconWallets },
-  { href: "/profile", label: "My Profile", icon: IconMyProfile },
-
-  // Admins
-  { href: "/admins", label: "Admins", icon: IconAdmins },
 
   // Sports
   {
@@ -214,6 +205,11 @@ const menuConfig: MenuItem[] = [
       { href: "/players/blocked-history", label: "Flags", icon: IconFlags },
     ],
   },
+
+  // Settings / wallets / profile
+  { href: "/settings/referral", label: "Settings", icon: IconSettings },
+  { href: "/accounts/balance", label: "Wallets", icon: IconWallets, badge: "beta" },
+  { href: "/profile", label: "My Profile", icon: IconMyProfile },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -263,14 +259,14 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-[260px] max-w-[85vw] flex-col bg-zinc-900 text-zinc-300 shadow-xl transition-[transform] duration-200 md:shadow-none md:transition-[margin] md:duration-200"
+      className="fixed left-0 top-0 z-40 flex h-screen w-[260px] max-w-[85vw] flex-col bg-sidebar-bg text-sidebar-text shadow-xl transition-[transform] duration-200 md:shadow-none md:transition-[margin] md:duration-200"
       style={{
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
         marginLeft: 0,
       }}
     >
       {/* Top section: Logo */}
-      <div className="flex flex-shrink-0 items-center border-b border-zinc-800 px-5 py-4">
+      <div className="flex flex-shrink-0 items-center border-b border-sidebar-border px-5 py-4">
         <span className="text-lg font-bold tracking-wider text-white">
           Sports Manager
         </span>
@@ -278,7 +274,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
       {/* Middle section: Scrollable navigation */}
       <nav
-        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-4 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-zinc-600 [&::-webkit-scrollbar-thumb]:hover:bg-zinc-500"
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-4 scroll-smooth [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sidebar-ring [&::-webkit-scrollbar-thumb]:hover:bg-sidebar-muted"
         style={{ scrollBehavior: "smooth" }}
       >
         <ul className="flex flex-col gap-0.5 px-3">
@@ -291,12 +287,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
-                      active ? "bg-zinc-700/90 text-white" : ""
+                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${
+                      active ? "bg-sidebar-active text-white" : ""
                     }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     <span>{item.label}</span>
+                    {item.badge === "beta" && (
+                      <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                        beta
+                      </span>
+                    )}
                   </Link>
                 </li>
               );
@@ -312,8 +313,8 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   <button
                     type="button"
                     onClick={() => toggleDropdown(item.label)}
-                    className={`flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-zinc-800 hover:text-white ${
-                      activeChild ? "bg-zinc-700/90 text-white" : ""
+                    className={`flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${
+                      activeChild ? "bg-sidebar-active text-white" : ""
                     }`}
                   >
                     <span className="flex items-center gap-3">
@@ -327,7 +328,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     )}
                   </button>
                   {isOpenDropdown && (
-                    <ul className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-zinc-700 pl-3">
+                    <ul className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-ring pl-3">
                       {children.map((child) => {
                         const childActive = pathname.startsWith(child.href);
                         const ChildIcon = child.icon;
@@ -338,10 +339,10 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                             <Link
                               href={child.href}
                               onClick={onClose}
-                              className={`block rounded-sm px-2.5 py-2 text-sm transition-colors hover:bg-zinc-800 hover:text-white ${
+                              className={`block rounded-sm px-2.5 py-2 text-sm transition-colors hover:bg-sidebar-hover hover:text-white ${
                                 childActive
-                                  ? "bg-zinc-800/80 text-white ring-1 ring-zinc-600"
-                                  : "text-zinc-400"
+                                  ? "bg-sidebar-hover/80 text-white ring-1 ring-sidebar-ring"
+                                  : "text-sidebar-muted"
                               }`}
                             >
                             <div className="flex items-center gap-2">
@@ -350,7 +351,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                         ) : null}
                               <span>{child.label}</span>
                               {child.badge === "beta" && (
-                                <span className="rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-semibold text-zinc-900">
+                                <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
                                   beta
                                 </span>
                               )}
@@ -371,11 +372,11 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       </nav>
 
       {/* Bottom section: Logout (fixed at bottom) */}
-      <div className="mt-auto flex flex-shrink-0 border-t border-zinc-800 p-3">
+      <div className="mt-auto flex flex-shrink-0 border-t border-sidebar-border p-3">
         <Link
           href="/logout"
           onClick={onClose}
-          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-sidebar-text transition-colors hover:bg-sidebar-hover hover:text-white"
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
           <span>Log Out</span>

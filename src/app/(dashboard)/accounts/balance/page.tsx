@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader, Card, FilterBar, Input, Button } from "@/components";
@@ -95,36 +95,36 @@ export default function BalancePage() {
 
       <Card title="Currency info" className="mt-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="rounded-sm border border-border bg-surface px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Currency
             </p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
+            <p className="mt-1 text-sm font-semibold text-foreground">
               {currency?.code ?? currency?.name ?? "—"}
             </p>
             {currency?.name &&
               currency?.code &&
               currency.name !== currency.code && (
-                <p className="mt-1 text-xs text-zinc-600">{currency.name}</p>
+                <p className="mt-1 text-xs text-foreground-tertiary">{currency.name}</p>
               )}
           </div>
 
-          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="rounded-sm border border-border bg-surface px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Rate
             </p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
+            <p className="mt-1 text-sm font-semibold text-foreground">
               {typeof currency?.rate === "number" && currency.rate !== 0
                 ? formatCurrency(currency.rate)
                 : "—"}
             </p>
           </div>
 
-          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="rounded-sm border border-border bg-surface px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Fractional
             </p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
+            <p className="mt-1 text-sm font-semibold text-foreground">
               {typeof (currency as any)?.fractional === "number" &&
               (currency as any).fractional !== 0
                 ? String((currency as any).fractional)
@@ -132,18 +132,18 @@ export default function BalancePage() {
             </p>
           </div>
 
-          <div className="rounded-sm border border-zinc-200 bg-white px-4 py-3">
-            <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+          <div className="rounded-sm border border-border bg-surface px-4 py-3">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
               Primary
             </p>
-            <p className="mt-1 text-sm font-semibold text-zinc-900">
+            <p className="mt-1 text-sm font-semibold text-foreground">
               {(currency as any)?.isPrimary ? "Yes" : "—"}
             </p>
           </div>
         </div>
 
-        <p className="mt-4 text-sm text-zinc-600">
-          Currency object shown is from the login response (<code className="rounded bg-zinc-100 px-1 text-xs">POST /authenticate/login</code>).
+        <p className="mt-4 text-sm text-foreground-tertiary">
+          Currency object shown is from the login response (<code className="rounded bg-surface-2 px-1 text-xs">POST /authenticate/login</code>).
         </p>
       </Card>
     </div>

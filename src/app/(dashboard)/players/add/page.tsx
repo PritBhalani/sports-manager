@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -93,13 +93,13 @@ export default function AddPlayerPage() {
               required
             />
             {usernameStatus === "checking" && (
-              <p className="mt-1 text-xs text-zinc-500">Checking…</p>
+              <p className="mt-1 text-xs text-muted">Checking…</p>
             )}
             {usernameStatus === "available" && (
-              <p className="mt-1 text-xs text-emerald-600">Username available.</p>
+              <p className="mt-1 text-xs text-success">Username available.</p>
             )}
             {usernameStatus === "taken" && (
-              <p className="mt-1 text-xs text-red-600">Username already taken.</p>
+              <p className="mt-1 text-xs text-error">Username already taken.</p>
             )}
           </div>
           <Input
@@ -125,7 +125,7 @@ export default function AddPlayerPage() {
           {message && (
             <p
               className={`text-sm ${
-                message.type === "success" ? "text-emerald-600" : "text-red-600"
+                message.type === "success" ? "text-success" : "text-error"
               }`}
             >
               {message.text}

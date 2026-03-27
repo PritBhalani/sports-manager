@@ -25,9 +25,9 @@ const Switch = forwardRef<HTMLInputElement, SwitchProps>(
           className="peer sr-only"
           {...props}
         />
-        <span className="relative inline-flex h-5 w-9 shrink-0 rounded-full bg-zinc-200 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-4" />
+        <span className="relative inline-flex h-5 w-9 shrink-0 rounded-full bg-surface-2 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-surface after:shadow after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4" />
         {label && (
-          <span className="text-sm font-medium text-zinc-700">{label}</span>
+          <span className="text-sm font-medium text-foreground-secondary">{label}</span>
         )}
       </label>
     );

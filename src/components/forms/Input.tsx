@@ -3,7 +3,7 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
 
 const baseClass =
-  "h-9 w-full rounded-sm border border-zinc-200 bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 disabled:bg-zinc-50 disabled:text-zinc-500";
+  "h-9 w-full rounded-sm border border-border bg-surface px-3 text-sm text-foreground placeholder:text-placeholder focus:border-border-strong focus:outline-none focus:ring-1 focus:ring-ring disabled:bg-surface-muted disabled:text-muted";
 
 export type InputProps = InputHTMLAttributes<HTMLInputElement> & {
   label?: string;
@@ -23,14 +23,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-1 block text-sm font-medium text-zinc-700"
+            className="mb-1 block text-sm font-medium text-foreground-secondary"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400">
+            <div className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-placeholder">
               {leftIcon}
             </div>
           )}
@@ -43,13 +43,13 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400">
+            <div className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-placeholder">
               {rightIcon}
             </div>
           )}
         </div>
         {error && (
-          <p id={`${inputId}-error`} className="mt-1 text-sm text-red-600">
+          <p id={`${inputId}-error`} className="mt-1 text-sm text-error">
             {error}
           </p>
         )}

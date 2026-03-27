@@ -10,15 +10,15 @@ const variantStyles: Record<
   string
 > = {
   primary:
-    "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 border-transparent",
+    "bg-primary text-primary-foreground hover:bg-primary-hover focus:ring-primary border-transparent",
   secondary:
-    "bg-zinc-800 text-white hover:bg-zinc-700 focus:ring-zinc-500 border-transparent",
+    "bg-secondary text-secondary-foreground hover:bg-secondary-hover focus:ring-secondary border-transparent",
   outline:
-    "bg-white text-zinc-700 border border-zinc-300 hover:bg-zinc-50 focus:ring-zinc-400",
+    "border border-border-strong bg-surface text-foreground-secondary hover:bg-surface-muted focus:ring-ring",
   danger:
-    "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 border-transparent",
+    "bg-error text-white hover:bg-error-hover focus:ring-error border-transparent",
   ghost:
-    "bg-transparent text-zinc-700 hover:bg-zinc-100 focus:ring-zinc-400 border-transparent",
+    "bg-transparent text-foreground-secondary hover:bg-surface-2 focus:ring-ring border-transparent",
 };
 
 const sizeStyles: Record<ButtonSize, string> = {

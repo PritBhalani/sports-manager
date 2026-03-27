@@ -97,14 +97,14 @@ function DashboardLayoutInner({ children }: LayoutProps) {
         className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? "md:ml-[260px]" : ""}`}
       >
         {banner.text1 && banner.notice1Visible && (
-          <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs text-amber-900 sm:px-5 sm:py-2.5 md:px-6">
-            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-amber-200 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-900">
+          <div className="flex items-center gap-3 border-b border-warning/40 bg-warning-subtle px-4 py-2 text-xs text-warning-foreground sm:px-5 sm:py-2.5 md:px-6">
+            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-warning/25 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-warning-foreground">
               Notice
             </span>
             <p className="min-w-0 flex-1 text-[11px] leading-relaxed sm:text-xs">{banner.text1}</p>
             <button
               type="button"
-              className="ml-2 shrink-0 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:underline"
+              className="ml-2 shrink-0 text-[11px] font-medium text-warning-foreground/80 underline-offset-2 hover:underline"
               onClick={banner.dismissNotice1}
             >
               Dismiss
@@ -112,14 +112,14 @@ function DashboardLayoutInner({ children }: LayoutProps) {
           </div>
         )}
         {banner.text2 && banner.notice2Visible && (
-          <div className="flex items-center gap-3 border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs text-amber-900 sm:px-5 sm:py-2.5 md:px-6">
-            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-amber-200 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-900">
+          <div className="flex items-center gap-3 border-b border-warning/40 bg-warning-subtle px-4 py-2 text-xs text-warning-foreground sm:px-5 sm:py-2.5 md:px-6">
+            <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-warning/25 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-warning-foreground">
               Notice
             </span>
             <p className="min-w-0 flex-1 text-[11px] leading-relaxed sm:text-xs">{banner.text2}</p>
             <button
               type="button"
-              className="ml-2 shrink-0 text-[11px] font-medium text-amber-900/80 underline-offset-2 hover:underline"
+              className="ml-2 shrink-0 text-[11px] font-medium text-warning-foreground/80 underline-offset-2 hover:underline"
               onClick={banner.dismissNotice2}
             >
               Dismiss
@@ -127,7 +127,7 @@ function DashboardLayoutInner({ children }: LayoutProps) {
           </div>
         )}
         <Navbar onMenuClick={toggleSidebar} balances={navbarBalances} />
-        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-zinc-100 p-4 sm:p-6 md:p-7">
+        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 p-4 sm:p-6 md:p-7">
           {children}
         </main>
       </div>

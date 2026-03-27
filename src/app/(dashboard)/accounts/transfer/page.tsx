@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -157,8 +157,8 @@ export default function TransferPage() {
             <p
               className={`text-sm ${
                 submitMessage.type === "success"
-                  ? "text-emerald-600"
-                  : "text-red-600"
+                  ? "text-success"
+                  : "text-error"
               }`}
             >
               {submitMessage.text}
