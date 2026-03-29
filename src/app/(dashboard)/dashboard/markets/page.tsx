@@ -18,7 +18,7 @@ export default function DashboardMarketsPage() {
 
   useEffect(() => {
     getPlByMarket({ page: 1, pageSize: 100, orderByDesc: true }, {})
-      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
+      .then((res) => setRows((res.items ?? []) as Row[]))
       .catch(() => setRows([]));
   }, []);
   return (

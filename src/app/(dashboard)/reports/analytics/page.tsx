@@ -14,7 +14,7 @@ export default function ReportsAnalyticsPage() {
 
   useEffect(() => {
     getPlByMarket({ page: 1, pageSize: 100, orderByDesc: true }, {})
-      .then((res) => setMarketRows(Array.isArray(res?.data) ? res.data : []))
+      .then((res) => setMarketRows((res.items ?? []) as Record<string, unknown>[]))
       .catch(() => setMarketRows([]));
     getDownlineSummary({ page: 1, pageSize: 100, orderByDesc: true }, {})
       .then((res) => setDownlineRows((res.items ?? []) as Record<string, unknown>[]))
