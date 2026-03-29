@@ -280,15 +280,22 @@ export default function LoginPage() {
                   <div
                     className="flex h-14 w-[140px] shrink-0 overflow-hidden rounded-sm border border-border-strong bg-surface"
                     style={{
-                      backgroundImage: captcha.image.startsWith("data:")
-                        ? `url(${captcha.image})`
-                        : undefined,
+                      backgroundImage:
+                        captcha.image.startsWith("data:") ||
+                        captcha.image.startsWith("http://") ||
+                        captcha.image.startsWith("https://")
+                          ? `url(${captcha.image})`
+                          : undefined,
                       backgroundSize: "contain",
                       backgroundRepeat: "no-repeat",
                       backgroundPosition: "center",
                     }}
                   >
-                    {!captcha.image.startsWith("data:") && (
+                    {!(
+                      captcha.image.startsWith("data:") ||
+                      captcha.image.startsWith("http://") ||
+                      captcha.image.startsWith("https://")
+                    ) && (
                       <span className="flex h-full w-full items-center justify-center text-xs text-placeholder">
                         Image
                       </span>
@@ -314,7 +321,7 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-          ) : captcha?.key != null && (
+          ) : captcha?.key != null ? (
             <Input
               label="Captcha"
               placeholder="Enter captcha"
@@ -322,6 +329,21 @@ export default function LoginPage() {
               onChange={(e) => setCaptchaInput(e.target.value)}
               disabled={submitLoading}
             />
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-sm border border-dashed border-border-strong bg-surface-2 px-4 py-6 text-center">
+              <p className="text-sm text-muted">
+                Captcha could not be loaded. Check the alert above or try again.
+              </p>
+              <button
+                type="button"
+                onClick={loadCaptcha}
+                disabled={submitLoading || captchaLoading}
+                className="inline-flex items-center gap-2 rounded-sm border border-border-strong bg-surface px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reload captcha
+              </button>
+            </div>
           )}
 
           <Button

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader, Card, FilterBar, Input, Button } from "@/components";
@@ -9,7 +9,7 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { getAuthSession } from "@/store/authStore";
 import type { LoginResponse } from "@/types/auth.types";
 
-export default function BalancePage() {
+export default function WebsiteCurrencyPage() {
   const [balance, setBalance] = useState<{ balance?: number; chips?: number; cash?: number } | null>(null);
   const [detailUserId, setDetailUserId] = useState("");
   const [detailBalance, setDetailBalance] = useState<typeof balance>(null);
@@ -53,7 +53,7 @@ export default function BalancePage() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Balance"
+        title="Website | Currency"
         breadcrumbs={["Website", "Currency"]}
       />
 
@@ -125,9 +125,9 @@ export default function BalancePage() {
               Fractional
             </p>
             <p className="mt-1 text-sm font-semibold text-foreground">
-              {typeof (currency as any)?.fractional === "number" &&
-              (currency as any).fractional !== 0
-                ? String((currency as any).fractional)
+              {typeof (currency as { fractional?: number })?.fractional === "number" &&
+              (currency as { fractional?: number }).fractional !== 0
+                ? String((currency as { fractional?: number }).fractional)
                 : "—"}
             </p>
           </div>
@@ -137,7 +137,7 @@ export default function BalancePage() {
               Primary
             </p>
             <p className="mt-1 text-sm font-semibold text-foreground">
-              {(currency as any)?.isPrimary ? "Yes" : "—"}
+              {(currency as { isPrimary?: boolean })?.isPrimary ? "Yes" : "—"}
             </p>
           </div>
         </div>

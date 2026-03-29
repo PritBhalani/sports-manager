@@ -17,7 +17,7 @@ export default function ReportsAnalyticsPage() {
       .then((res) => setMarketRows(Array.isArray(res?.data) ? res.data : []))
       .catch(() => setMarketRows([]));
     getDownlineSummary({ page: 1, pageSize: 100, orderByDesc: true }, {})
-      .then((res) => setDownlineRows(Array.isArray(res?.data) ? res.data : []))
+      .then((res) => setDownlineRows((res.items ?? []) as Record<string, unknown>[]))
       .catch(() => setDownlineRows([]));
   }, []);
 

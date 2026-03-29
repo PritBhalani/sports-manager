@@ -22,7 +22,7 @@ const columns = [
   { id: "device", header: "Device", sortable: true, cell: (row: Row) => String(row.device ?? row.userAgent ?? "—") },
 ];
 
-export default function SecurityAnalyticsPage() {
+export default function CasinoStatsPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
@@ -34,7 +34,7 @@ export default function SecurityAnalyticsPage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
-        title="Security Analytics"
+        title="Casino | Stats"
         breadcrumbs={["Casino", "Stats"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
@@ -77,4 +77,3 @@ export default function SecurityAnalyticsPage() {
     </div>
   );
 }
-

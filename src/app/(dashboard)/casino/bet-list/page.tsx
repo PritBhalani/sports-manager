@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -21,7 +21,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
 
-export default function BetHistoryListPage() {
+export default function CasinoBetListPage() {
   const { page, pageSize, setPage, setPageSize, pageSizeOptions } = usePagination();
   const [data, setData] = useState<Record<string, unknown>[]>([]);
   const [total, setTotal] = useState(0);
@@ -61,8 +61,8 @@ export default function BetHistoryListPage() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Sports | Betlist"
-        breadcrumbs={["Sports", "Betlist"]}
+        title="Casino | Bet List"
+        breadcrumbs={["Casino", "Bet List"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
       {error && (

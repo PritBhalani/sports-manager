@@ -30,6 +30,11 @@ export default function Dialog({
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const activeElementRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -37,7 +42,7 @@ export default function Dialog({
       typeof document !== "undefined" ? (document.activeElement as HTMLElement | null) : null;
     acquire();
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     document.addEventListener("keydown", onKeyDown);
     const id = requestAnimationFrame(() => panelRef.current?.focus());
@@ -47,7 +52,7 @@ export default function Dialog({
       release();
       activeElementRef.current?.focus?.();
     };
-  }, [isOpen, onClose, acquire, release]);
+  }, [isOpen, acquire, release]);
 
   if (!isOpen || typeof document === "undefined") return null;
 

@@ -85,7 +85,7 @@ const menuConfig: MenuItem[] = [
     label: "Transactions",
     icon: IconTransaction,
     children: [
-      { href: "/accounts/requests/deposit", label: "Request", icon: IconRequest },
+      { href: "/transactions/requests", label: "Request", icon: IconRequest },
       { href: "/accounts/deposit", label: "Auto", icon: IconAuto },
       { href: "/accounts/withdraw", label: "Manual", icon: IconManual },
     ],
@@ -99,13 +99,13 @@ const menuConfig: MenuItem[] = [
     label: "Sports",
     icon: IconTrophy,
     children: [
-      { href: "/bets/history", label: "Betlist", badge: "beta", icon: IconBetlist },
-      { href: "/bets/markets", label: "SPM Sports", icon: IconTrophy },
-      { href: "/bets/markets", label: "Betfair", icon: IconGamepad2 },
-      { href: "/bets/markets", label: "Betby", icon: IconLink2 },
-      { href: "/bets/markets", label: "Atlas", icon: IconGlobe },
-      { href: "/bets/markets", label: "IG Pixel", icon: IconFlag },
-      { href: "/bets/markets", label: "Alt Gaming", icon: IconGamepad2 },
+      { href: "/sports/betlist", label: "Betlist", badge: "beta", icon: IconBetlist },
+      { href: "/sports/spm-sports", label: "SPM Sports", icon: IconTrophy },
+      { href: "/sports/betfair", label: "Betfair", icon: IconGamepad2 },
+      { href: "/sports/betby", label: "Betby", icon: IconLink2 },
+      { href: "/sports/atlas", label: "Atlas", icon: IconGlobe },
+      { href: "/sports/ig-pixel", label: "IG Pixel", icon: IconFlag },
+      { href: "/sports/alt-gaming", label: "Alt Gaming", icon: IconGamepad2 },
     ],
   },
 
@@ -114,9 +114,9 @@ const menuConfig: MenuItem[] = [
     label: "Casino",
     icon: IconCasino,
     children: [
-      { href: "/security/analytics", label: "Stats", badge: "beta", icon: IconBarChart3 },
-      { href: "/bets/history", label: "Bet List", icon: IconBetlist },
-      { href: "/markets/manage", label: "Games", icon: IconGamepad2 },
+      { href: "/casino/stats", label: "Stats", badge: "beta", icon: IconBarChart3 },
+      { href: "/casino/bet-list", label: "Bet List", icon: IconBetlist },
+      { href: "/casino/games", label: "Games", icon: IconGamepad2 },
     ],
   },
 
@@ -125,63 +125,72 @@ const menuConfig: MenuItem[] = [
     label: "Bonus",
     icon: IconGift,
     children: [
-      { href: "/reports/account-statement", label: "Bonus", icon: IconGift },
-      { href: "/reports/credit-statement", label: "Statement", icon: IconFileText },
-      { href: "/reports/downline-summary", label: "Claims", icon: IconClipboardCheck },
+      { href: "/bonus/bonus", label: "Bonus", icon: IconGift },
+      { href: "/bonus/claims", label: "Claims", icon: IconClipboardCheck },
+      { href: "/bonus/statment", label: "Statment", icon: IconFileText },
     ],
   },
 
   // Referrals (link)
-  { href: "/settings/referral", label: "Referrals", icon: IconReferrals },
+  { href: "/referrals", label: "Referrals", icon: IconReferrals },
 
   // Website
   {
     label: "Website",
     icon: IconWebsite,
     children: [
-      { href: "/dashboard/analytics", label: "Analytics", icon: IconBarChart3 },
+      { href: "/website/analytics", label: "Analytics", icon: IconBarChart3 },
       { href: "/website/banners", label: "Banners", icon: IconImageIcon },
       { href: "/website/banking", label: "Banking", icon: IconBanknote },
-      { href: "/accounts/deposit", label: "Gateways", icon: IconGateways },
-      { href: "/accounts/balance", label: "Currency", icon: IconCurrency },
-      { href: "/settings/notifications", label: "Forms", badge: "beta", icon: IconFileCheck2 },
+      { href: "/website/gatways", label: "Gateways", icon: IconGateways },
+      { href: "/website/currency", label: "Currency", icon: IconCurrency },
+      { href: "/website/forms", label: "Forms", badge: "beta", icon: IconFileCheck2 },
       {
-        href: "/settings/event-types",
+        href: "/website/external-integrations",
         label: "External Integrations",
         icon: IconGateways,
       },
       {
-        href: "/settings/event-types",
+        href: "/website/data-integrations",
         label: "Data Integrations",
         icon: IconDatabase,
       },
     ],
   },
 
-  // Reports
+  // Reports (/reports/* list pages + player report shortcuts)
   {
     label: "Reports",
     icon: IconReports,
     children: [
       { href: "/reports/profit-loss", label: "Profit & Loss", icon: IconReports },
-      { href: "/players/detail", label: "Losing Commission", icon: IconLosingCommission },
-      { href: "/dashboard/analytics", label: "GGR", icon: IconGGR },
-      { href: "/players/blocked", label: "Blocked Players", icon: IconBlockedPlayers },
-      {
-        href: "/players/blocked-history",
-        label: "Blocked Player History",
-        icon: IconBlockedPlayerHistory,
-      },
-      { href: "/players/demo", label: "Demo Players", icon: IconDemoPlayers },
-      { href: "/players/nth-deposit", label: "Nth Deposit", icon: IconNthDeposit },
-      { href: "/players/ftd", label: "FTD", icon: IconFTD },
-      {
-        href: "/players/zero-deposit",
-        label: "Zero Deposit Players",
-        icon: IconZeroDepositPlayers,
-      },
-      { href: "/players/inactive", label: "Inactive Players", icon: IconInactivePlayers },
-      { href: "/players/master", label: "Player Master", badge: "beta", icon: IconPlayerMaster },
+      { href: "/reports/analytics", label: "Reports Analytics", icon: IconBarChart3 },
+      { href: "/reports/account-statement", label: "Account Statement", icon: IconFileText },
+      { href: "/reports/credit-statement", label: "Credit Statement", icon: IconFileText },
+      { href: "/reports/downline-summary", label: "Agent P&L Summary", icon: IconClipboardCheck },
+      { href: "/reports/bet-history", label: "Bet History", icon: IconBetlist },
+      { href: "/reports/bet-history-by-market", label: "Bet History by Market", icon: IconBetlist },
+      { href: "/reports/pl-by-agent", label: "P&L by Agent", icon: IconReports },
+      { href: "/reports/pl-by-market", label: "P&L by Market", icon: IconReports },
+      // { href: "/reports/pl-by-market-details", label: "P&L Market Details", icon: IconReports },
+      // { href: "/players/detail", label: "Losing Commission", icon: IconLosingCommission },
+      // { href: "/dashboard/analytics", label: "GGR", icon: IconGGR },
+      // { href: "/players/blocked", label: "Blocked Players", icon: IconBlockedPlayers },
+      // {
+      //   href: "/players/blocked-history",
+      //   label: "Blocked Player History",
+      //   icon: IconBlockedPlayerHistory,
+      // },
+      // { href: "/players/demo", label: "Demo Players", icon: IconDemoPlayers },
+      // { href: "/players/nth-deposit", label: "Nth Deposit", icon: IconNthDeposit },
+      // { href: "/players/ftd", label: "FTD", icon: IconFTD },
+      // {
+      //   href: "/players/zero-deposit",
+      //   label: "Zero Deposit Players",
+      //   icon: IconZeroDepositPlayers,
+      // },
+      // { href: "/players/inactive", label: "Inactive Players", icon: IconInactivePlayers },
+      // { href: "/players/master", label: "Player Master", badge: "beta", icon: IconPlayerMaster },
     ],
   },
 
@@ -207,8 +216,8 @@ const menuConfig: MenuItem[] = [
   },
 
   // Settings / wallets / profile
-  { href: "/settings/referral", label: "Settings", icon: IconSettings },
-  { href: "/accounts/balance", label: "Wallets", icon: IconWallets, badge: "beta" },
+  { href: "/settings", label: "Settings", icon: IconSettings },
+  { href: "/wallets", label: "Wallets", icon: IconWallets, badge: "beta" },
   { href: "/profile", label: "My Profile", icon: IconMyProfile },
 ];
 

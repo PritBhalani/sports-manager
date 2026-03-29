@@ -16,10 +16,10 @@ const AUTH = "/authenticate";
 
 type CaptchaApiEnvelope = {
   success?: boolean;
-  data?: {
-    key?: string;
-    captcha?: string;
-  };
+  data?: unknown;
+  result?: unknown;
+  Data?: unknown;
+  Result?: unknown;
 };
 
 type LoginApiEnvelope = {
@@ -79,6 +79,71 @@ function getApiErrorMessage(
   return fallback;
 }
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+function firstNonEmptyString(...candidates: unknown[]): string | undefined {
+  for (const v of candidates) {
+    if (typeof v === "string" && v.trim().length > 0) return v.trim();
+  }
+  return undefined;
+}
+
+/** Accept raw image: data URL, http(s) URL, or bare base64. */
+function normalizeCaptchaImage(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  const s = raw.trim();
+  if (!s) return undefined;
+  if (s.startsWith("data:")) return s;
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  return `data:image/png;base64,${s}`;
+}
+
+/**
+ * Normalize captcha JSON from common API shapes: flat body, { data }, { result }, PascalCase fields.
+ */
+function parseCaptchaPayload(json: unknown): CaptchaResponse {
+  if (!isRecord(json)) {
+    throw new Error("Captcha response was not a JSON object.");
+  }
+
+  const nested =
+    (isRecord(json.data) ? json.data : null) ??
+    (isRecord(json.result) ? json.result : null) ??
+    (isRecord(json.Data) ? json.Data : null) ??
+    (isRecord(json.Result) ? json.Result : null) ??
+    json;
+
+  const key = firstNonEmptyString(
+    nested.key,
+    nested.Key,
+    nested.sessionKey,
+    nested.SessionKey,
+    nested.captchaKey,
+    nested.CaptchaKey,
+  );
+
+  const rawImage = firstNonEmptyString(
+    nested.captcha,
+    nested.Captcha,
+    nested.image,
+    nested.Image,
+    nested.captchaImage,
+    nested.CaptchaImage,
+  );
+
+  const image = normalizeCaptchaImage(rawImage);
+
+  if (!key && !image) {
+    throw new Error(
+      "Captcha response had no usable key or image. The API shape may have changed.",
+    );
+  }
+
+  return { key, image };
+}
+
 /** GET /authenticate/captcha — no auth. Returns captcha payload (key/image). */
 export async function getCaptcha(): Promise<CaptchaResponse> {
   const url = `${apiConfig.baseUrl}${AUTH}/captcha`;
@@ -88,19 +153,16 @@ export async function getCaptcha(): Promise<CaptchaResponse> {
     credentials: "include",
   });
   if (!res.ok) throw new Error(`Captcha error ${res.status}: ${res.statusText}`);
-  const json = (await res.json()) as CaptchaResponse | CaptchaApiEnvelope;
+  const json: unknown = await res.json();
 
-  const envelope = json as CaptchaApiEnvelope;
-  if (envelope.data) {
-    const base64Image =
-      typeof envelope.data.captcha === "string" ? envelope.data.captcha : "";
-    return {
-      key: envelope.data.key,
-      image: base64Image ? `data:image/png;base64,${base64Image}` : undefined,
-    };
+  if (isRecord(json)) {
+    const env = json as CaptchaApiEnvelope;
+    if (env.success === false) {
+      throw new Error(getApiErrorMessage(json, "Captcha request failed."));
+    }
   }
 
-  return json as CaptchaResponse;
+  return parseCaptchaPayload(json);
 }
 
 /**

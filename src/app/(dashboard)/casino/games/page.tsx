@@ -18,7 +18,7 @@ import {
 } from "@/components";
 import { getMarketLockStatus } from "@/services/market.service";
 
-export default function MarketsManagePage() {
+export default function CasinoGamesPage() {
   const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(false);
   const [sportId, setSportId] = useState("");
@@ -38,7 +38,7 @@ export default function MarketsManagePage() {
   return (
     <div className="min-w-0">
       <PageHeader
-        title="Manage Market"
+        title="Casino | Games"
         breadcrumbs={["Casino", "Games"]}
       />
       <FilterBar className="mb-4">

@@ -23,15 +23,61 @@ export async function getUserActivity(userId: string): Promise<Record<string, un
   return apiGet(`${BETHISTORY}/getuseractivity/${encodeURIComponent(userId)}`);
 }
 
-/** POST /bethistory/getplbymarket — P&L aggregated by market (README §5). Body: searchQuery (fromDate, toDate, eventTypeId), params */
+/** Row from POST /bethistory/getplbymarket — `data.result[]` */
+export type PlByMarketRow = {
+  roundId: number;
+  marketId: string;
+  marketName: string;
+  competitionName?: string;
+  eventName: string;
+  marketTime?: string;
+  settleTime?: string;
+  winner?: string;
+  win: number;
+  commission: number;
+  pnl: number;
+  stake: number;
+};
+
+export type GetPlByMarketResponse = {
+  items: PlByMarketRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/** POST /bethistory/getplbymarket — Body: searchQuery (fromDate, toDate, eventTypeId), params */
 export async function getPlByMarket(
   params: ListParams,
   searchQuery: { fromDate?: string; toDate?: string; eventTypeId?: string }
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${BETHISTORY}/getplbymarket`, {
-    params: { pageSize: 15, ...params },
+): Promise<GetPlByMarketResponse> {
+  type Envelope = {
+    data?: {
+      result?: PlByMarketRow[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getplbymarket`, {
+    params: {
+      pageSize: params.pageSize ?? 15,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? true,
+      ...params,
+    },
     searchQuery,
   });
+
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 15,
+  };
 }
 
 /** GET /bethistory/getplbymarketdetails/{marketId}/ or /{marketId}/{parentId} — P&L details for a market (README §5) */
@@ -50,37 +96,178 @@ export async function getPlByMarketDetails(
 export async function getBetHistoryByMarketId(
   params: ListParams,
   searchQuery: { marketId: string; status?: string }
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${BETHISTORY}/getbethistorybymarketid`, {
-    params: { pageSize: 15, ...params },
-    searchQuery,
+): Promise<{
+  items: Record<string, unknown>[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+}> {
+  type Envelope = {
+    data?: {
+      result?: Record<string, unknown>[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getbethistorybymarketid`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
+    searchQuery: {
+      marketId: searchQuery.marketId,
+      status: searchQuery.status ?? "",
+    },
   });
+
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
 }
 
-/** POST /bethistory/getplbyagent — P&L by agent (downline). Body: searchQuery (fromDate, toDate), params, optional id (parentId) */
+/** Row from POST /bethistory/getplbyagent — `data.result[]` */
+export type PlByAgentUserPl = {
+  user: {
+    id: string;
+    userCode: string;
+    username: string;
+  };
+  netWin: number;
+  win: number;
+  comm: number;
+};
+
+export type PlByAgentRound = {
+  roundId: number;
+  marketId: string;
+  marketName: string;
+  eventName: string;
+  eventTypeName?: string;
+  competitionName?: string;
+  winner?: string;
+  marketTime?: string;
+  settleTime: string;
+  userPls: PlByAgentUserPl[];
+};
+
+export type GetPlByAgentResponse = {
+  items: PlByAgentRound[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/** POST /bethistory/getplbyagent — P&L by agent. Body: searchQuery (fromDate, toDate), params, optional id (parentId) */
 export async function getPlByAgent(
   params: ListParams,
   searchQuery: { fromDate?: string; toDate?: string },
   parentId?: string
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${BETHISTORY}/getplbyagent`, {
-    params: { pageSize: 15, ...params },
+): Promise<GetPlByAgentResponse> {
+  type Envelope = {
+    data?:
+      | PlByAgentRound[]
+      | {
+          result?: PlByAgentRound[];
+          total?: number;
+          pageIndex?: number;
+          pageSize?: number;
+        };
+  };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getplbyagent`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
     searchQuery,
     ...(parentId ? { id: parentId } : {}),
   });
+  const inner = res?.data;
+  if (Array.isArray(inner)) {
+    return {
+      items: inner,
+      total: inner.length,
+      pageIndex: params.page ?? 1,
+      pageSize: params.pageSize ?? 50,
+    };
+  }
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
 }
 
-/** POST /bethistory/getdownlinesummary — downline P&L summary. Body: searchQuery (fromDate, toDate), params, optional id (parentId) */
+/** Row from POST /bethistory/getdownlinesummary — `data.result[]` */
+export type DownlineSummaryUser = {
+  id: string;
+  userCode: string;
+  username: string;
+  userType?: number;
+};
+
+export type DownlineSummaryRow = {
+  user: DownlineSummaryUser;
+  pnl?: number;
+  to: number;
+  win: number;
+  comm: number;
+  roundId?: number;
+};
+
+export type GetDownlineSummaryResponse = {
+  items: DownlineSummaryRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/** POST /bethistory/getdownlinesummary — Body: searchQuery (fromDate, toDate), params, optional id (parent) */
 export async function getDownlineSummary(
   params: ListParams,
   searchQuery: { fromDate?: string; toDate?: string },
   parentId?: string
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${BETHISTORY}/getdownlinesummary`, {
-    params: { pageSize: 15, ...params },
+): Promise<GetDownlineSummaryResponse> {
+  type Envelope = {
+    data?: {
+      result?: DownlineSummaryRow[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getdownlinesummary`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
     searchQuery,
     ...(parentId ? { id: parentId } : {}),
   });
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
 }
 
 /** POST /bethistory/getdownlinesummarydetails — downline summary for one user. Body: id (userId), searchQuery (fromDate, toDate) */
