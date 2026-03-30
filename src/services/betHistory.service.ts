@@ -270,13 +270,24 @@ export async function getDownlineSummary(
   };
 }
 
-/** POST /bethistory/getdownlinesummarydetails — downline summary for one user. Body: id (userId), searchQuery (fromDate, toDate) */
+/** Row from POST /bethistory/getdownlinesummarydetails — `data[]` */
+export type DownlineSummaryDetailRow = {
+  eventTypeName?: string;
+  netPl?: number;
+  commission?: number;
+  stake?: number;
+};
+
+/** POST /bethistory/getdownlinesummarydetails — Body: id (userId), searchQuery (fromDate, toDate) */
 export async function getDownlineSummaryDetails(
   userId: string,
   searchQuery: { fromDate?: string; toDate?: string }
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  return apiPost(`${BETHISTORY}/getdownlinesummarydetails`, {
+): Promise<DownlineSummaryDetailRow[]> {
+  type Envelope = { data?: DownlineSummaryDetailRow[] };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getdownlinesummarydetails`, {
     id: userId,
     searchQuery,
   });
+  const list = res?.data;
+  return Array.isArray(list) ? list : [];
 }

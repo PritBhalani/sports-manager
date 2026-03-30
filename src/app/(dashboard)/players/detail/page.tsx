@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
@@ -80,9 +80,8 @@ function DetailContent() {
     if (!userId.trim() || !fromDate || !toDate) return;
     const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
     getDownlineSummaryDetails(userId.trim(), { fromDate: fromISO, toDate: toISO })
-      .then((res) => {
-        const list = res?.data ?? [];
-        setSummaryDetails(Array.isArray(list) ? list : []);
+      .then((list) => {
+        setSummaryDetails(list);
       })
       .catch(() => setSummaryDetails([]));
   }, [userId, fromDate, toDate]);

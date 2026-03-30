@@ -322,3 +322,66 @@ export async function getOffPayOut(
 
   return normalizeList<OffPayInRecord>(raw);
 }
+
+/** Row from POST /account/getb2csummary — `data.result[]` */
+export type B2cSummaryRow = {
+  id: string;
+  date: string;
+  userId?: string;
+  agentName?: string;
+  bonusCodeList?: unknown[];
+  newUsers?: unknown[];
+  firstDeposit?: unknown[];
+  secondDeposit?: unknown[];
+  thirdDeposit?: unknown[];
+  deposit: number;
+  depositCount: number;
+  withdrawal: number;
+  withdrawalCount: number;
+  bonus: number;
+  bonusCount: number;
+  bonusRedeem: number;
+  bonusActivated: number;
+  bonusExpired: number;
+  netDeposit: number;
+};
+
+export type GetB2cSummaryResponse = {
+  items: B2cSummaryRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/** POST /account/getb2csummary — B2C summary report */
+export async function getB2cSummary(
+  params: ListParams,
+  searchQuery: { fromDate?: string; toDate?: string }
+): Promise<GetB2cSummaryResponse> {
+  type Envelope = {
+    data?: {
+      result?: B2cSummaryRow[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>(`${ACCOUNT}/getb2csummary`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
+    searchQuery,
+  });
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
+}

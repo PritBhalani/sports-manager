@@ -134,18 +134,6 @@ export default function PlByMarketDetailPage() {
       ) : null}
 
       <Card>
-        <FilterBar className="mb-4 flex flex-wrap items-center gap-3">
-          <Input
-            placeholder="Status (optional)"
-            value={status}
-            onChange={(e) => {
-              setPage(1);
-              setStatus(e.target.value);
-            }}
-            className="max-w-[200px]"
-          />
-        </FilterBar>
-
         <Table>
           <TableHeader>
             <TableHead>Member</TableHead>

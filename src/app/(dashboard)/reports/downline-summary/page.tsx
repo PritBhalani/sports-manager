@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronsRight, Download } from "lucide-react";
 import {
   PageHeader,
@@ -21,6 +20,8 @@ import {
 } from "@/components";
 import {
   getDownlineSummary,
+  getDownlineSummaryDetails,
+  type DownlineSummaryDetailRow,
   type DownlineSummaryRow,
 } from "@/services/betHistory.service";
 import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
@@ -78,11 +79,25 @@ export default function AgentPlSummaryPage() {
   const [toDate, setToDate] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [detailsByUserId, setDetailsByUserId] = useState<
+    Record<string, DownlineSummaryDetailRow[]>
+  >({});
+  const [detailsLoading, setDetailsLoading] = useState<Record<string, boolean>>({});
+  const [detailsError, setDetailsError] = useState<Record<string, string | null>>({});
+
   useEffect(() => {
     const range = todayRangeUTC();
     setFromDate(range.fromDate.slice(0, 10));
     setToDate(range.toDate.slice(0, 10));
   }, []);
+
+  useEffect(() => {
+    setExpanded({});
+    setDetailsByUserId({});
+    setDetailsLoading({});
+    setDetailsError({});
+  }, [fromDate, toDate, refreshKey]);
 
   const load = useCallback(() => {
     if (!fromDate || !toDate) return;
@@ -114,6 +129,37 @@ export default function AgentPlSummaryPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const toggleExpand = useCallback(
+    async (userId: string) => {
+      setExpanded((prev) => ({ ...prev, [userId]: !prev[userId] }));
+
+      if (expanded[userId]) return;
+      if (detailsByUserId[userId] !== undefined) return;
+      if (detailsLoading[userId]) return;
+      if (!fromDate || !toDate) return;
+
+      const { fromDate: fromISO, toDate: toISO } = dateRangeToISO(fromDate, toDate);
+      setDetailsLoading((prev) => ({ ...prev, [userId]: true }));
+      setDetailsError((prev) => ({ ...prev, [userId]: null }));
+      try {
+        const rows = await getDownlineSummaryDetails(userId, {
+          fromDate: fromISO,
+          toDate: toISO,
+        });
+        setDetailsByUserId((prev) => ({ ...prev, [userId]: rows }));
+      } catch (e) {
+        setDetailsByUserId((prev) => ({ ...prev, [userId]: [] }));
+        setDetailsError((prev) => ({
+          ...prev,
+          [userId]: e instanceof Error ? e.message : "Failed to load details.",
+        }));
+      } finally {
+        setDetailsLoading((prev) => ({ ...prev, [userId]: false }));
+      }
+    },
+    [expanded, detailsByUserId, detailsLoading, fromDate, toDate],
+  );
 
   const totals = useMemo(() => {
     return items.reduce(
@@ -216,35 +262,129 @@ export default function AgentPlSummaryPage() {
                   const label = userTypeLabel(
                     typeof u?.userType === "number" ? u.userType : undefined,
                   );
+                  const isOpen = Boolean(expanded[uid]);
+                  const detailRows = detailsByUserId[uid] ?? [];
+                  const detailLoading = Boolean(detailsLoading[uid]);
+                  const detailErr = detailsError[uid];
+
+                  const detailTotals = detailRows.reduce<{
+                    stake: number;
+                    pl: number;
+                    comm: number;
+                  }>(
+                    (acc, d) => ({
+                      stake: acc.stake + (Number(d.stake) || 0),
+                      pl: acc.pl + (Number(d.netPl) || 0),
+                      comm: acc.comm + (Number(d.commission) || 0),
+                    }),
+                    { stake: 0, pl: 0, comm: 0 },
+                  );
+
                   return (
-                    <TableRow key={uid || `${u?.userCode}-${row.roundId}`}>
-                      <TableCell>
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <Badge variant="default">{label}</Badge>
-                          <span className="font-medium text-foreground">
-                            {u?.username ?? "—"}
-                          </span>
-                          {uid ? (
-                            <Link
-                              href={`/reports/downline-summary/${encodeURIComponent(uid)}`}
-                              className="inline-flex shrink-0 items-center text-primary hover:underline"
-                              aria-label={`Open details for ${u?.username ?? "user"}`}
-                            >
-                              <ChevronsRight className="h-4 w-4" aria-hidden />
-                            </Link>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
-                        {formatCurrency(row.to)}
-                      </TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
-                        {formatCurrency(row.win)}
-                      </TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
-                        {formatCurrency(row.comm)}
-                      </TableCell>
-                    </TableRow>
+                    <Fragment key={uid || `${u?.userCode}-${row.roundId}`}>
+                      <TableRow>
+                        <TableCell>
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Badge variant="default">{label}</Badge>
+                            <span className="font-medium text-foreground">
+                              {u?.username ?? "—"}
+                            </span>
+                            {uid ? (
+                              <button
+                                type="button"
+                                onClick={() => void toggleExpand(uid)}
+                                className={`inline-flex shrink-0 items-center rounded-sm text-primary transition-transform hover:bg-surface-muted/80 ${isOpen ? "rotate-90" : ""}`}
+                                aria-expanded={isOpen}
+                                aria-label={`${isOpen ? "Collapse" : "Expand"} details for ${u?.username ?? "user"}`}
+                              >
+                                <ChevronsRight className="h-4 w-4" aria-hidden />
+                              </button>
+                            ) : null}
+                          </div>
+                        </TableCell>
+                        <TableCell align="right" className="tabular-nums text-foreground">
+                          {formatCurrency(row.to)}
+                        </TableCell>
+                        <TableCell align="right" className="tabular-nums text-foreground">
+                          {formatCurrency(row.win)}
+                        </TableCell>
+                        <TableCell align="right" className="tabular-nums text-foreground">
+                          {formatCurrency(row.comm)}
+                        </TableCell>
+                      </TableRow>
+
+                      {isOpen && uid ? (
+                        <TableRow className="bg-surface-muted/30">
+                          <td colSpan={4} className="p-0">
+                            <div className="px-4 py-3">
+                              {detailErr ? (
+                                <p className="text-sm text-error" role="alert">
+                                  {detailErr}
+                                </p>
+                              ) : detailLoading ? (
+                                <p className="text-sm text-muted">Loading details…</p>
+                              ) : detailRows.length === 0 ? (
+                                <p className="text-sm text-muted">No breakdown for this user.</p>
+                              ) : (
+                                <div className="overflow-x-auto rounded-sm border border-border bg-surface">
+                                  <table className="min-w-full border-collapse text-sm">
+                                    <thead className="bg-surface-muted/60">
+                                      <tr>
+                                        <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                                          EventType
+                                        </th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                                          Stake
+                                        </th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                                          PL
+                                        </th>
+                                        <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                                          Commission
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {detailRows.map((d, idx) => (
+                                        <tr
+                                          key={`${d.eventTypeName ?? "et"}-${idx}`}
+                                          className="border-t border-border"
+                                        >
+                                          <td className="px-3 py-2 text-foreground">
+                                            {d.eventTypeName ?? "—"}
+                                          </td>
+                                          <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                            {formatCurrency(d.stake)}
+                                          </td>
+                                          <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                            {formatCurrency(d.netPl)}
+                                          </td>
+                                          <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                            {formatCurrency(d.commission)}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                      <tr className="border-t border-border font-medium">
+                                        <td className="px-3 py-2 text-foreground">Total</td>
+                                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                          {formatCurrency(detailTotals.stake)}
+                                        </td>
+                                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                          {formatCurrency(detailTotals.pl)}
+                                        </td>
+                                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                          {formatCurrency(detailTotals.comm)}
+                                        </td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </TableRow>
+                      ) : null}
+                    </Fragment>
                   );
                 })}
                 <TableRow className="bg-surface-muted/50 font-medium">
