@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./apiClient";
+import { apiGet, apiPost, type ApiMutationOptions } from "./apiClient";
 import { getAuthSession } from "@/store/authStore";
 import type { MyInfo, UpdateMemberBody } from "@/types/user.types";
 
@@ -206,14 +206,34 @@ export async function updateMember(body: UpdateMemberBody): Promise<unknown> {
   return apiPost(`${USER}/updatemember`, payload);
 }
 
-/** GET /user/getusercode/{parentId} — next user code under parent (README §3) */
-export async function getNextUserCode(parentId: string): Promise<{ userCode?: string }> {
-  return apiGet(`${USER}/getusercode/${encodeURIComponent(parentId)}`);
+/**
+ * GET /user/getusercode/{parentId} — next code may be:
+ * - envelope `data` as string: `{"success":true,"data":"comb2c02010107"}`
+ * - or `data: { userCode }` / top-level `userCode` (legacy)
+ */
+export function parseGetUserCodeResponse(raw: unknown): string {
+  if (!raw || typeof raw !== "object") return "";
+  const r = raw as Record<string, unknown>;
+  if (typeof r.data === "string") return r.data.trim();
+  if (r.data && typeof r.data === "object") {
+    const d = r.data as { userCode?: unknown };
+    if (typeof d.userCode === "string") return d.userCode.trim();
+  }
+  if (typeof r.userCode === "string") return r.userCode.trim();
+  return "";
+}
+
+export async function getNextUserCode(parentId: string): Promise<string> {
+  const raw = await apiGet<unknown>(`${USER}/getusercode/${encodeURIComponent(parentId)}`);
+  return parseGetUserCodeResponse(raw);
 }
 
 /** POST /user/addmember — create new member (README §3) */
-export async function addMember(body: Record<string, unknown>): Promise<unknown> {
-  return apiPost(`${USER}/addmember`, body);
+export async function addMember(
+  body: Record<string, unknown>,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost(`${USER}/addmember`, body, options);
 }
 
 /** GET /user/getuserbyid/{userId} — full user object (README §3) */
@@ -221,14 +241,33 @@ export async function getUserById(userId: string): Promise<Record<string, unknow
   return apiGet(`${USER}/getuserbyid/${encodeURIComponent(userId)}`);
 }
 
-/** GET /user/checkusername/{username} — username availability (README §3) */
-export async function checkUsername(username: string): Promise<{ available?: boolean; [key: string]: unknown }> {
-  return apiGet(`${USER}/checkusername/${encodeURIComponent(username)}`);
+/** GET /user/checkusername/{username} — `data: true` means available (see API envelope). */
+export async function checkUsername(username: string): Promise<{ available: boolean }> {
+  const raw = await apiGet<unknown>(`${USER}/checkusername/${encodeURIComponent(username)}`);
+  if (!raw || typeof raw !== "object") {
+    return { available: false };
+  }
+  const r = raw as { data?: unknown; available?: unknown };
+  if (typeof r.data === "boolean") {
+    return { available: r.data };
+  }
+  if (typeof r.available === "boolean") {
+    return { available: r.available };
+  }
+  return { available: false };
 }
 
 /** GET /user/getreferralsetting/{userId} — referral settings (README §3) */
 export async function getReferralSetting(userId: string): Promise<Record<string, unknown>> {
   return apiGet(`${USER}/getreferralsetting/${encodeURIComponent(userId)}`);
+}
+
+/** GET /user/getmyreferralmember/{userId} — referred users for this member */
+export async function getMyReferralMember(userId: string): Promise<unknown[]> {
+  const raw = await apiGet<unknown>(`${USER}/getmyreferralmember/${encodeURIComponent(userId)}`);
+  if (!raw || typeof raw !== "object") return [];
+  const d = (raw as { data?: unknown }).data;
+  return Array.isArray(d) ? d : [];
 }
 
 /** POST /user/changebettinglock — Body: userId, bettingLock (bool) (README §3) */
@@ -246,6 +285,28 @@ export async function setCommission(body: {
   applyAll: boolean;
 }): Promise<unknown> {
   return apiPost(`${USER}/setcommission`, body);
+}
+
+export type UpdateBetConfigItem = {
+  eventTypeId: string;
+  minBet: number;
+  maxBet: number;
+  betDelay: number;
+  maxExposure: number;
+  maxProfit: number;
+  haveChange: boolean;
+};
+
+/** POST /user/updatebetconfig — per-target user `id`, `applyAll` for downline template */
+export async function updateBetConfig(
+  body: {
+    id: string;
+    betConfigs: UpdateBetConfigItem[];
+    applyAll: boolean;
+  },
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost(`${USER}/updatebetconfig`, body, options);
 }
 
 /** POST /user/updatereferralsetting — Body: userId, applyAll, bonus, lockingDays, etc. (README §3) */

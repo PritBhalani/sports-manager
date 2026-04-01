@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -54,7 +55,9 @@ export default function PlByMarketDetailsPage() {
       {error && (
         <p className="mb-2 text-sm text-error" role="alert">{error}</p>
       )}
-      <FilterBar className="mb-4">
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
         <Input
           placeholder="Market ID *"
           value={marketId}
@@ -70,9 +73,9 @@ export default function PlByMarketDetailsPage() {
         <Button variant="primary" onClick={handleLoad} disabled={loading}>
           {loading ? "Loading…" : "Load"}
         </Button>
-      </FilterBar>
-      <Card>
-        <Table>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Date</TableHead>
             <TableHead>Market / Selection</TableHead>
@@ -95,8 +98,10 @@ export default function PlByMarketDetailsPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </Card>
+            </Table>
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

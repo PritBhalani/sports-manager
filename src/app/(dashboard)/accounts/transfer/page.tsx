@@ -1,9 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import {
   PageHeader,
   Card,
+  ListPageFrame,
+  ListTableSection,
   Button,
   Input,
   FilterBar,
@@ -174,20 +176,22 @@ export default function TransferPage() {
         </form>
       </Card>
 
-      <FilterBar className="mb-4">
-        <Input
-          placeholder="Filter by User ID"
-          value={searchUserId}
-          onChange={(e) => setSearchUserId(e.target.value)}
-          className="max-w-[200px]"
-        />
-        <Button variant="outline" onClick={() => fetchList()}>
-          Refresh
-        </Button>
-      </FilterBar>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              placeholder="Filter by User ID"
+              value={searchUserId}
+              onChange={(e) => setSearchUserId(e.target.value)}
+              className="max-w-[200px]"
+            />
+            <Button variant="outline" onClick={() => fetchList()}>
+              Refresh
+            </Button>
+          </FilterBar>
 
-      <Card>
-        <Table>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>User / ID</TableHead>
             <TableHead>Type</TableHead>
@@ -223,18 +227,20 @@ export default function TransferPage() {
               ))
             )}
           </TableBody>
-        </Table>
-        <TablePagination
-          page={page}
-          totalItems={totalItems}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
-          }}
-        />
-      </Card>
+            </Table>
+            <TablePagination
+              page={page}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

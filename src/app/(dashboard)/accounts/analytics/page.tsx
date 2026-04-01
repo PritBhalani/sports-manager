@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+  Badge,
+} from "@/components";
 import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
@@ -104,16 +114,16 @@ export default function AccountsAnalyticsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/players/${id}/balance`)}
+              onClick={() => router.push(`/players/${id}`)}
             >
-              View Balance
+              View Player
             </Button>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/players/${id}/activity`)}
+              onClick={() => router.push(`/players/${id}`)}
             >
-              View Activity
+              View Player
             </Button>
           </div>
         );
@@ -153,26 +163,30 @@ export default function AccountsAnalyticsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="max-w-[160px]" />
-          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="max-w-[160px]" />
-          <Input placeholder="Search user or code" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="username"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search accounts…"
-          getSearchText={(row: Row) =>
-            `${row.username ?? ""} ${row.userCode ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No account analytics data."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="max-w-[160px]" />
+            <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="max-w-[160px]" />
+            <Input placeholder="Search user or code" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="username"
+              initialSortDirection="asc"
+              searchPlaceholder="Search accounts…"
+              getSearchText={(row: Row) =>
+                `${row.username ?? ""} ${row.userCode ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No account analytics data."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

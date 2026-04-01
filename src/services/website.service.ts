@@ -105,6 +105,7 @@ export async function deleteAgentBanner(id: string): Promise<boolean> {
 
   const raw = await apiGet<BannerApiEnvelope>(
     `/website/deleteagentbanner/${encodeURIComponent(bannerId)}`,
+    { treatAsMutation: "delete", showSuccessToast: true },
   );
 
   if (raw?.success === false) {

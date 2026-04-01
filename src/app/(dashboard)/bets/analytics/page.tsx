@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+  Badge,
+} from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getLiveBets } from "@/services/bet.service";
 
@@ -11,10 +21,11 @@ type Row = Record<string, unknown>;
 export default function BetsAnalyticsPage() {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>([]);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
   useEffect(() => {
     getLiveBets({ page: 1, pageSize: 100, orderByDesc: true }, {})
-      .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
+      .then((res) => setRows((res.items ?? []) as Row[]))
       .catch(() => setRows([]));
   }, []);
 
@@ -80,7 +91,6 @@ export default function BetsAnalyticsPage() {
       <PageHeader
         title="Bets Analytics"
         breadcrumbs={["Bet", "Analytics"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -90,26 +100,46 @@ export default function BetsAnalyticsPage() {
         <StatsCard title="Open / Pending" value={rows.filter((row) => String(row.result ?? row.status ?? "").toLowerCase() === "pending").length.toString()} />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
-          <Input placeholder="Filter by sport" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="sport"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search by sport…"
-          getSearchText={(row: Row) =>
-            `${row.sport ?? ""} ${row.market ?? row.marketName ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No bet analytics data."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" className="max-w-[170px]" />
+            <Input type="date" className="max-w-[170px]" />
+            {showMoreFilters ? (
+              <Input placeholder="Filter by sport" className="max-w-xs" />
+            ) : (
+              <div className="hidden lg:block" />
+            )}
+            <div className="flex-1" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setShowMoreFilters((v) => !v)}
+              >
+                More Filters
+              </Button>
+              <Button variant="primary" size="sm">
+                Export
+              </Button>
+            </div>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="sport"
+              initialSortDirection="asc"
+              searchPlaceholder="Search by sport…"
+              getSearchText={(row: Row) =>
+                `${row.sport ?? ""} ${row.market ?? row.marketName ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No bet analytics data."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

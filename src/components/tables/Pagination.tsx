@@ -22,19 +22,35 @@ export default function TablePagination({
   pageSizeOptions = [...PAGE_SIZE_OPTIONS],
 }: TablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const clampedPage = Math.min(Math.max(1, page), totalPages);
+
+  const getPages = (): Array<number | "..."> => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: Array<number | "..."> = [1];
+    const start = Math.max(2, clampedPage - 2);
+    const end = Math.min(totalPages - 1, clampedPage + 2);
+    if (start > 2) pages.push("...");
+    for (let p = start; p <= end; p += 1) pages.push(p);
+    if (end < totalPages - 1) pages.push("...");
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const pages = getPages();
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface px-5 py-3.5 sm:px-6">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 bg-white px-4 py-2.5 sm:px-5">
+      <div className="flex items-center gap-3">
         {onPageSizeChange && (
           <>
-            <Select
-              options={pageSizeOptions.map((n) => ({ value: String(n), label: String(n) }))}
-              value={String(pageSize)}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="h-8 w-16 py-0 pl-2 pr-7"
-              aria-label="Items per page"
-            />
+            <div className="w-[4.5rem] shrink-0">
+              <Select
+                options={pageSizeOptions.map((n) => ({ value: String(n), label: String(n) }))}
+                value={String(pageSize)}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                aria-label="Items per page"
+              />
+            </div>
             <span className="text-sm text-foreground-tertiary">
               {totalItems} item{totalItems !== 1 ? "s" : ""}
             </span>
@@ -46,30 +62,42 @@ export default function TablePagination({
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
-          onClick={() => onPageChange(page - 1)}
-          disabled={page <= 1}
-          className="flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-surface text-foreground-tertiary transition-colors hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none"
+          onClick={() => onPageChange(clampedPage - 1)}
+          disabled={clampedPage <= 1}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-foreground-tertiary shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
           aria-label="Previous page"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
+        {pages.map((p, idx) =>
+          p === "..." ? (
+            <span key={`dots-${idx}`} className="px-1 text-sm text-foreground-tertiary">
+              …
+            </span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onPageChange(p)}
+              aria-current={p === clampedPage ? "page" : undefined}
+              className={
+                p === clampedPage
+                  ? "flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg bg-primary px-2 text-sm font-medium text-primary-foreground shadow-sm"
+                  : "flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg border border-gray-200 bg-white px-2 text-sm text-foreground shadow-sm transition-colors hover:bg-gray-50"
+              }
+            >
+              {p}
+            </button>
+          ),
+        )}
         <button
           type="button"
-          onClick={() => onPageChange(page)}
-          className="flex h-8 min-w-[2rem] items-center justify-center rounded-sm bg-primary px-2 text-sm font-medium text-primary-foreground"
-          aria-label={`Page ${page}`}
-          aria-current="page"
-        >
-          {page}
-        </button>
-        <button
-          type="button"
-          onClick={() => onPageChange(page + 1)}
-          disabled={page >= totalPages}
-          className="flex h-8 w-8 items-center justify-center rounded-sm border border-border bg-surface text-foreground-tertiary transition-colors hover:bg-surface-muted disabled:opacity-50 disabled:pointer-events-none"
+          onClick={() => onPageChange(clampedPage + 1)}
+          disabled={clampedPage >= totalPages}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-foreground-tertiary shadow-sm transition-colors hover:bg-gray-50 disabled:pointer-events-none disabled:opacity-50"
           aria-label="Next page"
         >
           <ChevronRight className="h-4 w-4" />

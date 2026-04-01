@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import { getPlByMarket } from "@/services/betHistory.service";
 
 type Row = Record<string, unknown>;
@@ -45,24 +54,28 @@ export default function DashboardMarketsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Filter by sport" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="sport"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search sports…"
-          getSearchText={(row: Row) =>
-            `${row.sport ?? ""} ${row.marketName ?? row.market ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No markets."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Filter by sport" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="sport"
+              initialSortDirection="asc"
+              searchPlaceholder="Search sports…"
+              getSearchText={(row: Row) =>
+                `${row.sport ?? ""} ${row.marketName ?? row.market ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No markets."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

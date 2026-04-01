@@ -256,11 +256,11 @@ export async function login(
 }
 
 /**
- * POST /changepassword
+ * POST /user/changepassword
  * Body: currentPassword, newPassword, userId — session headers (Primary-Token, Token, IMEI).
  */
 export async function changePassword(body: ChangePasswordBody): Promise<string> {
-  const raw = await apiPost<ChangePasswordResponse>("/changepassword", body);
+  const raw = await apiPost<ChangePasswordResponse>("/user/changepassword", body);
   if (!raw || typeof raw !== "object" || raw === null) throw new Error("Invalid response from server.");
 
   const env = raw as ChangePasswordResponse;

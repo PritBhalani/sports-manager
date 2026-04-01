@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -112,13 +113,22 @@ export default function DemoPlayersPage() {
         <StatsCard title="Latest Demo" value={formatDateTime(rows[0]?.createdAt ?? "—")} />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Search demo players" className="max-w-xs" />
-          <Button variant="primary">Export</Button>
-        </FilterBar>
-        <DataTable rows={rows} columns={columns} emptyMessage="No demo players found." />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Search demo players" className="max-w-xs" />
+            <Button variant="primary">Export</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              rows={rows}
+              columns={columns}
+              emptyMessage="No demo players found."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

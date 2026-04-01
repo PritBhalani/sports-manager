@@ -26,7 +26,7 @@ export default function Card({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-border bg-surface shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] ${className}`}
+      className={`overflow-hidden rounded-lg border border-border bg-surface shadow-sm ${className}`}
     >
       {title && (
         <div className="border-b border-border px-5 py-3.5 sm:px-6">

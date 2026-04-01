@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   Table,
   TableHeader,
   TableHead,
@@ -33,8 +34,10 @@ export default function PositionEventPage() {
         title="Position by Event Type"
         breadcrumbs={["Position", "Event"]}
       />
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Event Type / Sport</TableHead>
             <TableHead align="right">Exposure</TableHead>
@@ -59,8 +62,10 @@ export default function PositionEventPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </Card>
+            </Table>
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

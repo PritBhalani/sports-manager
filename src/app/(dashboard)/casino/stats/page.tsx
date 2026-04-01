@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import { formatDateTime } from "@/utils/date";
 import { getLoginHistory } from "@/services/token.service";
 
@@ -55,25 +64,29 @@ export default function CasinoStatsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="createdAt"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search events…"
-          getSearchText={(row: Row) =>
-            `${row.type ?? row.eventType ?? ""} ${row.username ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No security analytics data."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" className="max-w-[160px]" />
+            <Input type="date" className="max-w-[160px]" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="createdAt"
+              initialSortDirection="asc"
+              enableSearch
+              searchPlaceholder="Search events…"
+              getSearchText={(row: Row) =>
+                `${row.type ?? row.eventType ?? ""} ${row.username ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No security analytics data."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

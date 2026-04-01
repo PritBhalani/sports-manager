@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Table,
@@ -44,16 +45,18 @@ export default function TokenHistoryPage() {
         title="Token History"
         breadcrumbs={["Security", "Token History"]}
       />
-      <FilterBar className="mb-4">
-        <Input
-          placeholder="Search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-xs"
-        />
-      </FilterBar>
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-xs"
+            />
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Date / Time</TableHead>
             <TableHead>Token (masked)</TableHead>
@@ -76,8 +79,10 @@ export default function TokenHistoryPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </Card>
+            </Table>
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

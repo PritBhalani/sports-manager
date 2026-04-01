@@ -199,6 +199,7 @@ export async function deleteAgentOffer(id: string): Promise<boolean> {
 
   const raw = await apiGet<OfferApiEnvelope>(
     `/offer/deleteagentoffer/${encodeURIComponent(offerId)}`,
+    { treatAsMutation: "delete", showSuccessToast: true },
   );
   if (raw?.success === false) {
     throw new Error(toErrorMessage(raw.messages));

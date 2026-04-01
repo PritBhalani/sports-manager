@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./apiClient";
+import { apiGet, apiPost, type ApiMutationOptions } from "./apiClient";
 import type { ListParams, ApiListResponse } from "@/types/api.types";
 import type {
   BalanceResponse,
@@ -79,13 +79,18 @@ export type OffPayInRecord = {
   createdOn?: string;
   updatedOn?: string;
   comment?: string;
+  /** Deposit / pay-in request workflow status (not the same as `user.status`). */
   status?: number;
   user?: {
     id?: string;
     username?: string;
+    /** Member account status from the user service — not the pay-in row state. */
+    status?: number;
+    mobile?: string;
     parent?: {
       username?: string;
     };
+    [key: string]: unknown;
   };
 };
 
@@ -162,14 +167,20 @@ export async function transferOut(
   return apiPost(`${ACCOUNT}/transferout`, body);
 }
 
-/** POST /account/in – deposit chips to user */
-export async function deposit(body: DepositBody): Promise<unknown> {
-  return apiPost(`${ACCOUNT}/in`, body);
+/** POST /account/in – deposit chips to user (`dwType: "D"`) */
+export async function deposit(
+  body: DepositBody,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost(`${ACCOUNT}/in`, body, options);
 }
 
-/** POST /account/out – withdraw chips from user */
-export async function withdraw(body: WithdrawBody): Promise<unknown> {
-  return apiPost(`${ACCOUNT}/out`, body);
+/** POST /account/out – withdraw chips from user (`dwType: "W"`) */
+export async function withdraw(
+  body: WithdrawBody,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost(`${ACCOUNT}/out`, body, options);
 }
 
 /** POST /account/getaccountstatement – README §2 Statements */
@@ -179,6 +190,55 @@ export async function getAccountStatement(
   userId: string
 ): Promise<ApiListResponse<Record<string, unknown>>> {
   const raw = await apiPost<unknown>(`${ACCOUNT}/getaccountstatement`, {
+    params: { pageSize: 15, ...params },
+    searchQuery,
+    id: userId,
+  });
+  return normalizeList<Record<string, unknown>>(raw);
+}
+
+/** POST /account/getbonusstatement — bonus ledger for user */
+export async function getBonusStatement(
+  params: ListParams,
+  searchQuery: StatementSearchQuery,
+  userId: string
+): Promise<ApiListResponse<Record<string, unknown>>> {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/getbonusstatement`, {
+    params: { pageSize: 15, ...params },
+    searchQuery,
+    id: userId,
+  });
+  return normalizeList<Record<string, unknown>>(raw);
+}
+
+/** GET /account/getreferralbalance/{userId} — may return success: false with message */
+export async function getReferralBalance(userId: string): Promise<unknown> {
+  return apiGet<unknown>(
+    `${ACCOUNT}/getreferralbalance/${encodeURIComponent(userId)}`,
+  );
+}
+
+/** POST /account/getreferralstatement — referral ledger for user */
+export async function getReferralStatement(
+  params: ListParams,
+  searchQuery: StatementSearchQuery,
+  userId: string,
+): Promise<ApiListResponse<Record<string, unknown>>> {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/getreferralstatement`, {
+    params: { pageSize: 15, ...params },
+    searchQuery,
+    id: userId,
+  });
+  return normalizeList<Record<string, unknown>>(raw);
+}
+
+/** POST /account/gettransferstatement — transfer ledger for user */
+export async function getTransferStatement(
+  params: ListParams,
+  searchQuery: StatementSearchQuery,
+  userId: string,
+): Promise<ApiListResponse<Record<string, unknown>>> {
+  const raw = await apiPost<unknown>(`${ACCOUNT}/gettransferstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
@@ -321,6 +381,22 @@ export async function getOffPayOut(
   });
 
   return normalizeList<OffPayInRecord>(raw);
+}
+
+/**
+ * Confirm / process a pending off-pay-in request.
+ * If your backend uses a different path or body, change only this function.
+ */
+export async function updateOffPayIn(body: { id: string }): Promise<unknown> {
+  return apiPost("/payment/updateoffpayin", body, { showSuccessToast: true });
+}
+
+/**
+ * Roll back an off-pay-in request.
+ * If your backend uses a different path or body, change only this function.
+ */
+export async function rollbackOffPayIn(body: { id: string }): Promise<unknown> {
+  return apiPost("/payment/rollbackoffpayin", body, { showSuccessToast: true });
 }
 
 /** Row from POST /account/getb2csummary — `data.result[]` */

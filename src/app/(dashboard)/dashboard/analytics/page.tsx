@@ -1,6 +1,15 @@
 "use client";
 
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
 
@@ -41,23 +50,27 @@ export default function DashboardAnalyticsPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <FilterBar className="mb-4">
-              <Input type="date" className="max-w-[160px]" />
-              <Input type="date" className="max-w-[160px]" />
-              <Button variant="primary">Filter</Button>
-            </FilterBar>
-            <DataTable
-              columns={kpiColumns}
-              rows={rows}
-              initialSortColumnId="metric"
-              initialSortDirection="asc"
-              enableSearch
-              searchPlaceholder="Search metrics…"
-              getSearchText={(row: Row) => row.metric.toLowerCase()}
-              emptyMessage="No analytics data."
-            />
-          </Card>
+          <ListPageFrame>
+            <div className="flex w-full flex-col justify-center gap-0">
+              <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+                <Input type="date" className="max-w-[160px]" />
+                <Input type="date" className="max-w-[160px]" />
+                <Button variant="primary">Filter</Button>
+              </FilterBar>
+              <ListTableSection>
+                <DataTable
+                  enableSearch={false}
+                  columns={kpiColumns}
+                  rows={rows}
+                  initialSortColumnId="metric"
+                  initialSortDirection="asc"
+                  searchPlaceholder="Search metrics…"
+                  getSearchText={(row: Row) => row.metric.toLowerCase()}
+                  emptyMessage="No analytics data."
+                />
+              </ListTableSection>
+            </div>
+          </ListPageFrame>
         </div>
         <div className="lg:col-span-1">
           <ActivityFeed />

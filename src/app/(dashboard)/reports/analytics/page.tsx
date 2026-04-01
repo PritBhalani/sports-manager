@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
 import { getDownlineSummary, getPlByMarket } from "@/services/betHistory.service";
@@ -110,26 +119,30 @@ export default function ReportsAnalyticsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
-          <Input placeholder="Filter by type" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={marketRows}
-          initialSortColumnId="marketName"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search by market or sport…"
-          getSearchText={(row: Record<string, unknown>) =>
-            `${row.marketName ?? row.market ?? ""} ${row.sport ?? row.eventType ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No reports."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" className="max-w-[160px]" />
+            <Input type="date" className="max-w-[160px]" />
+            <Input placeholder="Filter by type" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={marketRows}
+              initialSortColumnId="marketName"
+              initialSortDirection="asc"
+              searchPlaceholder="Search by market or sport…"
+              getSearchText={(row: Record<string, unknown>) =>
+                `${row.marketName ?? row.market ?? ""} ${row.sport ?? row.eventType ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No reports."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

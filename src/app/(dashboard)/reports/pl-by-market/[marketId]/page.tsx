@@ -4,7 +4,8 @@ import { useMemo, useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Table,
@@ -133,8 +134,24 @@ export default function PlByMarketDetailPage() {
         </p>
       ) : null}
 
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              placeholder="Filter by status"
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(1);
+              }}
+              className="max-w-[160px]"
+            />
+            <Button variant="primary" type="button" onClick={() => load()}>
+              Apply
+            </Button>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Member</TableHead>
             <TableHead>Placed</TableHead>
@@ -199,19 +216,21 @@ export default function PlByMarketDetailPage() {
               })
             )}
           </TableBody>
-        </Table>
+            </Table>
 
-        {marketId && !loading && total > 0 ? (
-          <TablePagination
-            page={page}
-            totalItems={total}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={pageSizeOptions}
-          />
-        ) : null}
-      </Card>
+            {marketId && !loading && total > 0 ? (
+              <TablePagination
+                page={page}
+                totalItems={total}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={pageSizeOptions}
+              />
+            ) : null}
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

@@ -1,6 +1,15 @@
 "use client";
 
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataGrid } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataGrid,
+} from "@/components";
 
 type Row = Record<string, unknown>;
 
@@ -32,24 +41,28 @@ export default function TokenDetailPage() {
         <StatsCard title="Expires At" value="—" />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Search fields" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataGrid
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="field"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search token fields…"
-          getSearchText={(row: Row) =>
-            `${row.field ?? ""} ${row.value ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No token detail."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Search fields" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataGrid
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="field"
+              initialSortDirection="asc"
+              searchPlaceholder="Search token fields…"
+              getSearchText={(row: Row) =>
+                `${row.field ?? ""} ${row.value ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No token detail."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronsRight, Download, Users } from "lucide-react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -333,14 +334,11 @@ export default function B2cSummaryPage() {
     URL.revokeObjectURL(url);
   };
 
-  const rowCountLabel =
-    total === 1 ? "1 row found" : `${total.toLocaleString()} rows found`;
-
   const th =
     "px-2 py-2 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary sm:px-3";
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="B2C Summary"
         breadcrumbs={["Reports", "B2C Summary"]}
@@ -357,44 +355,46 @@ export default function B2cSummaryPage() {
         }
       />
 
-      <FilterBar className="flex flex-wrap items-center gap-3">
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="max-w-[160px]"
-          aria-label="From date"
-        />
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="max-w-[160px]"
-          aria-label="To date"
-        />
-        <Button
-          variant="primary"
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setRefreshKey((k) => k + 1);
-          }}
-        >
-          Apply
-        </Button>
-      </FilterBar>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setPage(1);
+                setFromDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+              aria-label="From date"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setPage(1);
+                setToDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+              aria-label="To date"
+            />
+            <div className="flex-1" />
+            <Button
+              variant="primary"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setRefreshKey((k) => k + 1);
+              }}
+            >
+              Apply
+            </Button>
+          </FilterBar>
 
-      {error ? (
-        <p className="text-sm text-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <p className="text-sm text-muted">{rowCountLabel}</p>
-
-      <Card padded={false} className="overflow-hidden p-0">
-        <Table>
-            <TableHeader>
+          <ListTableSection>
+            <Table className="w-full min-w-max rounded-lg">
+              <TableHeader className="w-full bg-white uppercase">
               <TableHead className={th}>Date</TableHead>
               <TableHead className={th}>Agent</TableHead>
               <TableHead className={`${th} text-right`} align="right">
@@ -573,22 +573,22 @@ export default function B2cSummaryPage() {
                 </>
               )}
             </TableBody>
-        </Table>
-        {!loading && total > 0 ? (
-          <div className="border-t border-border px-4 py-3">
-            <TablePagination
-              page={page}
-              totalItems={total}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setPage(1);
-              }}
-            />
-          </div>
-        ) : null}
-      </Card>
+            </Table>
+            {!loading && total > 0 ? (
+              <TablePagination
+                page={page}
+                totalItems={total}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setPage(1);
+                }}
+              />
+            ) : null}
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

@@ -1,8 +1,14 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, DataGrid, Button } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  DataGrid,
+  Button,
+} from "@/components";
 import { getLoginHistory } from "@/services/token.service";
 import { formatDateTime } from "@/utils/date";
 
@@ -76,28 +82,32 @@ export default function LoginHistoryPage() {
           {error}
         </p>
       )}
-      <Card>
-        {loading ? (
-          <p className="px-4 py-6 text-sm text-muted">Loading…</p>
-        ) : (
-          <DataGrid
-            columns={columns}
-            rows={rows}
-            initialSortColumnId="date"
-            initialSortDirection="desc"
-            enableSearch
-            searchPlaceholder="Search by IP, location or provider"
-            getSearchText={(row: Row) =>
-              `${row.remoteIp ?? row.ip ?? ""} ${row.location ?? ""} ${
-                row.provider ?? ""
-              } ${row.loginSince ?? ""}`
-                .toString()
-                .toLowerCase()
-            }
-            emptyMessage="No login history yet."
-          />
-        )}
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <ListTableSection>
+            {loading ? (
+              <p className="px-4 py-6 text-sm text-muted">Loading…</p>
+            ) : (
+              <DataGrid
+                columns={columns}
+                rows={rows}
+                initialSortColumnId="date"
+                initialSortDirection="desc"
+                enableSearch
+                searchPlaceholder="Search by IP, location or provider"
+                getSearchText={(row: Row) =>
+                  `${row.remoteIp ?? row.ip ?? ""} ${row.location ?? ""} ${
+                    row.provider ?? ""
+                  } ${row.loginSince ?? ""}`
+                    .toString()
+                    .toLowerCase()
+                }
+                emptyMessage="No login history yet."
+              />
+            )}
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

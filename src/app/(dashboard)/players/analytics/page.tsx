@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+  Badge,
+} from "@/components";
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -92,17 +102,8 @@ export default function PlayersAnalyticsPage() {
             <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}`)}>
               Details
             </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}/bets`)}>
-              Bets
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}/activity`)}>
-              Activity
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}/balance`)}>
-              Balance
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}/exposure`)}>
-              Exposure
+            <Button variant="outline" size="sm" onClick={() => router.push(`/players/${id}`)}>
+              Open
             </Button>
           </div>
         );
@@ -134,26 +135,30 @@ export default function PlayersAnalyticsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
-          <Input placeholder="Search username or code" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="username"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search players…"
-          getSearchText={(row: Row) =>
-            `${row.username ?? ""} ${row.userCode ?? ""} ${row.type ?? row.userType ?? ""} ${row.status ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No players found."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" className="max-w-[160px]" />
+            <Input type="date" className="max-w-[160px]" />
+            <Input placeholder="Search username or code" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="username"
+              initialSortDirection="asc"
+              searchPlaceholder="Search players…"
+              getSearchText={(row: Row) =>
+                `${row.username ?? ""} ${row.userCode ?? ""} ${row.type ?? row.userType ?? ""} ${row.status ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No players found."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

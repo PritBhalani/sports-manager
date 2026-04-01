@@ -25,6 +25,7 @@ import {
   Copy,
   Check,
   Download,
+  Bell,
 } from "lucide-react";
 import {
   getMyInfo,
@@ -37,6 +38,7 @@ import { changePassword } from "@/services/auth.service";
 import type { MyInfo } from "@/types/user.types";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import NotificationSettingsForm from "@/components/settings/NotificationSettingsForm";
 
 function formatNow(): string {
   try {
@@ -173,6 +175,7 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [notificationsModalOpen, setNotificationsModalOpen] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setNow(formatNow()), 1000);
@@ -187,12 +190,24 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let cancelled = false;
-    // README §3 getmyinfo/{parentId}.
-    // Prefer parent id; fall back to current member id so we always hit backend.
-    const pathId =
-      getMyInfoPathId() ||
-      getSessionMemberId() ||
-      "69803a1fda70c5ee87bf0493";
+    // README §3 getmyinfo/{parentId} expects the **parent id** from session.
+    // Do not fall back to member id or a hard-coded id, otherwise we'll spam failures
+    // for valid sessions that don't have parent context loaded yet.
+    const pathId = getMyInfoPathId();
+    if (!pathId) {
+      if (!cancelled) {
+        setInfo(null);
+        setMessage({
+          type: "error",
+          text: "Could not load profile. Please sign in again.",
+        });
+        setLoading(false);
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
     getMyInfo(pathId)
       .then((res) => {
         if (!cancelled) setInfo(res ?? null);
@@ -303,11 +318,8 @@ export default function ProfilePage() {
       setConfirmPassword("");
       setPasswordModalOpen(false);
       setMessage({ type: "success", text });
-    } catch (err) {
-      setMessage({
-        type: "error",
-        text: err instanceof Error ? err.message : "Change password failed.",
-      });
+    } catch {
+      // Global mutation toast handles API errors.
     } finally {
       setPasswordSubmitting(false);
     }
@@ -546,14 +558,25 @@ export default function ProfilePage() {
             <div className="overflow-hidden rounded-xl border border-border bg-surface-muted/80 shadow-sm">
               <div className="p-4 sm:p-6">
                 <h3 className="mb-4 text-sm font-semibold text-foreground">Password</h3>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setPasswordModalOpen(true)}
-                >
-                  Change password
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setPasswordModalOpen(true)}
+                  >
+                    Change password
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<Bell className="h-4 w-4" aria-hidden />}
+                    onClick={() => setNotificationsModalOpen(true)}
+                  >
+                    Notification
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -669,6 +692,25 @@ export default function ProfilePage() {
             </Button>
           </DialogActions>
         </form>
+      </Modal>
+      <Modal
+        isOpen={notificationsModalOpen}
+        onClose={() => setNotificationsModalOpen(false)}
+        title="Notifications"
+      >
+        <DialogSection>
+          <NotificationSettingsForm />
+        </DialogSection>
+        <DialogActions>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setNotificationsModalOpen(false)}
+          >
+            Close
+          </Button>
+        </DialogActions>
       </Modal>
       </div>
     );

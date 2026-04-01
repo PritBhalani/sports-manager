@@ -4,7 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronsRight, Download } from "lucide-react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -185,11 +186,8 @@ export default function AgentPlSummaryPage() {
     URL.revokeObjectURL(url);
   };
 
-  const rowCountLabel =
-    total === 1 ? "1 row found" : `${total.toLocaleString()} rows found`;
-
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Agent P&L Summary"
         breadcrumbs={["Reports", "Agent P&L Summary"]}
@@ -206,50 +204,52 @@ export default function AgentPlSummaryPage() {
         }
       />
 
-      <FilterBar className="flex flex-wrap items-center gap-3">
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="max-w-[160px]"
-          aria-label="From date"
-        />
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="max-w-[160px]"
-          aria-label="To date"
-        />
-        <Button
-          variant="primary"
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setRefreshKey((k) => k + 1);
-          }}
-        >
-          Apply
-        </Button>
-      </FilterBar>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center border-b">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setPage(1);
+                setFromDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+              aria-label="From date"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setPage(1);
+                setToDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+              aria-label="To date"
+            />
+            <div className="flex-1" />
+            <Button
+              variant="primary"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setRefreshKey((k) => k + 1);
+              }}
+            >
+              Apply
+            </Button>
+          </FilterBar>
 
-      {error ? (
-        <p className="text-sm text-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-
-      <p className="text-sm text-muted">{rowCountLabel}</p>
-
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableHead>Name</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">PL</TableHead>
-            <TableHead align="right">Commission</TableHead>
-          </TableHeader>
-          <TableBody>
+          <ListTableSection>
+            <Table className="w-full min-w-max ">
+              <TableHeader className="w-full bg-white uppercase">
+                <TableHead className="!px-6 !py-3 !text-left">NAME</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">STAKE</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">PL</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">COMMISSION</TableHead>
+              </TableHeader>
+              <TableBody>
             {loading ? (
               <TableEmpty colSpan={4} message="Loading…" />
             ) : items.length === 0 ? (
@@ -401,21 +401,23 @@ export default function AgentPlSummaryPage() {
                 </TableRow>
               </>
             )}
-          </TableBody>
-        </Table>
-        {!loading && total > 0 ? (
-          <TablePagination
-            page={page}
-            totalItems={total}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPage(1);
-            }}
-          />
-        ) : null}
-      </Card>
+              </TableBody>
+            </Table>
+            {!loading && total > 0 ? (
+              <TablePagination
+                page={page}
+                totalItems={total}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setPage(1);
+                }}
+              />
+            ) : null}
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

@@ -21,13 +21,13 @@
   --placeholder: #a1a1aa;
 
   /* Borders & focus */
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --border: #e8e8e8;
+  --border-strong: #d9d9d9;
   --ring: #a1a1aa;
 
   /* Brand */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  --primary: #228BE6;
+  --primary-hover: #1E73D5;
   --primary-foreground: #ffffff;
 
   /* Secondary (dark actions) */
@@ -37,16 +37,16 @@
 
   /* Semantic */
   --success: #059669;
-  --success-subtle: #d1fae5;
-  --success-foreground: #065f46;
+  --success-subtle: #BBF7D0;
+  --success-foreground: #166534;
   --error: #dc2626;
   --error-hover: #b91c1c;
-  --error-subtle: #fee2e2;
-  --error-foreground: #991b1b;
+  --error-subtle: #FECACA;
+  --error-foreground: #991B1B;
   --warning: #d97706;
-  --warning-subtle: #fef3c7;
-  --warning-foreground: #92400e;
-  --info: #2563eb;
+  --warning-subtle: #FDE68A;
+  --warning-foreground: #92400E;
+  --info: #228BE6;
   --info-subtle: #dbeafe;
   --info-foreground: #1e40af;
 
@@ -136,4 +136,27 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+}
+
+/* Dashboard main scroll — same as sidebar nav (Sidebar.tsx) */
+.dashboard-main-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-ring) transparent;
+}
+
+.dashboard-main-scroll::-webkit-scrollbar {
+  width: 6px; /* matches Tailwind w-1.5 */
+}
+
+.dashboard-main-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-main-scroll::-webkit-scrollbar-thumb {
+  background: var(--sidebar-ring);
+  border-radius: 9999px;
+}
+
+.dashboard-main-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--sidebar-muted);
 }

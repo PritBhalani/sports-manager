@@ -1,6 +1,15 @@
 "use client";
 
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataGrid } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataGrid,
+} from "@/components";
 
 type Row = Record<string, unknown>;
 
@@ -33,24 +42,28 @@ export default function MarketBetsPage() {
         <StatsCard title="Net P&L" value="0" />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Filter by user or selection" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataGrid
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="user"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search bets…"
-          getSearchText={(row: Row) =>
-            `${row.user ?? ""} ${row.selection ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No bets for this market."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Filter by user or selection" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataGrid
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="user"
+              initialSortDirection="asc"
+              searchPlaceholder="Search bets…"
+              getSearchText={(row: Row) =>
+                `${row.user ?? ""} ${row.selection ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No bets for this market."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

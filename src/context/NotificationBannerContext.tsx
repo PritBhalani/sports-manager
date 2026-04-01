@@ -67,20 +67,16 @@ export function NotificationBannerProvider({
   const apply = useCallback((data: NotificationTexts) => {
     const t1 = String(data.text1 ?? "").trim();
     const t2 = String(data.text2 ?? "").trim();
-    if (t1 && t2) {
-      const prev = prevRef.current;
-      const changed = t1 !== prev.t1 || t2 !== prev.t2;
-      prevRef.current = { t1, t2 };
-      setText1(t1);
-      setText2(t2);
-      if (changed) {
-        setNotice1Visible(true);
-        setNotice2Visible(true);
-      }
-    } else {
-      prevRef.current = { t1: "", t2: "" };
-      setText1("");
-      setText2("");
+    const prev = prevRef.current;
+    const changed = t1 !== prev.t1 || t2 !== prev.t2;
+    prevRef.current = { t1, t2 };
+    setText1(t1);
+    setText2(t2);
+    if (changed) {
+      // Re-open notices when settings change. Rendering still checks text presence,
+      // so empty text remains hidden even when visible flag is true.
+      setNotice1Visible(true);
+      setNotice2Visible(true);
     }
   }, []);
 

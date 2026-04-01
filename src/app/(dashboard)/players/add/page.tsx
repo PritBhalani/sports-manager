@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -34,7 +34,7 @@ export default function AddPlayerPage() {
       setUsernameStatus("checking");
       checkUsername(value.trim())
         .then((res) => {
-          setUsernameStatus(res?.available === false ? "taken" : "available");
+          setUsernameStatus(res.available ? "available" : "taken");
         })
         .catch(() => setUsernameStatus("idle"));
     }) as (...args: unknown[]) => void,
@@ -42,8 +42,12 @@ export default function AddPlayerPage() {
   );
 
   useEffect(() => {
+    if (!parentId.trim()) {
+      setUserCode("");
+      return;
+    }
     getNextUserCode(parentId)
-      .then((res) => setUserCode(res?.userCode ?? ""))
+      .then((code) => setUserCode(code))
       .catch(() => setUserCode(""));
   }, [parentId]);
 
@@ -68,9 +72,9 @@ export default function AddPlayerPage() {
       });
       setMessage({ type: "success", text: "Player added successfully." });
       setUsername("");
-      getNextUserCode(parentId).then((res) => setUserCode(res?.userCode ?? ""));
+      getNextUserCode(parentId).then((code) => setUserCode(code));
     } catch {
-      setMessage({ type: "error", text: "Failed to add player." });
+      // Global mutation toast handles API errors.
     } finally {
       setLoading(false);
     }

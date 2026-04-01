@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -108,36 +117,40 @@ export default function WithdrawHistoryPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="max-w-[160px]"
-          />
-          <Input
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="max-w-[160px]"
-          />
-          <Input placeholder="Filter by user or method" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="createdAt"
-          initialSortDirection="desc"
-          enableSearch
-          searchPlaceholder="Search withdrawals…"
-          getSearchText={(row: Row) =>
-            `${row.username ?? ""} ${row.userCode ?? ""} ${row.referenceId ?? ""} ${row.channel ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No withdrawals."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="max-w-[160px]"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="max-w-[160px]"
+            />
+            <Input placeholder="Filter by user or method" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="createdAt"
+              initialSortDirection="desc"
+              searchPlaceholder="Search withdrawals…"
+              getSearchText={(row: Row) =>
+                `${row.username ?? ""} ${row.userCode ?? ""} ${row.referenceId ?? ""} ${row.channel ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No withdrawals."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

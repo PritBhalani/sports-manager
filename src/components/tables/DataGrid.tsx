@@ -139,14 +139,16 @@ export default function DataGrid<T extends Record<string, unknown>>({
   return (
     <div className="space-y-4 sm:space-y-5">
       {enableSearch && (
-        <div className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-2">
-          <Search className="h-4 w-4 text-placeholder" aria-hidden />
-          <input
-            type="text"
-            placeholder={searchPlaceholder}
-            className="h-7 w-full bg-transparent text-sm text-foreground placeholder:text-placeholder focus:outline-none"
-            onChange={(e) => debouncedSetSearch(e.target.value)}
-          />
+        <div className="rounded-lg bg-neutral-200 px-5 py-4">
+          <div className="flex items-center gap-2 rounded-lg border border-border-strong bg-white px-3 py-2.5">
+            <Search className="h-4 w-4 text-placeholder" aria-hidden />
+            <input
+              type="text"
+              placeholder={searchPlaceholder}
+              className="h-6 w-full bg-transparent text-sm text-foreground placeholder:text-placeholder focus:outline-none"
+              onChange={(e) => debouncedSetSearch(e.target.value)}
+            />
+          </div>
         </div>
       )}
       <Table>

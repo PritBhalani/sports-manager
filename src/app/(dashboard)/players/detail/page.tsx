@@ -94,7 +94,7 @@ function DetailContent() {
       setBettingLock(!bettingLock);
       setMessage({ type: "success", text: "Betting lock updated." });
     } catch {
-      setMessage({ type: "error", text: "Failed to update betting lock." });
+      // Global mutation toast handles API errors.
     }
   };
 
@@ -115,7 +115,7 @@ function DetailContent() {
       await setCommission({ id: userId.trim(), commissions, applyAll });
       setMessage({ type: "success", text: "Commission updated." });
     } catch {
-      setMessage({ type: "error", text: "Failed to update commission." });
+      // Global mutation toast handles API errors.
     } finally {
       setCommissionSaving(false);
     }

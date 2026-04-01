@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { LayoutProps } from "@/types/layout.types";
@@ -13,6 +13,7 @@ import {
   NotificationBannerProvider,
   useNotificationBanner,
 } from "@/context/NotificationBannerContext";
+import { ScrollJumpButton } from "@/components/layout/ScrollJumpButton";
 
 /** Navbar strip — same GET /account/getbalance as dashboard / balance page */
 function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
@@ -48,6 +49,7 @@ function mapBalanceToNavbar(res: BalanceResponse | null | undefined) {
 function DashboardLayoutInner({ children }: LayoutProps) {
   const { isAuthenticated } = useAuth();
   const banner = useNotificationBanner();
+  const mainScrollRef = useRef<HTMLElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
@@ -94,7 +96,7 @@ function DashboardLayoutInner({ children }: LayoutProps) {
       )}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       <div
-        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? "md:ml-[260px]" : ""}`}
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? "md:ml-[15rem]" : ""}`}
       >
         {banner.text1 && banner.notice1Visible && (
           <div className="flex items-center gap-3 border-b border-warning/40 bg-warning-subtle px-4 py-2 text-xs text-warning-foreground sm:px-5 sm:py-2.5 md:px-6">
@@ -127,9 +129,13 @@ function DashboardLayoutInner({ children }: LayoutProps) {
           </div>
         )}
         <Navbar onMenuClick={toggleSidebar} balances={navbarBalances} />
-        <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 p-4 sm:p-6 md:p-7">
+        <main
+          ref={mainScrollRef}
+          className="dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 p-4 sm:p-6 md:p-7"
+        >
           {children}
         </main>
+        <ScrollJumpButton scrollRef={mainScrollRef} />
       </div>
     </div>
   );

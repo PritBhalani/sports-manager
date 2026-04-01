@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { PageHeader, Card, Button, Input } from "@/components";
@@ -61,7 +61,7 @@ export default function ReferralSettingsPage() {
       });
       setMessage({ type: "success", text: "Referral settings updated." });
     } catch {
-      setMessage({ type: "error", text: "Failed to update." });
+      // Global mutation toast handles API errors.
     } finally {
       setSaving(false);
     }

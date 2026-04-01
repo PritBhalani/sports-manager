@@ -1,6 +1,7 @@
 import type { Viewport } from "next";
 import { LayoutProps } from "@/types/layout.types";
 import { DialogProvider } from "@/components";
+import { ToastProvider } from "@/context/ToastContext";
 import "./globals.css";
 
 export const metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: LayoutProps) {
   return (
     <html lang="en" className="font-sans antialiased">
       <body className="min-h-screen font-sans antialiased">
-        <DialogProvider>{children}</DialogProvider>
+        <ToastProvider>
+          <DialogProvider>{children}</DialogProvider>
+        </ToastProvider>
       </body>
     </html>
   );

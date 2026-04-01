@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   Button,
   Dialog,
   Input,
@@ -406,9 +407,10 @@ export default function BonusManageOffersPage() {
         </p>
       ) : null}
 
-      <Card>
-        <p className="mb-3 text-sm text-foreground-secondary">{total || rows.length} Row found</p>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Name</TableHead>
             <TableHead>Offer On</TableHead>
@@ -467,17 +469,19 @@ export default function BonusManageOffersPage() {
               ))
             )}
           </TableBody>
-        </Table>
+            </Table>
 
-        <TablePagination
-          page={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={pageSizeOptions}
-        />
-      </Card>
+            <TablePagination
+              page={page}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              pageSizeOptions={pageSizeOptions}
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
 
       <Dialog
         isOpen={dialogOpen}

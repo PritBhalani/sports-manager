@@ -169,6 +169,8 @@ const menuConfig: MenuItem[] = [
       // { href: "/reports/credit-statement", label: "Credit Statement", icon: IconFileText },
       { href: "/reports/downline-summary", label: "Agent P&L Summary", icon: IconClipboardCheck },
       { href: "/reports/b2c-summary", label: "B2C Summary", icon: IconUsers },
+      { href: "/reports/b2c-activity", label: "B2C Activity", icon: IconUsers },
+      { href: "/reports/fd-game-report", label: "FD Game Report", icon: IconReports },
       // { href: "/reports/bet-history", label: "Bet History", icon: IconBetlist },
       // { href: "/reports/bet-history-by-market", label: "Bet History by Market", icon: IconBetlist },
       { href: "/reports/pl-by-agent", label: "P&L by Agent", icon: IconReports },
@@ -207,17 +209,24 @@ const menuConfig: MenuItem[] = [
   },
 
   // User Groups + Flags
-  {
-    label: "User Groups",
-    icon: IconUsers,
-    children: [
-      { href: "/security/login-history", label: "User Groups", icon: IconUsers },
-      { href: "/players/blocked-history", label: "Flags", icon: IconFlags },
-    ],
-  },
+  // {
+  //   label: "User Groups",
+  //   icon: IconUsers,
+  //   children: [
+  //     { href: "/security/login-history", label: "User Groups", icon: IconUsers },
+  //     { href: "/players/blocked-history", label: "Flags", icon: IconFlags },
+  //   ],
+  // },
 
   // Settings / wallets / profile
-  { href: "/settings", label: "Settings", icon: IconSettings },
+  {
+    label: "Settings",
+    icon: IconSettings,
+    children: [
+      { href: "/settings", label: "Settings", icon: IconSettings },
+      { href: "/settings/notifications", label: "Notifications", icon: IconAnnouncement },
+    ],
+  },
   { href: "/wallets", label: "Wallets", icon: IconWallets, badge: "beta" },
   { href: "/profile", label: "My Profile", icon: IconMyProfile },
 ];
@@ -269,7 +278,7 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-[260px] max-w-[85vw] flex-col bg-sidebar-bg text-sidebar-text shadow-xl transition-[transform] duration-200 md:shadow-none md:transition-[margin] md:duration-200"
+      className="fixed left-0 top-0 z-40 flex h-screen w-[15rem] max-w-[85vw] flex-col bg-sidebar-bg text-sidebar-text shadow-xl transition-[transform] duration-200 md:shadow-none md:transition-[margin] md:duration-200"
       style={{
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
         marginLeft: 0,

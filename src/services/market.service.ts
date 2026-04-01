@@ -1,6 +1,20 @@
-/** README §9 Manage Market */
+/** README §9 Manage Market + Market metadata */
 import { apiGet, apiPost } from "./apiClient";
 import type { MarketLockRecord } from "@/types/market.types";
+
+export type MarketTypeMapping = {
+  id: string;
+  displayName: string;
+  marketTypeCode: string;
+};
+
+/** GET /market/getAllmarkettypemapping — market type mapping list. Auth: Session. */
+export async function getAllMarketTypeMapping(): Promise<MarketTypeMapping[]> {
+  const res = await apiGet<MarketTypeMapping[] | { data?: MarketTypeMapping[] }>(
+    "/market/getAllmarkettypemapping",
+  );
+  return Array.isArray(res) ? res : res?.data ?? [];
+}
 
 /** GET /managemarket/getmarketlockstatus/{sportId} */
 export async function getMarketLockStatus(

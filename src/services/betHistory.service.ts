@@ -1,26 +1,96 @@
 /** README §5 Bet History */
 import { apiGet, apiPost } from "./apiClient";
 import type { ListParams, ApiListResponse } from "@/types/api.types";
-import type { BetHistorySearchQuery, BetHistoryResponse } from "@/types/bet.types";
+import type { BetHistorySearchQuery } from "@/types/bet.types";
 
 const BETHISTORY = "/bethistory";
+
+export type BetHistoryRow = Record<string, unknown>;
+
+export type GetBetHistoryResponse = {
+  items: BetHistoryRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
 
 /** POST /bethistory/getbethistory */
 export async function getBetHistory(
   params: ListParams,
   searchQuery: BetHistorySearchQuery,
   id?: string
-): Promise<BetHistoryResponse> {
-  return apiPost(`${BETHISTORY}/getbethistory`, {
-    params: { pageSize: 15, ...params },
+): Promise<GetBetHistoryResponse> {
+  type Envelope = {
+    data?: {
+      result?: BetHistoryRow[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getbethistory`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
     searchQuery,
     ...(id ? { id } : {}),
   });
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
 }
 
 /** GET /bethistory/getuseractivity/{userId} — user bet activity summary (README §5) */
 export async function getUserActivity(userId: string): Promise<Record<string, unknown>> {
   return apiGet(`${BETHISTORY}/getuseractivity/${encodeURIComponent(userId)}`);
+}
+
+/** Inner market row under each sport group from POST /bethistory/getprofitloss */
+export type BettingProfitLossMarketRow = {
+  pnl?: number;
+  to?: number;
+  win?: number;
+  comm?: number;
+  marketId?: string;
+  roundId?: number;
+  marketName?: string;
+  eventName?: string;
+  eventTypeName?: string;
+  winner?: string;
+  marketTime?: string;
+  settleTime?: string;
+};
+
+/** Sport/event-type group: `data[]` holds settled market P&L lines */
+export type BettingProfitLossGroup = {
+  eventTypeId?: string;
+  eventTypeName?: string;
+  totalPl?: number;
+  data?: BettingProfitLossMarketRow[];
+};
+
+/**
+ * POST /bethistory/getprofitloss — flattened sports-wise P&L; `data` is array of groups.
+ * Body: { fromDate, toDate, userId } (ISO strings).
+ */
+export async function getBettingProfitLoss(body: {
+  fromDate: string;
+  toDate: string;
+  userId: string;
+}): Promise<BettingProfitLossGroup[]> {
+  type Envelope = { data?: BettingProfitLossGroup[] };
+  const res = await apiPost<Envelope>(`${BETHISTORY}/getprofitloss`, body);
+  const list = res?.data;
+  return Array.isArray(list) ? list : [];
 }
 
 /** Row from POST /bethistory/getplbymarket — `data.result[]` */

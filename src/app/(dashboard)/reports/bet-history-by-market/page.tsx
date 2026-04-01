@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Table,
@@ -76,7 +77,9 @@ export default function BetHistoryByMarketPage() {
       {error && (
         <p className="mb-2 text-sm text-error" role="alert">{error}</p>
       )}
-      <FilterBar className="mb-4">
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
         <Input
           placeholder="Market ID *"
           value={marketId}
@@ -106,9 +109,9 @@ export default function BetHistoryByMarketPage() {
         >
           Apply
         </Button>
-      </FilterBar>
-      <Card>
-        <Table>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Event / Market</TableHead>
             <TableHead>Selection</TableHead>
@@ -137,18 +140,20 @@ export default function BetHistoryByMarketPage() {
               ))
             )}
           </TableBody>
-        </Table>
-        {marketId.trim() && data.length > 0 && (
-          <TablePagination
-            page={page}
-            totalItems={total}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={pageSizeOptions}
-          />
-        )}
-      </Card>
+            </Table>
+            {marketId.trim() && data.length > 0 && (
+              <TablePagination
+                page={page}
+                totalItems={total}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={pageSizeOptions}
+              />
+            )}
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

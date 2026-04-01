@@ -3,7 +3,8 @@
 import { useState } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -41,19 +42,21 @@ export default function CasinoGamesPage() {
         title="Casino | Games"
         breadcrumbs={["Casino", "Games"]}
       />
-      <FilterBar className="mb-4">
-        <Input
-          placeholder="Sport ID"
-          value={sportId}
-          onChange={(e) => setSportId(e.target.value)}
-          className="max-w-[200px]"
-        />
-        <Button variant="primary" onClick={handleLoad} disabled={loading}>
-          {loading ? "Loading…" : "Load status"}
-        </Button>
-      </FilterBar>
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              placeholder="Sport ID"
+              value={sportId}
+              onChange={(e) => setSportId(e.target.value)}
+              className="max-w-[200px]"
+            />
+            <Button variant="primary" onClick={handleLoad} disabled={loading}>
+              {loading ? "Loading…" : "Load status"}
+            </Button>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Node / Market</TableHead>
             <TableHead>Lock status</TableHead>
@@ -80,8 +83,10 @@ export default function CasinoGamesPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </Card>
+            </Table>
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

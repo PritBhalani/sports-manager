@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+  Badge,
+} from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
 import { getPlByMarket } from "@/services/betHistory.service";
@@ -115,24 +125,28 @@ export default function MarketsAnalyticsPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Filter by sport" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="startTime"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search sports…"
-          getSearchText={(row: Row) =>
-            `${row.sport ?? ""} ${row.marketName ?? row.market ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No market analytics data."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Filter by sport" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="startTime"
+              initialSortDirection="asc"
+              searchPlaceholder="Search sports…"
+              getSearchText={(row: Row) =>
+                `${row.sport ?? ""} ${row.marketName ?? row.market ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No market analytics data."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

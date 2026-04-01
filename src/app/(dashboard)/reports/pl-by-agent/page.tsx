@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { Fragment, useMemo, useState, useEffect, useCallback } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, TablePagination } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  TablePagination,
+} from "@/components";
 import { Download } from "lucide-react";
 import {
   getPlByAgent,
@@ -253,7 +261,7 @@ export default function PlByAgentPage() {
         }
       />
 
-      <FilterBar className="mb-2 flex flex-wrap items-center gap-3">
+      <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
         <Input
           type="date"
           value={fromDate}
@@ -286,8 +294,9 @@ export default function PlByAgentPage() {
         </p>
       ) : null}
 
-      <Card padded={false} className="overflow-hidden p-0">
-        <div className={tableWrap}>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <ListTableSection className={tableWrap}>
           <table className="min-w-full border-collapse [&_tr]:border-0 [&_td]:border-b-0 [&_th]:border-b-0">
             <thead className="bg-surface-muted/80">
               <tr>
@@ -441,9 +450,9 @@ export default function PlByAgentPage() {
               )}
             </tbody>
           </table>
-        </div>
-        {!loading && total > 0 ? (
-          <div className="px-4 py-3 pt-4">
+          </ListTableSection>
+          {!loading && total > 0 ? (
+            <div className="px-4 py-3 pt-4">
             <TablePagination
               page={page}
               totalItems={total}
@@ -454,9 +463,10 @@ export default function PlByAgentPage() {
                 setPage(1);
               }}
             />
-          </div>
-        ) : null}
-      </Card>
+            </div>
+          ) : null}
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

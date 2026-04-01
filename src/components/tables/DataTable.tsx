@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { type ReactNode } from "react";
 
@@ -12,7 +12,7 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-sm border border-border bg-surface">
+    <div className="overflow-x-auto border border-border bg-surface">
       <table className={`${tableBase} ${className}`}>{children}</table>
     </div>
   );
@@ -29,7 +29,7 @@ export function TableHeader({
   return (
     <thead>
       <tr
-        className={`border-b border-border ${className || "bg-surface-muted/80"}`}
+        className={`border-b border-border ${className || "bg-surface-2"}`}
       >
         {children}
       </tr>
@@ -54,7 +54,7 @@ export function TableHead({
         : "text-left";
   return (
     <th
-      className={`px-4 py-3.5 text-xs font-semibold uppercase tracking-wider text-foreground-tertiary sm:px-5 sm:py-4 ${alignClass} ${className}`}
+      className={`px-5 py-3 text-[12px] font-semibold uppercase tracking-wide text-foreground-tertiary ${alignClass} ${className}`}
     >
       {children}
     </th>
@@ -74,7 +74,7 @@ export function TableRow({
 }) {
   return (
     <tr
-      className={`bg-surface transition-colors hover:bg-surface-muted/80 even:bg-surface-muted/50 ${className}`}
+      className={`bg-surface transition-colors hover:bg-surface-muted ${className}`}
     >
       {children}
     </tr>
@@ -98,7 +98,7 @@ export function TableCell({
         : "text-left";
   return (
     <td
-      className={`px-4 py-3 text-sm text-foreground ${alignClass} ${className}`}
+      className={`px-5 py-4 text-sm text-foreground ${alignClass} ${className}`}
     >
       {children}
     </td>

@@ -21,7 +21,7 @@ export type LoginBody = {
   password: string;
 };
 
-/** POST /changepassword — session auth */
+/** POST /user/changepassword — session auth */
 export type ChangePasswordBody = {
   currentPassword: string;
   newPassword: string;

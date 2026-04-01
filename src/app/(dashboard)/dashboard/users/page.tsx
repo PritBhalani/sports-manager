@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable, Badge } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+  Badge,
+} from "@/components";
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -63,24 +73,28 @@ export default function DashboardUsersPage() {
         <StatsCard title="Players" value={rows.filter((p) => String(p.type ?? p.userType ?? "").toLowerCase() === "player").length.toString()} />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input placeholder="Search username" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="username"
-          initialSortDirection="asc"
-          enableSearch
-          searchPlaceholder="Search users…"
-          getSearchText={(row: Row) =>
-            `${row.username ?? ""} ${row.type ?? row.userType ?? ""} ${row.status ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No users."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input placeholder="Search username" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="username"
+              initialSortDirection="asc"
+              searchPlaceholder="Search users…"
+              getSearchText={(row: Row) =>
+                `${row.username ?? ""} ${row.type ?? row.userType ?? ""} ${row.status ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No users."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

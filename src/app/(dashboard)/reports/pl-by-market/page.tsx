@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useState, useEffect, useCallback, Fragment } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -104,55 +105,74 @@ export default function PlByMarketPage() {
   );
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="P&L by Market"
         breadcrumbs={["Reports", "P&L by Market"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
       />
-      <FilterBar className="mb-4">
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Input
-          placeholder="Event type ID"
-          value={eventTypeId}
-          onChange={(e) => setEventTypeId(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Button
-          variant="primary"
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setRefreshKey((k) => k + 1);
-          }}
-        >
-          Apply
-        </Button>
-      </FilterBar>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableHead>Event</TableHead>
-            <TableHead>Market</TableHead>
-            <TableHead>Winner</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">PL</TableHead>
-            <TableHead align="right">Commission</TableHead>
-            <TableHead>MarketTime</TableHead>
-            <TableHead>SettleTime</TableHead>
-          </TableHeader>
-          <TableBody>
+
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setPage(1);
+                setFromDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setPage(1);
+                setToDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+            />
+            <Input
+              placeholder="Event type ID"
+              value={eventTypeId}
+              onChange={(e) => {
+                setPage(1);
+                setEventTypeId(e.target.value);
+              }}
+              className="max-w-[180px]"
+            />
+            <div className="flex-1" />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                type="button"
+                size="sm"
+                onClick={() => {
+                  setPage(1);
+                  setRefreshKey((k) => k + 1);
+                }}
+              >
+                Apply
+              </Button>
+              <Button variant="primary" size="sm" type="button">
+                Export
+              </Button>
+            </div>
+          </FilterBar>
+
+          <ListTableSection>
+            <Table className="w-full min-w-max rounded-lg">
+              <TableHeader className="w-full bg-white uppercase">
+                <TableHead className="!px-6 !py-3 !text-left">EVENT</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">MARKET</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">WINNER</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">STAKE</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">PL</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">COMMISSION</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">MARKETTIME</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">SETTLETIME</TableHead>
+              </TableHeader>
+              <TableBody>
             {loading ? (
               <TableEmpty colSpan={8} message="Loading…" />
             ) : items.length === 0 ? (
@@ -273,19 +293,21 @@ export default function PlByMarketPage() {
                 );
               })
             )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          page={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
-          }}
-        />
-      </Card>
+              </TableBody>
+            </Table>
+            <TablePagination
+              page={page}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

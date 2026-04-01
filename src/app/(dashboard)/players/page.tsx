@@ -1,10 +1,13 @@
-﻿"use client";
+"use client";
 
 import { Fragment, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   PageHeader,
   Card,
+  ListPageFrame,
+  ListFilterPanel,
+  ListTableSection,
   Button,
   DialogActions,
   DialogFormRow,
@@ -27,18 +30,27 @@ import {
   ChevronRight,
   ChevronDown,
   Loader2,
+  Lock,
   LockOpen,
   Landmark,
   Code2,
   Percent,
-  Settings,
 } from "lucide-react";
-import { getDownline } from "@/services/account.service";
-import { getSessionMemberId, getUserById, setCommission } from "@/services/user.service";
-import { formatDateTime } from "@/utils/date";
+import { deposit, getDownline, withdraw } from "@/services/account.service";
+import {
+  changeBettingLock,
+  getSessionMemberId,
+  getUserById,
+  setCommission,
+  updateBetConfig,
+  updateMember,
+  type UpdateBetConfigItem,
+} from "@/services/user.service";
+import { formatDateTime, timestampMs } from "@/utils/date";
 import type { DownlineRecord } from "@/types/account.types";
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import CreateMemberModal from "@/components/players/CreateMemberModal";
 
 /** Map UI filter to API `searchQuery.status` (empty = no filter / all). */
 function statusForPlayerType(playerType: string): string {
@@ -81,6 +93,42 @@ type CommissionModalState = {
   open: boolean;
   userId: string;
   username: string;
+};
+
+type BettingLockConfirmState = {
+  open: boolean;
+  userId: string;
+  label: string;
+  nextLocked: boolean;
+  saving: boolean;
+  error: string | null;
+};
+
+const INITIAL_BETTING_LOCK_CONFIRM: BettingLockConfirmState = {
+  open: false,
+  userId: "",
+  label: "",
+  nextLocked: true,
+  saving: false,
+  error: null,
+};
+
+type PlayerQuickEditStatus = "active" | "inactive" | "suspended" | "close";
+
+type PlayerQuickEditModalState = {
+  open: boolean;
+  userId: string;
+  username: string;
+  userCode: string;
+  loading: boolean;
+  saving: boolean;
+  error: string | null;
+  mobile: string;
+  pt: string;
+  password: string;
+  repeatPassword: string;
+  status: PlayerQuickEditStatus;
+  notes: string;
 };
 
 type CommissionFieldKey =
@@ -232,12 +280,222 @@ function buildRowsFromApi(api: BetConfigApiRow[], eventTypes: EventTypeRecord[])
   });
 }
 
+function isSyntheticBetConfigKey(key: string): boolean {
+  return !key.trim() || key.startsWith("event-");
+}
+
+function buildUpdateBetConfigPayload(
+  userId: string,
+  rows: BetConfigRow[],
+  applyAll: boolean,
+):
+  | { ok: true; body: { id: string; betConfigs: UpdateBetConfigItem[]; applyAll: boolean } }
+  | { ok: false; error: string } {
+  const rate = getSessionCurrencyRate();
+  if (!userId.trim()) {
+    return { ok: false, error: "Missing user id." };
+  }
+  const betConfigs: UpdateBetConfigItem[] = [];
+
+  for (const row of rows) {
+    if (isSyntheticBetConfigKey(row.key)) continue;
+    const minBet = Number(row.minBet) / rate;
+    const maxBet = Number(row.maxBet) / rate;
+    const betDelay = Number(row.betDelay);
+    const maxExposure = Number(row.exposure) / rate;
+    const maxProfit = Number(row.profit) / rate;
+    if (
+      !Number.isFinite(minBet) ||
+      !Number.isFinite(maxBet) ||
+      !Number.isFinite(betDelay) ||
+      !Number.isFinite(maxExposure) ||
+      !Number.isFinite(maxProfit)
+    ) {
+      return { ok: false, error: `Invalid numbers for ${row.label}.` };
+    }
+    betConfigs.push({
+      eventTypeId: row.key,
+      minBet,
+      maxBet,
+      betDelay,
+      maxExposure,
+      maxProfit,
+      haveChange: true,
+    });
+  }
+
+  if (betConfigs.length === 0) {
+    return { ok: false, error: "No bet configuration rows to save." };
+  }
+
+  return { ok: true, body: { id: userId, betConfigs, applyAll } };
+}
+
+function unwrapUserPayload(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object") return {};
+  const envelope = raw as { data?: unknown };
+  if (envelope.data && typeof envelope.data === "object") {
+    return envelope.data as Record<string, unknown>;
+  }
+  return raw as Record<string, unknown>;
+}
+
+function toQuickEditStatus(raw: unknown): PlayerQuickEditStatus {
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (s === "inactive" || s === "-1") return "inactive";
+  if (s === "suspended" || s === "0") return "suspended";
+  if (s === "close" || s === "closed" || s === "-2") return "close";
+  return "active";
+}
+
+function toApiStatus(status: PlayerQuickEditStatus): number {
+  if (status === "inactive") return -1;
+  if (status === "suspended") return 0;
+  if (status === "close") return -2;
+  return 2;
+}
+
+function PlayerQuickEditModal({
+  state,
+  onClose,
+  onChange,
+  onSave,
+}: {
+  state: PlayerQuickEditModalState;
+  onClose: () => void;
+  onChange: (patch: Partial<PlayerQuickEditModalState>) => void;
+  onSave: () => void;
+}) {
+  const statusOptions: Array<{ value: PlayerQuickEditStatus; label: string }> = [
+    { value: "active", label: "ACTIVE" },
+    { value: "inactive", label: "INACTIVE" },
+    { value: "suspended", label: "SUSPENDED" },
+    { value: "close", label: "CLOSE" },
+  ];
+
+  return (
+    <Modal
+      isOpen={state.open}
+      onClose={onClose}
+      title="Information"
+      maxWidthClassName="max-w-4xl"
+      footer={
+        <DialogActions>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={state.saving}>
+            Cancel
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={state.saving || state.loading}>
+            {state.saving ? "Saving..." : "Save"}
+          </Button>
+        </DialogActions>
+      }
+    >
+      <DialogSection>
+        <div className="space-y-4">
+        <div className="rounded-lg border border-border bg-surface p-4 sm:p-5">
+          <p className="text-sm font-semibold text-foreground">
+            User Name (Usercode)
+          </p>
+          <p className="mt-1 text-sm text-foreground-secondary">
+            {state.username || "—"}
+            {state.userCode ? ` (${state.userCode})` : ""}
+          </p>
+        </div>
+
+        {state.loading ? (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Loading player details...
+          </div>
+        ) : null}
+
+        {state.error ? (
+          <p className="text-sm text-error" role="alert">
+            {state.error}
+          </p>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            label="Mobile"
+            value={state.mobile}
+            onChange={(e) => onChange({ mobile: e.target.value })}
+            placeholder="Enter mobile"
+            disabled={state.loading || state.saving}
+          />
+          <Input
+            label="PT"
+            value={state.pt}
+            onChange={(e) => onChange({ pt: e.target.value })}
+            placeholder="Enter PT"
+            disabled={state.loading || state.saving}
+          />
+          <Input
+            type="password"
+            label="Password"
+            value={state.password}
+            onChange={(e) => onChange({ password: e.target.value })}
+            placeholder="Leave blank to keep unchanged"
+            disabled={state.loading || state.saving}
+          />
+          <Input
+            type="password"
+            label="Repeat Password"
+            value={state.repeatPassword}
+            onChange={(e) => onChange({ repeatPassword: e.target.value })}
+            placeholder="Repeat new password"
+            disabled={state.loading || state.saving}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-semibold text-foreground">Status</p>
+          <div className="flex flex-wrap items-center gap-4">
+            {statusOptions.map((option) => (
+              <label
+                key={option.value}
+                className="inline-flex cursor-pointer items-center gap-2 text-sm text-foreground"
+              >
+                <input
+                  type="radio"
+                  name="player-status"
+                  checked={state.status === option.value}
+                  onChange={() => onChange({ status: option.value })}
+                  disabled={state.loading || state.saving}
+                  className="h-4 w-4 border-border"
+                />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <label className="mb-1 block text-sm font-medium text-foreground-secondary">
+            Notes
+          </label>
+          <textarea
+            value={state.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+            placeholder="Add notes about this user"
+            rows={4}
+            disabled={state.loading || state.saving}
+            className="box-border w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-muted"
+          />
+        </div>
+        </div>
+      </DialogSection>
+    </Modal>
+  );
+}
+
 function CreditActionModal({
   state,
   mode,
   amount,
   remarks,
   saving,
+  submitError,
   onClose,
   onModeChange,
   onAmountChange,
@@ -249,6 +507,7 @@ function CreditActionModal({
   amount: string;
   remarks: string;
   saving: boolean;
+  submitError: string | null;
   onClose: () => void;
   onModeChange: (mode: "D" | "W") => void;
   onAmountChange: (value: string) => void;
@@ -272,6 +531,11 @@ function CreditActionModal({
       }
     >
       <DialogSection>
+        {submitError ? (
+          <p className="text-sm text-error" role="alert">
+            {submitError}
+          </p>
+        ) : null}
         <DialogFormRow>
           <button
             type="button"
@@ -348,10 +612,16 @@ function BetConfigModal({
           <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={onApplyToAllChild} disabled={saving}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={onApplyToAllChild}
+            disabled={saving || loading}
+          >
             Apply To All Child
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving}>
+          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving || loading}>
             {saving ? "Saving..." : "Save"}
           </Button>
         </DialogActions>
@@ -481,6 +751,7 @@ export default function PlayersPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creditModal, setCreditModal] = useState<CreditModalState>({
@@ -492,6 +763,7 @@ export default function PlayersPage() {
   const [creditAmount, setCreditAmount] = useState("");
   const [creditRemarks, setCreditRemarks] = useState("");
   const [creditSaving, setCreditSaving] = useState(false);
+  const [creditSubmitError, setCreditSubmitError] = useState<string | null>(null);
   const [betConfigModal, setBetConfigModal] = useState<BetConfigModalState>({
     open: false,
     userId: "",
@@ -513,10 +785,85 @@ export default function PlayersPage() {
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [commissionError, setCommissionError] = useState<string | null>(null);
   const [commissionSaving, setCommissionSaving] = useState(false);
+  const [quickEditModal, setQuickEditModal] = useState<PlayerQuickEditModalState>({
+    open: false,
+    userId: "",
+    username: "",
+    userCode: "",
+    loading: false,
+    saving: false,
+    error: null,
+    mobile: "",
+    pt: "",
+    password: "",
+    repeatPassword: "",
+    status: "active",
+    notes: "",
+  });
+  const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
   const [downlineRows, setDownlineRows] = useState<Record<string, DownlineRecord[]>>({});
   const [downlineLoading, setDownlineLoading] = useState<Record<string, boolean>>({});
   const [downlineError, setDownlineError] = useState<Record<string, string | null>>({});
+  const [bettingLockConfirm, setBettingLockConfirm] =
+    useState<BettingLockConfirmState>(INITIAL_BETTING_LOCK_CONFIRM);
+
+  const patchBettingLockInList = useCallback((userId: string, bettingLock: boolean) => {
+    setRows((prev) =>
+      prev.map((r) => (String(r.id) === userId ? { ...r, bettingLock } : r)),
+    );
+    setDownlineRows((prev) => {
+      let changed = false;
+      const next: Record<string, DownlineRecord[]> = { ...prev };
+      for (const k of Object.keys(next)) {
+        const list = next[k];
+        if (!list?.some((c) => String(c.id) === userId)) continue;
+        changed = true;
+        next[k] = list.map((c) =>
+          String(c.id) === userId ? { ...c, bettingLock } : c,
+        );
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const openBettingLockConfirm = useCallback(
+    (userId: string, label: string, currentlyLocked: boolean) => {
+      const uid = userId.trim();
+      if (!uid) return;
+      const lbl = label.trim() || uid;
+      setBettingLockConfirm({
+        open: true,
+        userId: uid,
+        label: lbl,
+        nextLocked: !currentlyLocked,
+        saving: false,
+        error: null,
+      });
+    },
+    [],
+  );
+
+  const closeBettingLockConfirm = useCallback(() => {
+    setBettingLockConfirm((p) => (p.saving ? p : { ...INITIAL_BETTING_LOCK_CONFIRM }));
+  }, []);
+
+  const confirmBettingLockChange = useCallback(async () => {
+    const { userId, nextLocked } = bettingLockConfirm;
+    if (!userId) return;
+    setBettingLockConfirm((p) => ({ ...p, saving: true, error: null }));
+    try {
+      await changeBettingLock({ userId, bettingLock: nextLocked });
+      patchBettingLockInList(userId, nextLocked);
+      setBettingLockConfirm(INITIAL_BETTING_LOCK_CONFIRM);
+    } catch (e) {
+      setBettingLockConfirm((p) => ({
+        ...p,
+        saving: false,
+        error: e instanceof Error ? e.message : "Could not update betting lock.",
+      }));
+    }
+  }, [bettingLockConfirm.userId, bettingLockConfirm.nextLocked, patchBettingLockInList]);
 
   const loadDownline = useCallback(() => {
     const scopeId = getSessionMemberId();
@@ -615,6 +962,7 @@ export default function PlayersPage() {
     setCreditMode("D");
     setCreditAmount("");
     setCreditRemarks("");
+    setCreditSubmitError(null);
     setCreditModal({ open: true, userId, username });
   };
 
@@ -624,10 +972,52 @@ export default function PlayersPage() {
   };
 
   const saveCredit = async () => {
-    // Placeholder for transfer/credit API wiring.
+    const userId = creditModal.userId;
+    if (!userId) return;
+    const chips = Number(creditAmount);
+    if (!Number.isFinite(chips) || chips <= 0) {
+      setCreditSubmitError("Enter a valid amount greater than zero.");
+      return;
+    }
+    if (creditMode === "W" && !creditRemarks.trim()) {
+      setCreditSubmitError("Remarks are required for withdraw (comment).");
+      return;
+    }
+    setCreditSubmitError(null);
+    const timestamp = timestampMs();
     setCreditSaving(true);
     try {
+      if (creditMode === "D") {
+        await deposit(
+          {
+            isTransfer: true,
+            chips,
+            userId,
+            dwType: "D",
+            timestamp,
+            ...(creditRemarks.trim() ? { comment: creditRemarks.trim() } : {}),
+          },
+          { showSuccessToast: true },
+        );
+      } else {
+        await withdraw(
+          {
+            isTransfer: true,
+            chips,
+            userId,
+            dwType: "W",
+            comment: creditRemarks.trim(),
+            timestamp,
+          },
+          { showSuccessToast: true },
+        );
+      }
       setCreditModal((prev) => ({ ...prev, open: false }));
+      setCreditAmount("");
+      setCreditRemarks("");
+      loadDownline();
+    } catch {
+      /* global mutation toast on error */
     } finally {
       setCreditSaving(false);
     }
@@ -678,18 +1068,32 @@ export default function PlayersPage() {
     );
   };
 
-  const applyBetConfigToAllChild = () => {
-    // Placeholder for "apply to all child" backend action.
-  };
-
-  const saveBetConfig = async () => {
-    // Placeholder for bet configuration save API wiring.
+  const persistBetConfig = async (applyAll: boolean) => {
+    const userId = betConfigModal.userId;
+    const built = buildUpdateBetConfigPayload(userId, betConfigRows, applyAll);
+    if (!built.ok) {
+      setBetConfigError(built.error);
+      return;
+    }
+    setBetConfigError(null);
     setBetConfigSaving(true);
     try {
+      await updateBetConfig(built.body, { showSuccessToast: true });
       setBetConfigModal((prev) => ({ ...prev, open: false }));
+      loadDownline();
+    } catch {
+      /* global mutation toast on error */
     } finally {
       setBetConfigSaving(false);
     }
+  };
+
+  const applyBetConfigToAllChild = () => {
+    void persistBetConfig(true);
+  };
+
+  const saveBetConfig = async () => {
+    await persistBetConfig(false);
   };
 
   const openCommissionModal = async (userId: string, username: string) => {
@@ -751,115 +1155,231 @@ export default function PlayersPage() {
     }
   };
 
+  const openQuickEditModal = async (
+    userId: string,
+    usernameValue: string,
+    userCodeValue: string,
+  ) => {
+    if (!userId) return;
+    setQuickEditModal({
+      open: true,
+      userId,
+      username: usernameValue,
+      userCode: userCodeValue,
+      loading: true,
+      saving: false,
+      error: null,
+      mobile: "",
+      pt: "",
+      password: "",
+      repeatPassword: "",
+      status: "active",
+      notes: "",
+    });
+
+    try {
+      const raw = await getUserById(userId);
+      const user = unwrapUserPayload(raw);
+      setQuickEditModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: null,
+        username: String(user.username ?? user.userName ?? usernameValue ?? "").trim(),
+        userCode: String(user.userCode ?? user.code ?? userCodeValue ?? "").trim(),
+        mobile: String(
+          user.mobile ?? user.phone ?? user.phoneNumber ?? "",
+        ).trim(),
+        pt: String(user.pt ?? user.point ?? user.pts ?? "").trim(),
+        status: toQuickEditStatus(user.status),
+        notes: String(user.notes ?? user.note ?? user.remark ?? "").trim(),
+      }));
+    } catch (e) {
+      setQuickEditModal((prev) => ({
+        ...prev,
+        loading: false,
+        error: e instanceof Error ? e.message : "Failed to load player details.",
+      }));
+    }
+  };
+
+  const closeQuickEditModal = () => {
+    if (quickEditModal.loading || quickEditModal.saving) return;
+    setQuickEditModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const saveQuickEditModal = async () => {
+    if (!quickEditModal.userId) return;
+    const password = quickEditModal.password.trim();
+    const repeatPassword = quickEditModal.repeatPassword.trim();
+    if (password || repeatPassword) {
+      if (!password || !repeatPassword || password !== repeatPassword) {
+        setQuickEditModal((prev) => ({
+          ...prev,
+          error: "Password and repeat password must match.",
+        }));
+        return;
+      }
+    }
+
+    setQuickEditModal((prev) => ({ ...prev, saving: true, error: null }));
+    try {
+      const payload: Record<string, unknown> = {
+        id: quickEditModal.userId,
+        mobile: quickEditModal.mobile.trim(),
+        phone: quickEditModal.mobile.trim(),
+        pt: quickEditModal.pt.trim(),
+        status: toApiStatus(quickEditModal.status),
+        notes: quickEditModal.notes.trim(),
+        remark: quickEditModal.notes.trim(),
+      };
+      if (password) {
+        payload.password = password;
+      }
+      await updateMember(payload);
+      setQuickEditModal((prev) => ({
+        ...prev,
+        open: false,
+        saving: false,
+        password: "",
+        repeatPassword: "",
+      }));
+      loadDownline();
+    } catch (e) {
+      setQuickEditModal((prev) => ({
+        ...prev,
+        saving: false,
+        error: e instanceof Error ? e.message : "Failed to save player information.",
+      }));
+    }
+  };
+
   return (
-    <div className="min-w-0 space-y-5 sm:space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader title="Players" breadcrumbs={["Players"]} />
 
-      <Card>
+      <ListPageFrame>
         {error && (
-          <p className="mb-2 text-sm text-error" role="alert">
+          <p className="px-5 pt-4 text-sm text-error" role="alert">
             {error}
           </p>
         )}
 
-        {/* Filters row */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-          <Input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => {
-              setPage(1);
-              setUsername(e.target.value);
+        <div className="flex w-full flex-col justify-center gap-0">
+          <ListFilterPanel
+            mobileToggle={{
+              onClick: () => setShowMoreFilters((v) => !v),
+              label: "Show Filters",
             }}
-            className="h-10"
-          />
-          <Select
-            aria-label="Player type"
-            value={playerType}
-            onChange={(e) => {
-              setPage(1);
-              setPlayerType(e.target.value);
-            }}
-            options={[
-              { label: "All Players", value: "all" },
-              { label: "Active", value: "active" },
-              { label: "Inactive", value: "inactive" },
-            ]}
-            className="h-10"
-          />
-          <Input
-            placeholder="User code"
-            value={userCode}
-            onChange={(e) => {
-              setPage(1);
-              setUserCode(e.target.value);
-            }}
-            className="h-10"
-          />
-        </div>
+          >
+            <div className="hidden sm:grid flex-1 gap-3 bg-neutral-200 px-5 pb-4 pt-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <input
+                  placeholder="Search username"
+                  value={username}
+                  onChange={(e) => {
+                    setPage(1);
+                    setUsername(e.target.value);
+                  }}
+                  className="min-w-[8rem] rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm sm:min-w-[12rem]"
+                />
 
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5 sm:gap-4">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              leftIcon={<Filter className="h-4 w-4" aria-hidden />}
-              onClick={() => {
-                setPage(1);
-                loadDownline();
-              }}
-            >
-              Apply filters
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              leftIcon={<Download className="h-4 w-4" aria-hidden />}
-            >
-              Export
-            </Button>
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
-            <Button type="button" variant="outline" size="sm">
-              KYC
-            </Button>
-            <Link
-              href="/players/add"
-              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-sm border-transparent bg-primary px-3 text-xs font-medium text-white transition-colors hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              Create
-            </Link>
-          </div>
-        </div>
+                {showMoreFilters ? (
+                  <>
+                    <input
+                      placeholder="User code"
+                      value={userCode}
+                      onChange={(e) => {
+                        setPage(1);
+                        setUserCode(e.target.value);
+                      }}
+                      className="min-w-[8rem] rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm sm:min-w-[12rem]"
+                    />
+                    <select
+                      value={playerType}
+                      onChange={(e) => {
+                        setPage(1);
+                        setPlayerType(e.target.value);
+                      }}
+                      className="min-w-[8rem] rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"
+                      aria-label="Player type"
+                    >
+                      <option value="all">All Players</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <div className="hidden lg:block" />
+                    <div className="hidden lg:block" />
+                  </>
+                )}
+
+                <div className="flex flex-wrap gap-2 sm:col-span-full md:col-span-2">
+                  <div className="flex justify-center gap-2 sm:flex-none">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPage(1);
+                        loadDownline();
+                      }}
+                      className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-white"
+                    >
+                      Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMoreFilters((v) => !v)}
+                      className="flex h-9 max-w-max items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
+                    >
+                      <span className="mr-2 text-xl">
+                        <Filter className="h-4 w-4" aria-hidden />
+                      </span>
+                      More Filters
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {}}
+                      className="flex h-9 max-w-max items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
+                    >
+                      <span className="mr-2 text-xl">
+                        <Download className="h-4 w-4" aria-hidden />
+                      </span>
+                      Export
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCreateMemberOpen(true)}
+                      className="flex h-9 max-w-max items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
+                    >
+                      Create
+                    </button>
+                  </div>
+                </div>
+              </div>
+          </ListFilterPanel>
 
         {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ListTableSection>
           {loading ? (
             <div className="px-4 py-8 text-center text-sm text-muted">Loading…</div>
           ) : rows.length === 0 ? (
-            <div className="px-4 py-8 text-center text-sm text-muted">
-              No players yet.
-            </div>
+            <div className="px-4 py-8 text-center text-sm text-muted">No players yet.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-surface">
-                  <TableHead className="font-bold text-foreground/80">Username</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Downline</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Betting Status</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Status</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Details</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Net Exposure</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Take</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Give</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Balance</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Credit Limit</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Available Credit</TableHead>
-                  <TableHead className="font-bold text-foreground/80">Actions</TableHead>
-                </TableHeader>
-                <TableBody>
+            <Table className="w-full min-w-max rounded-lg">
+              <TableHeader className="w-full bg-white text-xs font-semibold text-foreground-secondary">
+                <TableHead className="!px-4 !py-3 !text-left">Username</TableHead>
+                <TableHead className="!px-4 !py-3 !text-left">Downline</TableHead>
+                <TableHead className="!px-4 !py-3 !text-center">Betting Status</TableHead>
+                <TableHead className="!px-4 !py-3 !text-center">Status</TableHead>
+                <TableHead className="!px-4 !py-3 !text-left">Details</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">Net Exposure</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">Take</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">Give</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">Balance</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">Credit Limit</TableHead>
+                <TableHead className="!px-4 !py-3 !text-center">Actions</TableHead>
+              </TableHeader>
+              <TableBody>
                   {rows.map((row) => {
                     const id = String(row.id ?? "");
                     const uname = String(row.username ?? "—");
@@ -877,11 +1397,14 @@ export default function PlayersPage() {
                     const creditLimit = Number(
                       bal?.creditLimit ?? row.creditLimit ?? 0,
                     );
-                    const availableCredit = Number(
-                      bal?.availableCredit ?? row.availableCredit ?? 0,
-                    );
+                    const bettingLockRaw = row.bettingLock ?? bal?.bettingLock;
+                    const bettingLocked =
+                      bettingLockRaw === true ||
+                      bettingLockRaw === 1 ||
+                      String(bettingLockRaw).toLowerCase() === "true";
                     const lastIp = String(row.remoteIp ?? row.ip ?? row.lastIp ?? "—");
                     const mobile = String(row.mobile ?? "");
+                    const createdOn = (row as unknown as { createdOn?: unknown }).createdOn;
 
                     const isExpanded = Boolean(expandedRows[id]);
                     const childRows = downlineRows[id] ?? [];
@@ -890,16 +1413,17 @@ export default function PlayersPage() {
 
                     return (
                       <Fragment key={id || uname}>
-                      <TableRow>
-                        <TableCell className="text-foreground">
+                        <TableRow>
+                        <TableCell className="!px-4 !py-4 text-foreground">
                           <div>
                             {id ? (
-                              <Link
-                                href={`/players/${id}`}
+                              <button
+                                type="button"
+                                onClick={() => void openQuickEditModal(id, uname, userCode)}
                                 className="text-primary hover:underline"
                               >
                                 {uname}
-                              </Link>
+                              </button>
                             ) : (
                               uname
                             )}
@@ -907,12 +1431,13 @@ export default function PlayersPage() {
                           <div className="text-xs text-muted">
                             {mobile || userCode ? (
                               id ? (
-                                <Link
-                                  href={`/players/${id}`}
+                                <button
+                                  type="button"
+                                  onClick={() => void openQuickEditModal(id, uname, userCode)}
                                   className="text-primary hover:underline"
                                 >
                                   ({mobile || userCode})
-                                </Link>
+                                </button>
                               ) : (
                                 `(${mobile || userCode})`
                               )
@@ -921,64 +1446,95 @@ export default function PlayersPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {isLeafUser ? (
-                            <span className="text-muted">-</span>
-                          ) : id ? (
+                        <TableCell className="!px-4 !py-4 text-foreground">
+                          {!isLeafUser && id ? (
                             <button
                               type="button"
                               onClick={() => void toggleDownline(id)}
-                              className="inline-flex items-center gap-1 rounded-sm px-1 py-0.5 text-muted hover:bg-surface-2 hover:text-foreground"
-                              aria-label={isExpanded ? "Collapse downline" : "Expand downline"}
-                              title={isExpanded ? "Collapse downline" : "Expand downline"}
+                              className="inline-flex items-center gap-0.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-2"
+                              aria-expanded={isExpanded}
+                              aria-label={isExpanded ? "Hide downline" : "Show downline"}
                             >
-                              {childLoading ? (
-                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                              ) : isExpanded ? (
-                                <ChevronDown className="h-4 w-4" aria-hidden />
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
                               ) : (
-                                <ChevronRight className="h-4 w-4" aria-hidden />
+                                <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
                               )}
                             </button>
                           ) : (
-                            "—"
+                            <span className="text-muted">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <LockOpen className="h-4 w-4 text-muted" aria-hidden />
+                        <TableCell className="!px-4 !py-4 text-center">
+                          <button
+                            type="button"
+                            disabled={!id}
+                            onClick={() =>
+                              openBettingLockConfirm(
+                                id,
+                                userCode !== "—" ? userCode : uname,
+                                bettingLocked,
+                              )
+                            }
+                            className="inline-flex items-center justify-center gap-1 rounded-sm p-0.5 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            title={
+                              bettingLocked
+                                ? "Click to unlock betting"
+                                : "Click to lock betting"
+                            }
+                            aria-label={
+                              bettingLocked
+                                ? `Confirm unlock betting for ${uname}`
+                                : `Confirm lock betting for ${uname}`
+                            }
+                          >
+                            {bettingLocked ? (
+                              <Lock className="h-4 w-4 text-error" aria-hidden />
+                            ) : (
+                              <LockOpen className="h-4 w-4 text-success" aria-hidden />
+                            )}
+                            <span className="sr-only">{bettingLocked ? "Locked" : "Open"}</span>
+                          </button>
                         </TableCell>
-                        <TableCell className={statusActive ? "text-success" : "text-error"}>
-                          {statusText}
+                        <TableCell className="!px-4 !py-4 text-center">
+                          <span
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                              statusActive
+                                ? "bg-[#d3f9d8] text-[#2f9e44]"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {statusText}
+                          </span>
                         </TableCell>
-                        <TableCell>
-                          {id ? (
-                            <Link href={`/players/${encodeURIComponent(id)}`} className="text-primary hover:underline">
-                              <Eye className="h-4 w-4" aria-hidden />
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
+                        <TableCell className="!px-4 !py-4 text-left text-sm text-primary">
+                        {id ? (
+                              <Link
+                                href={`/players/${encodeURIComponent(id)}`}
+                                className="rounded-sm p-0.5 hover:bg-info-subtle text-primary"
+                                aria-label="View player"
+                              >
+                                <Eye className="h-4 w-4" aria-hidden />
+                              </Link>
+                            ) : null}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
+                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                           {formatCurrency(exposure)}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
+                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                           {formatCurrency(take)}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
+                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                           {formatCurrency(give)}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
+                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                           {formatCurrency(balance)}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
+                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                           {formatCurrency(creditLimit)}
                         </TableCell>
-                        <TableCell className="tabular-nums text-foreground">
-                          {formatCurrency(availableCredit)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2 text-primary">
+                        <TableCell className="!px-4 !py-4 text-center">
+                          <div className="flex flex-wrap items-center justify-center gap-1 text-primary">
                             <button
                               type="button"
                               onClick={() => openCreditModal(id, uname)}
@@ -1009,19 +1565,19 @@ export default function PlayersPage() {
                       {isExpanded && !isLeafUser ? (
                         childLoading ? (
                           <TableRow>
-                            <td colSpan={15} className="px-4 py-3 text-sm text-muted">
+                            <td colSpan={11} className="px-4 py-3 text-sm text-muted">
                               Loading downline...
                             </td>
                           </TableRow>
                         ) : childError ? (
                           <TableRow>
-                            <td colSpan={15} className="px-4 py-3 text-sm text-error">
+                            <td colSpan={11} className="px-4 py-3 text-sm text-error">
                               {childError}
                             </td>
                           </TableRow>
                         ) : childRows.length === 0 ? (
                           <TableRow>
-                            <td colSpan={15} className="px-4 py-3 text-sm text-muted">
+                            <td colSpan={11} className="px-4 py-3 text-sm text-muted">
                               No downline users.
                             </td>
                           </TableRow>
@@ -1041,16 +1597,19 @@ export default function PlayersPage() {
                             const cCreditLimit = Number(
                               cBal?.creditLimit ?? child.creditLimit ?? 0,
                             );
-                            const cAvailableCredit = Number(
-                              cBal?.availableCredit ?? child.availableCredit ?? 0,
-                            );
+                            const cBettingLockRaw = child.bettingLock ?? cBal?.bettingLock;
+                            const cBettingLocked =
+                              cBettingLockRaw === true ||
+                              cBettingLockRaw === 1 ||
+                              String(cBettingLockRaw).toLowerCase() === "true";
                             const cLastIp = String(
                               child.remoteIp ?? child.ip ?? child.lastIp ?? "—",
                             );
                             const cMobile = String(child.mobile ?? "");
+                            const cUserCode = String(child.userCode ?? "—");
                             return (
                               <TableRow key={cId} className="bg-surface-2/70">
-                                <TableCell className="pl-8 text-foreground">
+                                <TableCell className="!px-4 !py-4 pl-8 text-foreground">
                                   <div>
                                     {cId ? (
                                       <Link
@@ -1067,42 +1626,87 @@ export default function PlayersPage() {
                                     {cMobile ? `(${cMobile})` : "—"}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-muted">—</TableCell>
-                                <TableCell>
-                                  <LockOpen className="h-4 w-4 text-muted" aria-hidden />
+                                <TableCell className="!px-4 !py-4 text-muted">—</TableCell>
+                                <TableCell className="!px-4 !py-4 text-center">
+                                  <button
+                                    type="button"
+                                    disabled={!cId}
+                                    onClick={() =>
+                                      openBettingLockConfirm(
+                                        cId,
+                                        cUserCode !== "—" ? cUserCode : cUname,
+                                        cBettingLocked,
+                                      )
+                                    }
+                                    className="inline-flex items-center justify-center rounded-sm p-0.5 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    title={
+                                      cBettingLocked
+                                        ? "Click to unlock betting"
+                                        : "Click to lock betting"
+                                    }
+                                    aria-label={
+                                      cBettingLocked
+                                        ? `Confirm unlock betting for ${cUname}`
+                                        : `Confirm lock betting for ${cUname}`
+                                    }
+                                  >
+                                    {cBettingLocked ? (
+                                      <Lock className="h-4 w-4 text-error" aria-hidden />
+                                    ) : (
+                                      <LockOpen className="h-4 w-4 text-success" aria-hidden />
+                                    )}
+                                    <span className="sr-only">
+                                      {cBettingLocked ? "Locked" : "Open"}
+                                    </span>
+                                  </button>
                                 </TableCell>
-                                <TableCell className={cStatus.active ? "text-success" : "text-error"}>
-                                  {cStatus.text}
+                                <TableCell className="!px-4 !py-4 text-center">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                                      cStatus.active
+                                        ? "bg-[#d3f9d8] text-[#2f9e44]"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
+                                    {cStatus.text}
+                                  </span>
                                 </TableCell>
-                                <TableCell>
-                                  {cId ? (
-                                    <Link href={`/players/${encodeURIComponent(cId)}`} className="text-primary hover:underline">
-                                      <Eye className="h-4 w-4" aria-hidden />
-                                    </Link>
-                                  ) : (
-                                    "—"
-                                  )}
+                                <TableCell className="!px-4 !py-4 text-left text-sm text-foreground">
+                                  <div className="max-w-[12rem] space-y-0.5 text-xs">
+                                    <div className="font-mono text-foreground-secondary">{cUserCode}</div>
+                                    <div className="text-muted">
+                                      {cMobile ? `${cMobile} · ` : ""}
+                                      {cLastIp}
+                                    </div>
+                                    <div className="text-muted">{formatDateTime(child.createdOn)}</div>
+                                  </div>
                                 </TableCell>
-                                <TableCell className="tabular-nums text-success">
+                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                                   {formatCurrency(cExposure)}
                                 </TableCell>
-                                <TableCell className="tabular-nums text-success">
+                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                                   {formatCurrency(cTake)}
                                 </TableCell>
-                                <TableCell className="tabular-nums text-error">
+                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                                   {formatCurrency(cGive)}
                                 </TableCell>
-                                <TableCell className="tabular-nums text-foreground">
+                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                                   {formatCurrency(cBalance)}
                                 </TableCell>
-                                <TableCell className="tabular-nums text-foreground">
+                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
                                   {formatCurrency(cCreditLimit)}
                                 </TableCell>
-                                <TableCell className="tabular-nums text-foreground">
-                                  {formatCurrency(cAvailableCredit)}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2 text-primary">
+                                <TableCell className="!px-4 !py-4 text-center">
+                                  <div className="flex flex-wrap items-center justify-center gap-1 text-primary">
+                                    {cId ? (
+                                      <Link
+                                        href={`/players/${encodeURIComponent(cId)}`}
+                                        className="rounded-sm p-0.5 hover:bg-info-subtle"
+                                        aria-label="View player"
+                                      >
+                                        <Eye className="h-4 w-4" aria-hidden />
+                                      </Link>
+                                    ) : null}
                                     <button
                                       type="button"
                                       onClick={() => openCreditModal(cId, cUname)}
@@ -1127,16 +1731,8 @@ export default function PlayersPage() {
                                     >
                                       <Percent className="h-4 w-4" aria-hidden />
                                     </button>
-                                    <Settings className="h-4 w-4" aria-hidden />
                                   </div>
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap text-xs text-foreground/80">
-                                  {formatDateTime(child.createdOn)}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap text-xs text-foreground/80">
-                                  {formatDateTime(child.lastLogin)}
-                                </TableCell>
-                                <TableCell className="text-foreground/80">{cLastIp}</TableCell>
                               </TableRow>
                             );
                           })
@@ -1145,9 +1741,8 @@ export default function PlayersPage() {
                       </Fragment>
                     );
                   })}
-                </TableBody>
-              </Table>
-            </div>
+              </TableBody>
+            </Table>
           )}
           <TablePagination
             page={page}
@@ -1160,18 +1755,35 @@ export default function PlayersPage() {
             }}
             pageSizeOptions={[15, 30, 50, 100, 200]}
           />
+        </ListTableSection>
         </div>
-      </Card>
+      </ListPageFrame>
+      <PlayerQuickEditModal
+        state={quickEditModal}
+        onClose={closeQuickEditModal}
+        onChange={(patch) => setQuickEditModal((prev) => ({ ...prev, ...patch }))}
+        onSave={() => void saveQuickEditModal()}
+      />
       <CreditActionModal
         state={creditModal}
         mode={creditMode}
         amount={creditAmount}
         remarks={creditRemarks}
         saving={creditSaving}
+        submitError={creditSubmitError}
         onClose={closeCreditModal}
-        onModeChange={setCreditMode}
-        onAmountChange={setCreditAmount}
-        onRemarksChange={setCreditRemarks}
+        onModeChange={(m) => {
+          setCreditSubmitError(null);
+          setCreditMode(m);
+        }}
+        onAmountChange={(v) => {
+          setCreditSubmitError(null);
+          setCreditAmount(v);
+        }}
+        onRemarksChange={(v) => {
+          setCreditSubmitError(null);
+          setCreditRemarks(v);
+        }}
         onSave={() => void saveCredit()}
       />
       <BetConfigModal
@@ -1195,6 +1807,52 @@ export default function PlayersPage() {
         onClose={closeCommissionModal}
         onFieldChange={updateCommissionValue}
         onSave={() => void saveCommission()}
+      />
+      <Modal
+        isOpen={bettingLockConfirm.open}
+        onClose={closeBettingLockConfirm}
+        title="Confirm"
+        maxWidthClassName="max-w-md"
+        bodyClassName="p-4 sm:p-5"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={bettingLockConfirm.saving}
+              onClick={() => void confirmBettingLockChange()}
+            >
+              {bettingLockConfirm.saving ? "…" : "Proceed"}
+            </Button>
+            <button
+              type="button"
+              className="text-sm font-medium text-primary hover:underline disabled:opacity-50"
+              disabled={bettingLockConfirm.saving}
+              onClick={closeBettingLockConfirm}
+            >
+              Reject
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-foreground">
+          Are you sure you want to {bettingLockConfirm.nextLocked ? "lock" : "unlock"}{" "}
+          <span className="font-semibold">{bettingLockConfirm.label}</span>?
+        </p>
+        {bettingLockConfirm.error ? (
+          <p className="mt-3 text-sm text-error" role="alert">
+            {bettingLockConfirm.error}
+          </p>
+        ) : null}
+      </Modal>
+      <CreateMemberModal
+        open={createMemberOpen}
+        onClose={() => setCreateMemberOpen(false)}
+        onCreated={() => {
+          setPage(1);
+          loadDownline();
+        }}
       />
     </div>
   );

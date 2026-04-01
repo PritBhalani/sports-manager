@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -75,23 +76,25 @@ export default function CreditStatementPage() {
         breadcrumbs={["Bonus", "Statement"]}
         action={<Button variant="primary" size="sm">Export</Button>}
       />
-      <FilterBar className="mb-4">
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Button variant="primary">Apply</Button>
-      </FilterBar>
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="max-w-[160px]"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="max-w-[160px]"
+            />
+            <Button variant="primary">Apply</Button>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Date</TableHead>
             <TableHead>Description</TableHead>
@@ -118,18 +121,20 @@ export default function CreditStatementPage() {
               ))
             )}
           </TableBody>
-        </Table>
-        <TablePagination
-          page={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
-          }}
-        />
-      </Card>
+            </Table>
+            <TablePagination
+              page={page}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

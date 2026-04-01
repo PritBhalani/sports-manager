@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -48,9 +49,8 @@ export default function BetHistoryPage() {
       { fromDate: fromISO, toDate: toISO }
     )
       .then((res) => {
-        const list = res?.data ?? [];
-        setData(Array.isArray(list) ? list : []);
-        setTotal(res?.total ?? 0);
+        setData((res.items ?? []) as Record<string, unknown>[]);
+        setTotal(res.total ?? 0);
       })
       .catch(() => {
         setData([]);
@@ -60,38 +60,55 @@ export default function BetHistoryPage() {
   }, [page, pageSize, fromDate, toDate]);
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Bet History"
         breadcrumbs={["Reports", "Bet History"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
       />
-      <FilterBar className="mb-4">
-        <Input
-          type="date"
-          value={fromDate}
-          onChange={(e) => setFromDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Input
-          type="date"
-          value={toDate}
-          onChange={(e) => setToDate(e.target.value)}
-          className="max-w-[160px]"
-        />
-        <Button variant="primary">Apply</Button>
-      </FilterBar>
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableHead>Event / Market</TableHead>
-            <TableHead>Selection</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">Odds</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
-          </TableHeader>
-          <TableBody>
+
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              type="date"
+              value={fromDate}
+              onChange={(e) => {
+                setPage(1);
+                setFromDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+            />
+            <Input
+              type="date"
+              value={toDate}
+              onChange={(e) => {
+                setPage(1);
+                setToDate(e.target.value);
+              }}
+              className="max-w-[170px]"
+            />
+            <div className="flex-1" />
+            <div className="flex items-center gap-2">
+              <Button variant="primary" size="sm" type="button">
+                Apply
+              </Button>
+              <Button variant="primary" size="sm" type="button">
+                Export
+              </Button>
+            </div>
+          </FilterBar>
+
+          <ListTableSection>
+            <Table className="w-full min-w-max rounded-lg">
+              <TableHeader className="w-full bg-white uppercase">
+                <TableHead className="!px-6 !py-3 !text-left">EVENT / MARKET</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">SELECTION</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">STAKE</TableHead>
+                <TableHead className="!px-6 !py-3 !text-right">ODDS</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">STATUS</TableHead>
+                <TableHead className="!px-6 !py-3 !text-left">DATE</TableHead>
+              </TableHeader>
+              <TableBody>
             {loading ? (
               <TableEmpty colSpan={6} message="Loading…" />
             ) : data.length === 0 ? (
@@ -108,19 +125,21 @@ export default function BetHistoryPage() {
                 </TableRow>
               ))
             )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          page={page}
-          totalItems={total}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(s) => {
-            setPageSize(s);
-            setPage(1);
-          }}
-        />
-      </Card>
+              </TableBody>
+            </Table>
+            <TablePagination
+              page={page}
+              totalItems={total}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

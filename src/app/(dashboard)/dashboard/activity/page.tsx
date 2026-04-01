@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PageHeader, Card, FilterBar, Input, Button, StatsCard, DataTable } from "@/components";
+import {
+  PageHeader,
+  ListPageFrame,
+  ListTableSection,
+  FilterBar,
+  Input,
+  Button,
+  StatsCard,
+  DataTable,
+} from "@/components";
 import { formatDateTime } from "@/utils/date";
 import { getLoginHistory } from "@/services/token.service";
 
@@ -50,26 +59,30 @@ export default function DashboardActivityPage() {
         />
       </div>
 
-      <Card>
-        <FilterBar className="mb-4">
-          <Input type="date" className="max-w-[160px]" />
-          <Input type="date" className="max-w-[160px]" />
-          <Input placeholder="Filter by type or user" className="max-w-xs" />
-          <Button variant="primary">Filter</Button>
-        </FilterBar>
-        <DataTable
-          columns={columns}
-          rows={rows}
-          initialSortColumnId="createdAt"
-          initialSortDirection="desc"
-          enableSearch
-          searchPlaceholder="Search activity…"
-          getSearchText={(row: Row) =>
-            `${row.type ?? row.eventType ?? ""} ${row.username ?? row.userCode ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
-          }
-          emptyMessage="No activity."
-        />
-      </Card>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input type="date" className="max-w-[160px]" />
+            <Input type="date" className="max-w-[160px]" />
+            <Input placeholder="Filter by type or user" className="max-w-xs" />
+            <Button variant="primary">Filter</Button>
+          </FilterBar>
+          <ListTableSection>
+            <DataTable
+              enableSearch={false}
+              columns={columns}
+              rows={rows}
+              initialSortColumnId="createdAt"
+              initialSortDirection="desc"
+              searchPlaceholder="Search activity…"
+              getSearchText={(row: Row) =>
+                `${row.type ?? row.eventType ?? ""} ${row.username ?? row.userCode ?? ""} ${row.ipAddress ?? row.ip ?? ""}`.toLowerCase()
+              }
+              emptyMessage="No activity."
+            />
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

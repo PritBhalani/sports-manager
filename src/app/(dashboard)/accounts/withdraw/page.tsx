@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import {
@@ -39,7 +39,7 @@ export default function WithdrawPage() {
       setChips("");
       setComment("");
     } catch {
-      setMessage({ type: "error", text: "Withdrawal failed. Please try again." });
+      // Global mutation toast handles API errors.
     } finally {
       setLoading(false);
     }

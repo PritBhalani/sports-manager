@@ -3,7 +3,8 @@
 import { useState } from "react";
 import {
   PageHeader,
-  Card,
+  ListPageFrame,
+  ListTableSection,
   FilterBar,
   Input,
   Button,
@@ -41,19 +42,21 @@ export default function LockStatusPage() {
         title="Lock Status"
         breadcrumbs={["Markets", "Lock Status"]}
       />
-      <FilterBar className="mb-4">
-        <Input
-          placeholder="Sport ID"
-          value={sportId}
-          onChange={(e) => setSportId(e.target.value)}
-          className="max-w-[200px]"
-        />
-        <Button variant="primary" onClick={handleLoad} disabled={loading}>
-          {loading ? "Loading…" : "Load"}
-        </Button>
-      </FilterBar>
-      <Card>
-        <Table>
+      <ListPageFrame>
+        <div className="flex w-full flex-col justify-center gap-0">
+          <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
+            <Input
+              placeholder="Sport ID"
+              value={sportId}
+              onChange={(e) => setSportId(e.target.value)}
+              className="max-w-[200px]"
+            />
+            <Button variant="primary" onClick={handleLoad} disabled={loading}>
+              {loading ? "Loading…" : "Load"}
+            </Button>
+          </FilterBar>
+          <ListTableSection>
+            <Table>
           <TableHeader>
             <TableHead>Node</TableHead>
             <TableHead>Status</TableHead>
@@ -80,8 +83,10 @@ export default function LockStatusPage() {
               ))
             )}
           </TableBody>
-        </Table>
-      </Card>
+            </Table>
+          </ListTableSection>
+        </div>
+      </ListPageFrame>
     </div>
   );
 }

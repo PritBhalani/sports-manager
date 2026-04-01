@@ -14,7 +14,7 @@ export default function FilterBar({
 }: FilterBarProps) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 rounded-sm border border-border bg-surface-muted/80 p-4 sm:gap-4 sm:p-5 ${className}`}
+      className={`flex flex-wrap items-center gap-3 rounded-lg bg-neutral-200 px-5 py-4 sm:gap-4 ${className}`}
     >
       {children}
     </div>
