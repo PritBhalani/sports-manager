@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Download } from "lucide-react";
 import {
   PageHeader,
@@ -188,17 +189,33 @@ export default function FdGameReportPage() {
               <TableEmpty colSpan={3} message="No data for this range." />
             ) : (
               <>
-                {items.map((r) => (
+                {items.map((r) => {
+                  const playerId = String(r.user?.id ?? "").trim();
+                  return (
                   <TableRow key={r.user?.id ?? `${r.user?.userCode}-${r.createdOn}`}>
                     <TableCell>
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="default">Member</Badge>
-                        <span className="font-medium text-foreground">
-                          {r.user?.username ?? "—"}
-                        </span>
-                        <span className="text-muted">
-                          ({r.user?.userCode ?? "—"})
-                        </span>
+                        {playerId ? (
+                          <Link
+                            href={`/players/${encodeURIComponent(playerId)}?tab=fd-betting-pl`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            <span>{r.user?.username ?? "—"}</span>{" "}
+                            <span className="text-primary/80">
+                              ({r.user?.userCode ?? "—"})
+                            </span>
+                          </Link>
+                        ) : (
+                          <>
+                            <span className="font-medium text-foreground">
+                              {r.user?.username ?? "—"}
+                            </span>
+                            <span className="text-muted">
+                              ({r.user?.userCode ?? "—"})
+                            </span>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -208,7 +225,8 @@ export default function FdGameReportPage() {
                       {formatCurrency(r.win)}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 <TableRow className="bg-surface-muted/50 font-medium">
                   <TableCell>Total</TableCell>
                   <TableCell> </TableCell>
