@@ -83,16 +83,32 @@ export async function getFdProfitLoss(
 
 /** Row from POST /fdstudio/getrunningexposure — `data.result[]` */
 export type FdRunningExposureRow = {
+  id?: string;
+  username?: string;
   name?: string;
   tableName?: string;
-  roundId?: number;
-  provider?: string;
+  roundId?: string | number;
+  provider?: number | string;
   credit?: number;
   debit?: number;
+  /** Legacy/alternate flag name */
   isPl?: boolean;
+  isPlRequest?: boolean;
   createdOn?: string;
   [key: string]: unknown;
 };
+
+/** Known FD / casino provider ids → display label (extend as backend adds providers). */
+const FD_PROVIDER_LABELS: Record<number, string> = {
+  5: "Aura",
+};
+
+export function formatFdProvider(provider: unknown): string {
+  if (provider === undefined || provider === null) return "—";
+  const n = Number(provider);
+  if (Number.isFinite(n) && FD_PROVIDER_LABELS[n]) return FD_PROVIDER_LABELS[n]!;
+  return String(provider);
+}
 
 export type GetFdRunningExposureResponse = {
   items: FdRunningExposureRow[];

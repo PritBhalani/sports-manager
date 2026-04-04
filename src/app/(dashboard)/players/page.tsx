@@ -381,11 +381,11 @@ function PlayerQuickEditModal({
       maxWidthClassName="max-w-4xl"
       footer={
         <DialogActions>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={state.saving}>
-            Cancel
-          </Button>
           <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={state.saving || state.loading}>
             {state.saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={state.saving}>
+            Cancel
           </Button>
         </DialogActions>
       }
@@ -521,11 +521,11 @@ function CreditActionModal({
       title={`${mode === "D" ? "Deposit" : "Withdraw"} - ${state.username || "User"}`}
       footer={
         <DialogActions>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
           <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving}>
             {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
+            Cancel
           </Button>
         </DialogActions>
       }
@@ -546,7 +546,7 @@ function CreditActionModal({
                 : "border-border-strong bg-surface text-foreground-secondary"
             }`}
           >
-            D
+            Deposit
           </button>
           <button
             type="button"
@@ -557,7 +557,7 @@ function CreditActionModal({
                 : "border-border-strong bg-surface text-foreground-secondary"
             }`}
           >
-            W
+            Withdraw
           </button>
           <Input
             value={amount}
@@ -609,9 +609,6 @@ function BetConfigModal({
       bodyClassName="p-3 sm:p-4"
       footer={
         <DialogActions>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
           <Button
             type="button"
             variant="primary"
@@ -623,6 +620,9 @@ function BetConfigModal({
           </Button>
           <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving || loading}>
             {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
+            Cancel
           </Button>
         </DialogActions>
       }
@@ -697,11 +697,11 @@ function CommissionModal({
       maxWidthClassName="max-w-3xl"
       footer={
         <DialogActions>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={loading || saving}>
-            Cancel
-          </Button>
           <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={loading || saving}>
             {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={loading || saving}>
+            Cancel
           </Button>
         </DialogActions>
       }

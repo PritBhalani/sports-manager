@@ -37,3 +37,41 @@ export function formatCurrency(value: unknown): string {
     maximumFractionDigits: digits,
   });
 }
+
+function sessionFractionalDigits(): number {
+  let fractional = 0;
+  if (typeof window !== "undefined") {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { getAuthSession } = require("@/store/authStore") as {
+        getAuthSession?: () => { currency?: { fractional?: unknown } };
+      };
+      const session = getAuthSession?.();
+      const f = Number(session?.currency?.fractional ?? 0);
+      if (Number.isFinite(f) && f >= 0) fractional = Math.floor(f);
+    } catch {
+      // ignore
+    }
+  }
+  return Math.max(0, Math.min(6, fractional));
+}
+
+/**
+ * Format an amount without multiplying by session currency rate.
+ * Use when the API already returns values in the same units shown to the user (e.g. FD Studio running exposure).
+ */
+export function formatAmountNoRate(value: unknown): string {
+  if (value === undefined || value === null) return "0";
+  const n =
+    typeof value === "string"
+      ? parseFloat(value)
+      : typeof value === "number"
+        ? value
+        : Number.NaN;
+  if (Number.isNaN(n)) return "0";
+  const digits = sessionFractionalDigits();
+  return n.toLocaleString("en-IN", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}

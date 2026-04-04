@@ -336,11 +336,11 @@ export default function WebsiteBannersPage() {
         maxWidthClassName="max-w-3xl"
         footer={
           <>
-            <Button variant="ghost" onClick={closeAddDialog} disabled={adding}>
-              Cancel
-            </Button>
             <Button variant="primary" onClick={() => void handleAddBanner()} disabled={adding}>
               {adding ? "Saving..." : "Save"}
+            </Button>
+            <Button variant="ghost" onClick={closeAddDialog} disabled={adding}>
+              Cancel
             </Button>
           </>
         }

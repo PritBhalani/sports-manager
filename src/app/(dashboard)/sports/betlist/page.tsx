@@ -55,6 +55,27 @@ function marketTypeOption(m: MarketTypeMapping): { value: string; label: string 
   return { value: m.marketTypeCode, label: m.displayName || m.marketTypeCode };
 }
 
+/** Same as other dashboard pages: API stake amounts use base units; UI uses display × rate. */
+function getSessionCurrencyRate(): number {
+  try {
+    const session = getAuthSession();
+    const r = Number(session?.currency?.rate ?? 1);
+    return Number.isFinite(r) && r > 0 ? r : 1;
+  } catch {
+    return 1;
+  }
+}
+
+/** Convert filter input (display currency) to API payload (divide by rate). */
+function stakeInputToApi(value: string, rate: number): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed);
+  if (!Number.isFinite(n)) return undefined;
+  const r = Number.isFinite(rate) && rate > 0 ? rate : 1;
+  return n / r;
+}
+
 export default function SportsBetlistPage() {
   const [eventTypes, setEventTypes] = useState<EventTypeRecord[]>([]);
   const [marketTypes, setMarketTypes] = useState<MarketTypeMapping[]>([]);
@@ -101,6 +122,7 @@ export default function SportsBetlistPage() {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
+    const rate = getSessionCurrencyRate();
     getLiveBets(
       {
         page,
@@ -114,8 +136,8 @@ export default function SportsBetlistPage() {
         inplay: false,
         eventTypeId: eventTypeId || "",
         marketTypeCode: marketTypeCode || "",
-        stakefrom: stakeFrom.trim() ? Number(stakeFrom) : undefined,
-        staketo: stakeTo.trim() ? Number(stakeTo) : undefined,
+        stakefrom: stakeInputToApi(stakeFrom, rate),
+        staketo: stakeInputToApi(stakeTo, rate),
         eventName: memberName.trim() ? memberName.trim() : undefined,
       },
     )

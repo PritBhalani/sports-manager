@@ -199,15 +199,6 @@ export default function CreateMemberModal({
       footer={
         <DialogActions>
           <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleClose}
-            disabled={saving}
-          >
-            Cancel
-          </Button>
-          <Button
             type="submit"
             form="create-member-form"
             variant="primary"
@@ -215,6 +206,15 @@ export default function CreateMemberModal({
             disabled={saving || codeLoading}
           >
             {saving ? "Creating…" : "Create"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleClose}
+            disabled={saving}
+          >
+            Cancel
           </Button>
         </DialogActions>
       }

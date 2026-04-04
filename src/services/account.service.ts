@@ -399,6 +399,103 @@ export async function rollbackOffPayIn(body: { id: string }): Promise<unknown> {
   return apiPost("/payment/rollbackoffpayin", body, { showSuccessToast: true });
 }
 
+/** Row from GET /payment/getbankdetails — `data[]` */
+export type BankDetailRecord = {
+  id?: string;
+  acNo?: string;
+  acHolder?: string;
+  ifsc?: string;
+  bankName?: string;
+  detailType?: number | string;
+  isActive?: boolean;
+  whatsAppNo?: string;
+  telegramNo?: string;
+  whatsapp?: string;
+  telegram?: string;
+  [key: string]: unknown;
+};
+
+/**
+ * GET /payment/getbankdetails — website banking account list (`data[]`).
+ */
+export async function getBankDetails(): Promise<BankDetailRecord[]> {
+  const raw = await apiGet<unknown>("/payment/getbankdetails");
+  if (!raw || typeof raw !== "object") return [];
+  const env = raw as ApiEnvelope<unknown>;
+  if (env.success === false) {
+    throw new Error(readEnvelopeErrorMessage(raw));
+  }
+  const d = env.data;
+  return Array.isArray(d) ? (d as BankDetailRecord[]) : [];
+}
+
+/**
+ * GET /payment/changeactivebank/{bankId}/{true|false}
+ * Toggles bank detail active flag (Yes/No in UI).
+ */
+export async function changeActiveBank(
+  bankId: string,
+  active: boolean,
+): Promise<void> {
+  const id = String(bankId || "").trim();
+  if (!id) throw new Error("Missing bank id.");
+  const path = `/payment/changeactivebank/${encodeURIComponent(id)}/${active}`;
+  const raw = await apiGet<unknown>(path);
+  if (!raw || typeof raw !== "object") return;
+  const env = raw as ApiEnvelope<unknown>;
+  if (env.success === false) {
+    throw new Error(readEnvelopeErrorMessage(raw));
+  }
+}
+
+/** POST /payment/addbankdetails */
+export type AddBankDetailsBody = {
+  detailType: string;
+  acNo: string;
+  acHolder?: string;
+  ifsc?: string;
+  bankName?: string;
+  whatsAppNo?: string;
+  telegramNo?: string;
+};
+
+export async function addBankDetails(body: AddBankDetailsBody): Promise<unknown> {
+  return apiPost("/payment/addbankdetails", body, { showSuccessToast: true });
+}
+
+/** POST /payment/updatebankdetails */
+export type UpdateBankDetailsBody = {
+  id: string;
+  detailType: string;
+  acNo: string;
+  acHolder?: string;
+  ifsc?: string;
+  bankName?: string;
+  whatsAppNo?: string;
+  telegramNo?: string;
+  isActive: boolean;
+};
+
+export async function updateBankDetails(body: UpdateBankDetailsBody): Promise<unknown> {
+  return apiPost("/payment/updatebankdetails", body, { showSuccessToast: true });
+}
+
+/**
+ * GET /payment/deletebankdetails/{id}
+ */
+export async function deleteBankDetails(bankId: string): Promise<void> {
+  const id = String(bankId || "").trim();
+  if (!id) throw new Error("Missing bank id.");
+  const raw = await apiGet<unknown>(
+    `/payment/deletebankdetails/${encodeURIComponent(id)}`,
+  );
+  if (!raw || typeof raw !== "object") return;
+  const env = raw as ApiEnvelope<unknown>;
+  if (env.success === false) {
+    throw new Error(readEnvelopeErrorMessage(raw));
+  }
+}
+
 /** Row from POST /account/getb2csummary — `data.result[]` */
 export type B2cSummaryRow = {
   id: string;

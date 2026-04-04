@@ -18,8 +18,12 @@ import {
 import { usePagination } from "@/hooks/usePagination";
 import { RefreshCw } from "lucide-react";
 import { formatDateTime } from "@/utils/date";
-import { formatCurrency } from "@/utils/formatCurrency";
-import { getFdRunningExposure, type FdRunningExposureRow } from "@/services/fdstudio.service";
+import { formatAmountNoRate } from "@/utils/formatCurrency";
+import {
+  getFdRunningExposure,
+  formatFdProvider,
+  type FdRunningExposureRow,
+} from "@/services/fdstudio.service";
 
 export default function CasinoBetListPage() {
   const { page, pageSize, setPage, setPageSize, pageSizeOptions } = usePagination();
@@ -96,24 +100,27 @@ export default function CasinoBetListPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={8} message="No running exposure records." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const isPl = Boolean(row.isPlRequest ?? row.isPl);
+                return (
                 <TableRow key={String(row.id ?? row.roundId ?? i)}>
-                  <TableCell>{String(row.name ?? row.username ?? "—")}</TableCell>
+                  <TableCell>{String(row.username ?? row.name ?? "—")}</TableCell>
                   <TableCell>{String(row.tableName ?? row.table ?? "—")}</TableCell>
                   <TableCell>{String(row.roundId ?? "—")}</TableCell>
-                  <TableCell>{String(row.provider ?? row.vendor ?? "—")}</TableCell>
+                  <TableCell>{formatFdProvider(row.provider ?? row.vendor)}</TableCell>
                   <TableCell align="right" className="tabular-nums">
-                    {formatCurrency(row.credit ?? 0)}
+                    {formatAmountNoRate(row.credit ?? 0)}
                   </TableCell>
                   <TableCell align="right" className="tabular-nums">
-                    {formatCurrency(row.debit ?? 0)}
+                    {formatAmountNoRate(row.debit ?? 0)}
                   </TableCell>
-                  <TableCell>{row.isPl ? "Yes" : "No"}</TableCell>
+                  <TableCell>{isPl ? "Yes" : "No"}</TableCell>
                   <TableCell className="whitespace-nowrap">
                     {formatDateTime(row.createdOn ?? row.createdAt)}
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

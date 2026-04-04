@@ -490,11 +490,11 @@ export default function BonusManageOffersPage() {
         maxWidthClassName="max-w-6xl"
         footer={
           <>
-            <Button variant="ghost" onClick={closeDialog} disabled={saving}>
-              Cancel
-            </Button>
             <Button variant="primary" onClick={() => void handleSave()} disabled={saving}>
               {saving ? "Saving..." : "Save"}
+            </Button>
+            <Button variant="ghost" onClick={closeDialog} disabled={saving}>
+              Cancel
             </Button>
           </>
         }

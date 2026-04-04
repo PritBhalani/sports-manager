@@ -30,6 +30,7 @@ import {
 import {
   getMyInfo,
   getMyInfoPathId,
+  getUserById,
   getSessionMemberId,
   getLoginProfileFromSession,
 } from "@/services/user.service";
@@ -130,6 +131,18 @@ function ProfileFieldRow({
   );
 }
 
+/** Unwrap getuserbyid envelope; skip failed API envelopes without surfacing load errors. */
+function myInfoFromGetUserById(raw: unknown): MyInfo | null {
+  if (!raw || typeof raw !== "object") return null;
+  const env = raw as { success?: boolean; data?: unknown };
+  if (env.success === false) return null;
+  const data =
+    env.data !== undefined && env.data !== null && typeof env.data === "object"
+      ? env.data
+      : raw;
+  return data as MyInfo;
+}
+
 function ProfileSkeleton() {
   return (
     <div className="animate-pulse space-y-3">
@@ -190,40 +203,34 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let cancelled = false;
-    // README §3 getmyinfo/{parentId} expects the **parent id** from session.
-    // Do not fall back to member id or a hard-coded id, otherwise we'll spam failures
-    // for valid sessions that don't have parent context loaded yet.
+    // Primary: GET /user/getmyinfo/{parentId} (README §3).
+    // Fallback: GET /user/getuserbyid/{memberId} to avoid blocking errors when getmyinfo fails or parent id is absent.
     const pathId = getMyInfoPathId();
-    if (!pathId) {
-      if (!cancelled) {
-        setInfo(null);
-        setMessage({
-          type: "error",
-          text: "Could not load profile. Please sign in again.",
-        });
-        setLoading(false);
-      }
-      return () => {
-        cancelled = true;
-      };
-    }
+    const memberId = getSessionMemberId();
 
-    getMyInfo(pathId)
-      .then((res) => {
-        if (!cancelled) setInfo(res ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setInfo(null);
-          setMessage({
-            type: "error",
-            text: "Could not load profile. Check session or try logging in again.",
-          });
+    void (async () => {
+      try {
+        if (pathId) {
+          try {
+            const res = await getMyInfo(pathId);
+            if (!cancelled) setInfo(res ?? null);
+            return;
+          } catch {
+            /* use getuserbyid below */
+          }
         }
-      })
-      .finally(() => {
+        if (memberId) {
+          const raw = await getUserById(memberId);
+          const parsed = myInfoFromGetUserById(raw);
+          if (!cancelled) setInfo(parsed);
+        } else if (!cancelled) {
+          setInfo(null);
+        }
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
