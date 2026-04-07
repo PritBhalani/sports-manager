@@ -14,6 +14,7 @@ import {
   Badge,
 } from "@/components";
 import { formatDateTime } from "@/utils/date";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type PlayerRow = {
   id: string;
@@ -39,6 +40,20 @@ function makeIsoDate(daysAgo: number): string {
 
 export default function ZeroDepositPlayersPage() {
   const router = useRouter();
+
+  const exportZeroDepositCsv = () => {
+    downloadCsv(
+      "zero-deposit-players.csv",
+      ["ID", "Username", "User code", "Status", "Registered"],
+      rows.map((r) => [
+        r.id,
+        r.username,
+        r.userCode,
+        r.status,
+        formatDateTime(r.createdAt),
+      ]),
+    );
+  };
 
   const rows: PlayerRow[] = useMemo(
     () =>
@@ -118,7 +133,9 @@ export default function ZeroDepositPlayersPage() {
         <div className="flex w-full flex-col justify-center gap-0">
           <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
             <Input placeholder="Search zero deposit users" className="max-w-xs" />
-            <Button variant="primary">Export</Button>
+            <Button variant="primary" type="button" onClick={exportZeroDepositCsv}>
+              Export
+            </Button>
           </FilterBar>
           <ListTableSection>
             <DataTable

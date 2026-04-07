@@ -21,6 +21,7 @@ import {
 import { ArrowUpDown, ArrowUpFromLine, HandCoins } from "lucide-react";
 import { getOffPayOut, type OffPayInRecord } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 import { dateRangeToISO, formatDateTime } from "@/utils/date";
 
 const STATUS_OPTIONS = [
@@ -107,7 +108,30 @@ export default function TransactionsRequestWithdrawPage() {
   };
 
   const onExport = () => {
-    // TODO: wire to export API
+    const header = [
+      "Username",
+      "UTR/TXN",
+      "Account mode",
+      "Amount",
+      "Status",
+      "Created",
+      "Updated",
+    ];
+    const out = rows.map((row) => {
+      const statusLabel =
+        String(row.comment ?? "").trim() ||
+        (row.status != null ? `Status ${row.status}` : "—");
+      return [
+        String(row.user?.username ?? ""),
+        String(row.utrNo ?? ""),
+        String(row.detailType ?? "manual"),
+        Number(row.amount ?? 0),
+        statusLabel,
+        formatDateTime(row.createdOn),
+        formatDateTime(row.updatedOn),
+      ];
+    });
+    downloadCsv(`withdraw-requests-${fromDate}-${toDate}.csv`, header, out);
   };
 
   const isWithdrawTab = pathname?.includes("/withdraw") ?? false;

@@ -526,6 +526,169 @@ export type GetB2cSummaryResponse = {
   pageSize: number;
 };
 
+/** Row from POST /account/getdwtransaction — `data.result[]` (deposit / withdrawal ledger). */
+export type DwTransactionUser = {
+  username?: string;
+  mobile?: string;
+  userType?: number;
+};
+
+export type DwTransactionRow = {
+  userId?: string;
+  balance?: number;
+  total?: number;
+  creditTotal?: number;
+  narration?: string;
+  remarks?: string;
+  comment?: string;
+  accountType?: number;
+  createdOn?: string;
+  user?: DwTransactionUser;
+};
+
+export type DwTransactionSearchQuery = {
+  b2CSummaryId: string;
+  userId: string;
+  /** UTC ISO: start of summary calendar day in IST (e.g. `2026-04-04T18:30:00.000Z` for 05-Apr-2026 IST). */
+  fromDate: string;
+  dwType: "D" | "W";
+  agentName: string;
+};
+
+export type GetDwTransactionResponse = {
+  items: DwTransactionRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/**
+ * B2C summary `row.date` calendar day → `fromDate` for getdwtransaction (midnight Asia/Kolkata as UTC).
+ */
+export function b2cSummaryRowToDwFromDateIso(dateRaw: string): string {
+  const trimmed = String(dateRaw ?? "").trim();
+  const day = trimmed.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(day)) {
+    return new Date(`${day}T00:00:00+05:30`).toISOString();
+  }
+  const d = new Date(trimmed);
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return new Date(`${y}-${m}-${dd}T00:00:00+05:30`).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+/** POST /account/getdwtransaction — deposit (D) or withdrawal (W) transactions for a B2C summary cell */
+export async function getDwTransaction(
+  params: ListParams,
+  searchQuery: DwTransactionSearchQuery,
+): Promise<GetDwTransactionResponse> {
+  type Envelope = {
+    success?: boolean;
+    data?: {
+      result?: DwTransactionRow[];
+      pageIndex?: number;
+      pageSize?: number;
+      total?: number;
+    };
+    messages?: unknown;
+  };
+  const res = await apiPost<Envelope>(`${ACCOUNT}/getdwtransaction`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
+    searchQuery,
+  });
+  if (res && typeof res === "object" && res.success === false) {
+    throw new Error(readEnvelopeErrorMessage(res));
+  }
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
+}
+
+/** Row from POST /account/getbonustransaction — `data.result[]` (activated / redeemed bonus). */
+export type BonusTransactionRow = {
+  userId?: string;
+  bonusCode?: string;
+  code?: string;
+  amount?: number;
+  balance?: number;
+  createdOn?: string;
+  expireOn?: string;
+  expiringOn?: string;
+  expiredOn?: string;
+  user?: DwTransactionUser;
+  [key: string]: unknown;
+};
+
+export type BonusTransactionSearchQuery = {
+  b2CSummaryId: string;
+  userId: string;
+  fromDate: string;
+  /** `A` = activated, `R` = redeemed, `E` = expired. */
+  dwType: "A" | "R" | "E";
+  agentName: string;
+};
+
+export type GetBonusTransactionResponse = {
+  items: BonusTransactionRow[];
+  total: number;
+  pageIndex: number;
+  pageSize: number;
+};
+
+/** POST /account/getbonustransaction — bonus ledger for a B2C summary row */
+export async function getBonusTransaction(
+  params: ListParams,
+  searchQuery: BonusTransactionSearchQuery,
+): Promise<GetBonusTransactionResponse> {
+  type Envelope = {
+    success?: boolean;
+    data?: {
+      result?: BonusTransactionRow[];
+      pageIndex?: number;
+      pageSize?: number;
+      total?: number;
+    };
+    messages?: unknown;
+  };
+  const res = await apiPost<Envelope>(`${ACCOUNT}/getbonustransaction`, {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
+    searchQuery,
+  });
+  if (res && typeof res === "object" && res.success === false) {
+    throw new Error(readEnvelopeErrorMessage(res));
+  }
+  const inner =
+    res && typeof res === "object" ? (res as Envelope).data : undefined;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
+}
+
 /** POST /account/getb2csummary — B2C summary report */
 export async function getB2cSummary(
   params: ListParams,

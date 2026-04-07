@@ -14,6 +14,7 @@ import {
   Badge,
 } from "@/components";
 import { formatDateTime } from "@/utils/date";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type PlayerRow = {
   id: string;
@@ -41,6 +42,21 @@ function makeIsoDate(daysAgo: number): string {
 
 export default function BlockedPlayerHistoryPage() {
   const router = useRouter();
+
+  const exportBlockedHistoryCsv = () => {
+    downloadCsv(
+      "blocked-player-history.csv",
+      ["ID", "Username", "User code", "Event", "Status", "Time"],
+      rows.map((r) => [
+        r.id,
+        r.username,
+        r.userCode,
+        r.event,
+        r.status,
+        formatDateTime(r.createdAt),
+      ]),
+    );
+  };
 
   const rows: PlayerRow[] = useMemo(
     () =>
@@ -129,7 +145,9 @@ export default function BlockedPlayerHistoryPage() {
         <div className="flex w-full flex-col justify-center gap-0">
           <FilterBar className="rounded-none bg-neutral-200 px-5 pb-4 pt-4">
             <Input placeholder="Search history (client-side)" className="max-w-xs" />
-            <Button variant="primary">Export</Button>
+            <Button variant="primary" type="button" onClick={exportBlockedHistoryCsv}>
+              Export
+            </Button>
           </FilterBar>
           <ListTableSection>
             <DataTable

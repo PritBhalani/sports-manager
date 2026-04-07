@@ -98,15 +98,24 @@ export type FdRunningExposureRow = {
   [key: string]: unknown;
 };
 
-/** Known FD / casino provider ids → display label (extend as backend adds providers). */
-const FD_PROVIDER_LABELS: Record<number, string> = {
-  5: "Aura",
+/**
+ * Casino provider ids (e.g. `AllowedProvider: [5, 7]` enables Fawk + DreamCasino).
+ * Aligns with backend enum; extend when new providers are added.
+ */
+export const CASINO_PROVIDER_LABELS: Record<number, string> = {
+  1: "Fairdeal",
+  2: "Supernowa",
+  3: "Ezugi",
+  4: "Evolution",
+  5: "Fawk",
+  6: "QTech",
+  7: "DreamCasino",
 };
 
 export function formatFdProvider(provider: unknown): string {
   if (provider === undefined || provider === null) return "—";
   const n = Number(provider);
-  if (Number.isFinite(n) && FD_PROVIDER_LABELS[n]) return FD_PROVIDER_LABELS[n]!;
+  if (Number.isFinite(n) && CASINO_PROVIDER_LABELS[n]) return CASINO_PROVIDER_LABELS[n]!;
   return String(provider);
 }
 

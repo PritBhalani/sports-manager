@@ -10,6 +10,7 @@ import {
   StatsCard,
   DataGrid,
 } from "@/components";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -24,12 +25,24 @@ const columns = [
 ];
 
 export default function EventPositionDetailPage() {
+  const onExportCsv = () => {
+    downloadCsv(
+      "event-position-detail.csv",
+      ["Market", "Exposure"],
+      rows.map((r) => [String(r.market ?? ""), Number(r.exposure ?? 0)]),
+    );
+  };
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Event Position Detail"
         breadcrumbs={["Position", "Event", "Detail"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button variant="primary" size="sm" type="button" onClick={onExportCsv}>
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

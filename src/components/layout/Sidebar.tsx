@@ -59,6 +59,8 @@ type MenuLink = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   badge?: "beta";
+  /** When true, item is shown but does not navigate. */
+  disabled?: boolean;
   children?: never;
 };
 
@@ -66,11 +68,15 @@ type MenuDropdown = {
   href?: never;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  /** When true, section is shown but does not expand or navigate. */
+  disabled?: boolean;
   children: {
     href: string;
     label: string;
     badge?: "beta";
     icon?: ComponentType<{ className?: string }>;
+    /** When true, shown but does not navigate. */
+    disabled?: boolean;
   }[];
 };
 
@@ -86,8 +92,8 @@ const menuConfig: MenuItem[] = [
     icon: IconTransaction,
     children: [
       { href: "/transactions/requests", label: "Request", icon: IconRequest },
-      { href: "/accounts/deposit", label: "Auto", icon: IconAuto },
-      { href: "/accounts/withdraw", label: "Manual", icon: IconManual },
+      { href: "/accounts/deposit", label: "Auto", icon: IconAuto, disabled: true },
+      { href: "/accounts/withdraw", label: "Manual", icon: IconManual, disabled: true },
     ],
   },
 
@@ -100,12 +106,12 @@ const menuConfig: MenuItem[] = [
     icon: IconTrophy,
     children: [
       { href: "/sports/betlist", label: "Betlist", badge: "beta", icon: IconBetlist },
-      { href: "/sports/spm-sports", label: "SPM Sports", icon: IconTrophy },
-      { href: "/sports/betfair", label: "Betfair", icon: IconGamepad2 },
-      { href: "/sports/betby", label: "Betby", icon: IconLink2 },
-      { href: "/sports/atlas", label: "Atlas", icon: IconGlobe },
-      { href: "/sports/ig-pixel", label: "IG Pixel", icon: IconFlag },
-      { href: "/sports/alt-gaming", label: "Alt Gaming", icon: IconGamepad2 },
+      { href: "/sports/spm-sports", label: "SPM Sports", icon: IconTrophy, disabled: true },
+      { href: "/sports/betfair", label: "Betfair", icon: IconGamepad2, disabled: true },
+      { href: "/sports/betby", label: "Betby", icon: IconLink2, disabled: true },
+      { href: "/sports/atlas", label: "Atlas", icon: IconGlobe, disabled: true },
+      { href: "/sports/ig-pixel", label: "IG Pixel", icon: IconFlag, disabled: true },
+      { href: "/sports/alt-gaming", label: "Alt Gaming", icon: IconGamepad2, disabled: true },
     ],
   },
 
@@ -114,9 +120,9 @@ const menuConfig: MenuItem[] = [
     label: "Casino",
     icon: IconCasino,
     children: [
-      { href: "/casino/stats", label: "Stats", badge: "beta", icon: IconBarChart3 },
+      { href: "/casino/stats", label: "Stats", badge: "beta", icon: IconBarChart3, disabled: true },
       { href: "/casino/bet-list", label: "Bet List", icon: IconBetlist },
-      { href: "/casino/games", label: "Games", icon: IconGamepad2 },
+      { href: "/casino/games", label: "Games", icon: IconGamepad2, disabled: true },
     ],
   },
 
@@ -126,8 +132,8 @@ const menuConfig: MenuItem[] = [
     icon: IconGift,
     children: [
       { href: "/bonus/bonus", label: "Bonus", icon: IconGift },
-      { href: "/bonus/claims", label: "Claims", icon: IconClipboardCheck },
-      { href: "/bonus/statment", label: "Statment", icon: IconFileText },
+      { href: "/bonus/claims", label: "Claims", icon: IconClipboardCheck, disabled: true },
+      { href: "/bonus/statment", label: "Statment", icon: IconFileText, disabled: true },
     ],
   },
 
@@ -144,16 +150,18 @@ const menuConfig: MenuItem[] = [
       { href: "/website/banking", label: "Banking", icon: IconBanknote },
       { href: "/website/gatways", label: "Gateways", icon: IconGateways },
       { href: "/website/currency", label: "Currency", icon: IconCurrency },
-      { href: "/website/forms", label: "Forms", badge: "beta", icon: IconFileCheck2 },
+      { href: "/website/forms", label: "Forms", badge: "beta", icon: IconFileCheck2, disabled: true },
       {
         href: "/website/external-integrations",
         label: "External Integrations",
         icon: IconGateways,
+        disabled: true,
       },
       {
         href: "/website/data-integrations",
         label: "Data Integrations",
         icon: IconDatabase,
+        disabled: true,
       },
     ],
   },
@@ -202,9 +210,9 @@ const menuConfig: MenuItem[] = [
     label: "Security",
     icon: IconSecurity,
     children: [
-      { href: "/security/token-history", label: "Roles", icon: IconRoles },
+      { href: "/security/token-history", label: "Roles", icon: IconRoles, disabled: true },
       { href: "/security/activity", label: "Activity", icon: IconDashboardActivity },
-      { href: "/security/token-history", label: "Fraud Logs", icon: IconFraudLogs },
+      { href: "/security/token-history", label: "Fraud Logs", icon: IconFraudLogs, disabled: true },
     ],
   },
 
@@ -222,12 +230,19 @@ const menuConfig: MenuItem[] = [
   {
     label: "Settings",
     icon: IconSettings,
+    disabled: true,
     children: [
       { href: "/settings", label: "Settings", icon: IconSettings },
       { href: "/settings/notifications", label: "Notifications", icon: IconAnnouncement },
     ],
   },
-  { href: "/wallets", label: "Wallets", icon: IconWallets, badge: "beta" },
+  {
+    href: "/wallets",
+    label: "Wallets",
+    icon: IconWallets,
+    badge: "beta",
+    disabled: true,
+  },
   { href: "/profile", label: "My Profile", icon: IconMyProfile },
 ];
 
@@ -238,9 +253,11 @@ function isActive(pathname: string, href: string) {
 
 function hasActiveChild(
   pathname: string,
-  children: readonly { href: string }[]
+  children: readonly { href: string; disabled?: boolean }[],
 ) {
-  return children.some((c) => pathname.startsWith(c.href));
+  return children.some(
+    (c) => !c.disabled && pathname.startsWith(c.href),
+  );
 }
 
 type SidebarProps = {
@@ -258,7 +275,11 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
     setOpenDropdowns((prev) => {
       const next = new Set(prev);
       menuConfig.forEach((item) => {
-        if ("children" in item && item.children?.length) {
+        if (
+          "children" in item &&
+          item.children?.length &&
+          !("disabled" in item && item.disabled)
+        ) {
           const shouldBeOpen = hasActiveChild(pathname, item.children);
           if (shouldBeOpen) next.add(item.label);
         }
@@ -301,6 +322,24 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
             if ("href" in item && item.href) {
               const active = isActive(pathname, item.href);
               const Icon = item.icon;
+              if (item.disabled) {
+                return (
+                  <li key={item.label}>
+                    <span
+                      className="flex cursor-not-allowed select-none items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium opacity-50"
+                      aria-disabled="true"
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      <span>{item.label}</span>
+                      {item.badge === "beta" && (
+                        <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                          beta
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              }
               return (
                 <li key={item.label}>
                   <Link
@@ -327,6 +366,22 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               const isOpenDropdown = openDropdowns.has(item.label);
               const activeChild = hasActiveChild(pathname, children);
               const Icon = item.icon;
+              if ("disabled" in item && item.disabled) {
+                return (
+                  <li key={item.label}>
+                    <div
+                      className="flex cursor-not-allowed select-none items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium opacity-50"
+                      aria-disabled="true"
+                    >
+                      <span className="flex items-center gap-3">
+                        <Icon className="h-5 w-5 flex-shrink-0" />
+                        <span>{item.label}</span>
+                      </span>
+                      <ChevronRight className="h-4 w-4" aria-hidden />
+                    </div>
+                  </li>
+                );
+              }
               return (
                 <li key={item.label}>
                   <button
@@ -349,8 +404,33 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   {isOpenDropdown && (
                     <ul className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-ring pl-3">
                       {children.map((child) => {
-                        const childActive = pathname.startsWith(child.href);
+                        const childActive =
+                          !child.disabled && pathname.startsWith(child.href);
                         const ChildIcon = child.icon;
+                        if (child.disabled) {
+                          return (
+                            <li
+                              key={`${item.label}:${child.label}:${child.href}`}
+                            >
+                              <span
+                                className="block cursor-not-allowed select-none rounded-sm px-2.5 py-2 text-sm opacity-50"
+                                aria-disabled="true"
+                              >
+                                <div className="flex items-center gap-2">
+                                  {ChildIcon ? (
+                                    <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                                  ) : null}
+                                  <span>{child.label}</span>
+                                  {child.badge === "beta" && (
+                                    <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                                      beta
+                                    </span>
+                                  )}
+                                </div>
+                              </span>
+                            </li>
+                          );
+                        }
                         return (
                           <li
                             key={`${item.label}:${child.label}:${child.href}`}
@@ -364,17 +444,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                                   : "text-sidebar-muted"
                               }`}
                             >
-                            <div className="flex items-center gap-2">
-                        {ChildIcon ? (
-                          <ChildIcon className="h-4 w-4 flex-shrink-0" />
-                        ) : null}
-                              <span>{child.label}</span>
-                              {child.badge === "beta" && (
-                                <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                                  beta
-                                </span>
-                              )}
-                            </div>
+                              <div className="flex items-center gap-2">
+                                {ChildIcon ? (
+                                  <ChildIcon className="h-4 w-4 flex-shrink-0" />
+                                ) : null}
+                                <span>{child.label}</span>
+                                {child.badge === "beta" && (
+                                  <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
+                                    beta
+                                  </span>
+                                )}
+                              </div>
                             </Link>
                           </li>
                         );

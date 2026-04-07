@@ -22,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { getBetHistoryByMarketId } from "@/services/betHistory.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type BetRow = Record<string, unknown>;
 
@@ -115,6 +116,53 @@ export default function PlByMarketDetailPage() {
     load();
   }, [load]);
 
+  const exportMarketBetsCsv = useCallback(() => {
+    const header = [
+      "Member",
+      "Placed",
+      "Selection",
+      "Bet ID",
+      "In play",
+      "1-Click",
+      "Side",
+      "Odds",
+      "Stake",
+      "Status",
+      "Win/Loss",
+      "IP",
+    ];
+    const out = rows.map((r) => {
+      const user = (r.user ?? {}) as Record<string, unknown>;
+      const member = text(user.username ?? user.userCode);
+      const placed = formatDateTime(r.createdOn ?? r.createdAt ?? r.date);
+      const selection = text(r.runnerName ?? r.selection);
+      const betId = text(r.betId ?? r.id, "");
+      const inPlay = yn(Boolean(r.inPlay));
+      const oneClick = oneClickLabel(r.betFrom);
+      const side = sideLabel(r.side);
+      const odds = text(r.price ?? r.odds);
+      const stake = formatCurrency(r.size ?? r.stake);
+      const pl = formatCurrency(r.pl ?? r.pnl ?? r.netWin);
+      const statusText = statusLabel(r.status, r.pl ?? r.pnl);
+      const ip = text(r.remoteIp ?? r.ipAddress);
+      return [
+        member,
+        placed,
+        selection,
+        betId,
+        inPlay,
+        oneClick,
+        side,
+        odds,
+        stake,
+        statusText,
+        pl,
+        ip,
+      ];
+    });
+    downloadCsv(`pl-by-market-bets-${marketId || "market"}.csv`, header, out);
+  }, [rows, marketId]);
+
   return (
     <div className="min-w-0 space-y-4">
       <PageHeader
@@ -125,7 +173,17 @@ export default function PlByMarketDetailPage() {
             ? `${headerInfo.eventName} - ${headerInfo.marketName}`
             : "Market bet history"
         }
-        action={<Button variant="primary" size="sm">Download CSV</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportMarketBetsCsv}
+            disabled={loading || rows.length === 0}
+          >
+            Download CSV
+          </Button>
+        }
       />
 
       {error ? (

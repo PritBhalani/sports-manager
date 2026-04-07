@@ -27,8 +27,7 @@ import {
   Download,
   Filter,
   Eye,
-  ChevronRight,
-  ChevronDown,
+  Network,
   Loader2,
   Lock,
   LockOpen,
@@ -50,6 +49,7 @@ import { formatDateTime, timestampMs } from "@/utils/date";
 import type { DownlineRecord } from "@/types/account.types";
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 import CreateMemberModal from "@/components/players/CreateMemberModal";
 
 /** Map UI filter to API `searchQuery.status` (empty = no filter / all). */
@@ -64,6 +64,302 @@ function rowStatusLabel(status: unknown): { text: string; active: boolean } {
   if (n === 2 || n === 1) return { text: "ACTIVE", active: true };
   if (n === -1 || Number.isNaN(n)) return { text: "INACTIVE", active: false };
   return { text: String(status ?? "—"), active: false };
+}
+
+type DownlineTableContext = {
+  expandedRows: Record<string, boolean>;
+  downlineRows: Record<string, DownlineRecord[]>;
+  downlineLoading: Record<string, boolean>;
+  downlineError: Record<string, string | null>;
+  toggleDownline: (parentId: string) => void | Promise<void>;
+  openQuickEditModal: (id: string, uname: string, userCode: string) => void | Promise<void>;
+  openBettingLockConfirm: (id: string, label: string, locked: boolean) => void;
+  openCreditModal: (id: string, uname: string) => void;
+  openBetConfigModal: (id: string, uname: string) => void;
+  openCommissionModal: (id: string, uname: string) => void | Promise<void>;
+};
+
+function DownlineExpansionRows({
+  parentId,
+  depth,
+  expandedRows,
+  downlineRows,
+  downlineLoading,
+  downlineError,
+  toggleDownline,
+  openQuickEditModal,
+  openBettingLockConfirm,
+  openCreditModal,
+  openBetConfigModal,
+  openCommissionModal,
+}: { parentId: string; depth: number } & DownlineTableContext) {
+  if (downlineLoading[parentId]) {
+    return (
+      <TableRow>
+        <td colSpan={11} className="px-4 py-3 text-sm text-muted">
+          Loading downline...
+        </td>
+      </TableRow>
+    );
+  }
+  const err = downlineError[parentId];
+  if (err) {
+    return (
+      <TableRow>
+        <td colSpan={11} className="px-4 py-3 text-sm text-error">
+          {err}
+        </td>
+      </TableRow>
+    );
+  }
+  const list = downlineRows[parentId] ?? [];
+  if (list.length === 0) {
+    return (
+      <TableRow>
+        <td colSpan={11} className="px-4 py-3 text-sm text-muted">
+          No downline users.
+        </td>
+      </TableRow>
+    );
+  }
+  return (
+    <DownlineTableRows
+      records={list}
+      depth={depth}
+      expandedRows={expandedRows}
+      downlineRows={downlineRows}
+      downlineLoading={downlineLoading}
+      downlineError={downlineError}
+      toggleDownline={toggleDownline}
+      openQuickEditModal={openQuickEditModal}
+      openBettingLockConfirm={openBettingLockConfirm}
+      openCreditModal={openCreditModal}
+      openBetConfigModal={openBetConfigModal}
+      openCommissionModal={openCommissionModal}
+    />
+  );
+}
+
+function DownlineTableRows({
+  records,
+  depth,
+  expandedRows,
+  downlineRows,
+  downlineLoading,
+  downlineError,
+  toggleDownline,
+  openQuickEditModal,
+  openBettingLockConfirm,
+  openCreditModal,
+  openBetConfigModal,
+  openCommissionModal,
+}: DownlineTableContext & { records: DownlineRecord[]; depth: number }) {
+  const firstCellPadStyle =
+    depth >= 1 ? ({ paddingLeft: `${16 + depth * 16}px` } as const) : undefined;
+
+  return (
+    <>
+      {records.map((child, idx) => {
+        const cId = String(child.id ?? `nested-${depth}-${idx}`);
+        const cUname = String(child.username ?? "—");
+        const cUserCode = String(child.userCode ?? "—");
+        const { text: cStatusText, active: cStatusActive } = rowStatusLabel(child.status);
+        const cUserType = Number(child.userType ?? 0);
+        const cIsLeaf = cUserType === 5;
+        const cBal = child.balanceInfo as Record<string, unknown> | undefined;
+        const cExposure = Number(
+          cBal?.exposure ?? child.exposure ?? child.netExposure ?? 0,
+        );
+        const cTake = Number(cBal?.take ?? child.take ?? 0);
+        const cGive = Number(cBal?.give ?? child.give ?? 0);
+        const cBalance = Number(cBal?.balance ?? child.balance ?? 0);
+        const cCreditLimit = Number(cBal?.creditLimit ?? child.creditLimit ?? 0);
+        const cBettingLockRaw = child.bettingLock ?? cBal?.bettingLock;
+        const cBettingLocked =
+          cBettingLockRaw === true ||
+          cBettingLockRaw === 1 ||
+          String(cBettingLockRaw).toLowerCase() === "true";
+        const cMobile = String(child.mobile ?? "");
+        const cLastIp = String(child.remoteIp ?? child.ip ?? child.lastIp ?? "");
+        const createdOn = (child as unknown as { createdOn?: unknown }).createdOn;
+        const cExtraTooltip = [cLastIp, createdOn != null ? formatDateTime(createdOn) : ""]
+          .filter(Boolean)
+          .join(" · ");
+
+        const isNestedExpanded = Boolean(expandedRows[cId]);
+
+        return (
+          <Fragment key={cId}>
+            <TableRow>
+              <TableCell className="!px-4 !py-4 text-foreground">
+                <div style={firstCellPadStyle} title={cExtraTooltip || undefined}>
+                  <div>
+                    {cId ? (
+                      <button
+                        type="button"
+                        onClick={() => void openQuickEditModal(cId, cUname, cUserCode)}
+                        className="text-primary hover:underline"
+                      >
+                        {cUname}
+                      </button>
+                    ) : (
+                      cUname
+                    )}
+                  </div>
+                  <div className="text-xs text-muted">
+                    {cMobile || (cUserCode !== "—" ? cUserCode : "") ? (
+                      cId ? (
+                        <button
+                          type="button"
+                          onClick={() => void openQuickEditModal(cId, cUname, cUserCode)}
+                          className="text-primary hover:underline"
+                        >
+                          ({cMobile || cUserCode})
+                        </button>
+                      ) : (
+                        `(${cMobile || cUserCode})`
+                      )
+                    ) : (
+                      "—"
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-foreground">
+                {!cIsLeaf && cId ? (
+                  <button
+                    type="button"
+                    onClick={() => void toggleDownline(cId)}
+                    className={`inline-flex items-center justify-center rounded-md border px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-2 ${
+                      isNestedExpanded
+                        ? "border-primary/50 bg-primary/10 text-primary"
+                        : "border-border"
+                    }`}
+                    aria-expanded={isNestedExpanded}
+                    aria-label={isNestedExpanded ? "Hide downline" : "Show downline"}
+                  >
+                    <Network className="h-4 w-4 shrink-0" aria-hidden />
+                  </button>
+                ) : (
+                  <span className="text-muted">—</span>
+                )}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-center">
+                <button
+                  type="button"
+                  disabled={!cId}
+                  onClick={() =>
+                    openBettingLockConfirm(
+                      cId,
+                      cUserCode !== "—" ? cUserCode : cUname,
+                      cBettingLocked,
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-1 rounded-sm p-0.5 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={
+                    cBettingLocked ? "Click to unlock betting" : "Click to lock betting"
+                  }
+                  aria-label={
+                    cBettingLocked
+                      ? `Confirm unlock betting for ${cUname}`
+                      : `Confirm lock betting for ${cUname}`
+                  }
+                >
+                  {cBettingLocked ? (
+                    <Lock className="h-4 w-4 text-error" aria-hidden />
+                  ) : (
+                    <LockOpen className="h-4 w-4 text-success" aria-hidden />
+                  )}
+                  <span className="sr-only">{cBettingLocked ? "Locked" : "Open"}</span>
+                </button>
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-center">
+                <span
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                    cStatusActive
+                      ? "bg-[#d3f9d8] text-[#2f9e44]"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {cStatusText}
+                </span>
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-left text-sm text-primary">
+                {cId ? (
+                  <Link
+                    href={`/players/${encodeURIComponent(cId)}`}
+                    className="rounded-sm p-0.5 hover:bg-info-subtle text-primary"
+                    aria-label="View player"
+                  >
+                    <Eye className="h-4 w-4" aria-hidden />
+                  </Link>
+                ) : null}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                {formatCurrency(cExposure)}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                {formatCurrency(cTake)}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                {formatCurrency(cGive)}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                {formatCurrency(cBalance)}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                {formatCurrency(cCreditLimit)}
+              </TableCell>
+              <TableCell className="!px-4 !py-4 text-center">
+                <div className="flex flex-wrap items-center justify-center gap-1 text-primary">
+                  <button
+                    type="button"
+                    onClick={() => openCreditModal(cId, cUname)}
+                    className="rounded-sm p-0.5 hover:bg-info-subtle"
+                    aria-label="Open credit popup"
+                  >
+                    <Landmark className="h-4 w-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openBetConfigModal(cId, cUname)}
+                    className="rounded-sm p-0.5 hover:bg-info-subtle"
+                    aria-label="Open bet configuration popup"
+                  >
+                    <Code2 className="h-4 w-4" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void openCommissionModal(cId, cUname)}
+                    className="rounded-sm p-0.5 hover:bg-info-subtle"
+                    aria-label="Open commission popup"
+                  >
+                    <Percent className="h-4 w-4" aria-hidden />
+                  </button>
+                </div>
+              </TableCell>
+            </TableRow>
+            {!cIsLeaf && cId && isNestedExpanded ? (
+              <DownlineExpansionRows
+                parentId={cId}
+                depth={depth + 1}
+                expandedRows={expandedRows}
+                downlineRows={downlineRows}
+                downlineLoading={downlineLoading}
+                downlineError={downlineError}
+                toggleDownline={toggleDownline}
+                openQuickEditModal={openQuickEditModal}
+                openBettingLockConfirm={openBettingLockConfirm}
+                openCreditModal={openCreditModal}
+                openBetConfigModal={openBetConfigModal}
+                openCommissionModal={openCommissionModal}
+              />
+            ) : null}
+          </Fragment>
+        );
+      })}
+    </>
+  );
 }
 
 type CreditModalState = {
@@ -958,6 +1254,43 @@ export default function PlayersPage() {
     }
   };
 
+  const exportPlayersCsv = useCallback(() => {
+    const header = [
+      "User ID",
+      "Username",
+      "User code",
+      "Status",
+      "Betting locked",
+      "Net exposure",
+      "Take",
+      "Give",
+      "Balance",
+      "Credit limit",
+    ];
+    const out = rows.map((row) => {
+      const bal = row.balanceInfo as Record<string, unknown> | undefined;
+      const bettingLockRaw = row.bettingLock ?? bal?.bettingLock;
+      const bettingLocked =
+        bettingLockRaw === true ||
+        bettingLockRaw === 1 ||
+        String(bettingLockRaw).toLowerCase() === "true";
+      const { text: statusText } = rowStatusLabel(row.status);
+      return [
+        String(row.id ?? ""),
+        String(row.username ?? ""),
+        String(row.userCode ?? ""),
+        statusText,
+        bettingLocked ? "Yes" : "No",
+        Number(bal?.exposure ?? row.exposure ?? row.netExposure ?? 0),
+        Number(bal?.take ?? row.take ?? 0),
+        Number(bal?.give ?? row.give ?? 0),
+        Number(bal?.balance ?? row.balance ?? 0),
+        Number(bal?.creditLimit ?? row.creditLimit ?? 0),
+      ];
+    });
+    downloadCsv(`players-${new Date().toISOString().slice(0, 10)}.csv`, header, out);
+  }, [rows]);
+
   const openCreditModal = (userId: string, username: string) => {
     setCreditMode("D");
     setCreditAmount("");
@@ -1338,7 +1671,7 @@ export default function PlayersPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {}}
+                      onClick={() => exportPlayersCsv()}
                       className="flex h-9 max-w-max items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
                     >
                       <span className="mr-2 text-xl">
@@ -1402,14 +1735,9 @@ export default function PlayersPage() {
                       bettingLockRaw === true ||
                       bettingLockRaw === 1 ||
                       String(bettingLockRaw).toLowerCase() === "true";
-                    const lastIp = String(row.remoteIp ?? row.ip ?? row.lastIp ?? "—");
                     const mobile = String(row.mobile ?? "");
-                    const createdOn = (row as unknown as { createdOn?: unknown }).createdOn;
 
                     const isExpanded = Boolean(expandedRows[id]);
-                    const childRows = downlineRows[id] ?? [];
-                    const childLoading = Boolean(downlineLoading[id]);
-                    const childError = downlineError[id];
 
                     return (
                       <Fragment key={id || uname}>
@@ -1451,15 +1779,15 @@ export default function PlayersPage() {
                             <button
                               type="button"
                               onClick={() => void toggleDownline(id)}
-                              className="inline-flex items-center gap-0.5 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-2"
+                              className={`inline-flex items-center justify-center rounded-md border px-2 py-1 text-xs font-medium text-foreground-secondary transition-colors hover:bg-surface-2 ${
+                                isExpanded
+                                  ? "border-primary/50 bg-primary/10 text-primary"
+                                  : "border-border"
+                              }`}
                               aria-expanded={isExpanded}
                               aria-label={isExpanded ? "Hide downline" : "Show downline"}
                             >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
-                              ) : (
-                                <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                              )}
+                              <Network className="h-4 w-4 shrink-0" aria-hidden />
                             </button>
                           ) : (
                             <span className="text-muted">—</span>
@@ -1562,181 +1890,21 @@ export default function PlayersPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                      {isExpanded && !isLeafUser ? (
-                        childLoading ? (
-                          <TableRow>
-                            <td colSpan={11} className="px-4 py-3 text-sm text-muted">
-                              Loading downline...
-                            </td>
-                          </TableRow>
-                        ) : childError ? (
-                          <TableRow>
-                            <td colSpan={11} className="px-4 py-3 text-sm text-error">
-                              {childError}
-                            </td>
-                          </TableRow>
-                        ) : childRows.length === 0 ? (
-                          <TableRow>
-                            <td colSpan={11} className="px-4 py-3 text-sm text-muted">
-                              No downline users.
-                            </td>
-                          </TableRow>
-                        ) : (
-                          childRows.map((child, idx) => {
-                            const cId = String(child.id ?? `${id}-${idx}`);
-                            const cUname = String(child.username ?? "—");
-                            const cStatus = rowStatusLabel(child.status);
-                            const cBal =
-                              child.balanceInfo as Record<string, unknown> | undefined;
-                            const cExposure = Number(
-                              cBal?.exposure ?? child.exposure ?? child.netExposure ?? 0,
-                            );
-                            const cTake = Number(cBal?.take ?? child.take ?? 0);
-                            const cGive = Number(cBal?.give ?? child.give ?? 0);
-                            const cBalance = Number(cBal?.balance ?? child.balance ?? 0);
-                            const cCreditLimit = Number(
-                              cBal?.creditLimit ?? child.creditLimit ?? 0,
-                            );
-                            const cBettingLockRaw = child.bettingLock ?? cBal?.bettingLock;
-                            const cBettingLocked =
-                              cBettingLockRaw === true ||
-                              cBettingLockRaw === 1 ||
-                              String(cBettingLockRaw).toLowerCase() === "true";
-                            const cLastIp = String(
-                              child.remoteIp ?? child.ip ?? child.lastIp ?? "—",
-                            );
-                            const cMobile = String(child.mobile ?? "");
-                            const cUserCode = String(child.userCode ?? "—");
-                            return (
-                              <TableRow key={cId} className="bg-surface-2/70">
-                                <TableCell className="!px-4 !py-4 pl-8 text-foreground">
-                                  <div>
-                                    {cId ? (
-                                      <Link
-                                        href={`/players/${cId}`}
-                                        className="text-primary hover:underline"
-                                      >
-                                        {cUname}
-                                      </Link>
-                                    ) : (
-                                      cUname
-                                    )}
-                                  </div>
-                                  <div className="text-xs text-muted">
-                                    {cMobile ? `(${cMobile})` : "—"}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-muted">—</TableCell>
-                                <TableCell className="!px-4 !py-4 text-center">
-                                  <button
-                                    type="button"
-                                    disabled={!cId}
-                                    onClick={() =>
-                                      openBettingLockConfirm(
-                                        cId,
-                                        cUserCode !== "—" ? cUserCode : cUname,
-                                        cBettingLocked,
-                                      )
-                                    }
-                                    className="inline-flex items-center justify-center rounded-sm p-0.5 hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                    title={
-                                      cBettingLocked
-                                        ? "Click to unlock betting"
-                                        : "Click to lock betting"
-                                    }
-                                    aria-label={
-                                      cBettingLocked
-                                        ? `Confirm unlock betting for ${cUname}`
-                                        : `Confirm lock betting for ${cUname}`
-                                    }
-                                  >
-                                    {cBettingLocked ? (
-                                      <Lock className="h-4 w-4 text-error" aria-hidden />
-                                    ) : (
-                                      <LockOpen className="h-4 w-4 text-success" aria-hidden />
-                                    )}
-                                    <span className="sr-only">
-                                      {cBettingLocked ? "Locked" : "Open"}
-                                    </span>
-                                  </button>
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-center">
-                                  <span
-                                    className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
-                                      cStatus.active
-                                        ? "bg-[#d3f9d8] text-[#2f9e44]"
-                                        : "bg-red-100 text-red-800"
-                                    }`}
-                                  >
-                                    {cStatus.text}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-left text-sm text-foreground">
-                                  <div className="max-w-[12rem] space-y-0.5 text-xs">
-                                    <div className="font-mono text-foreground-secondary">{cUserCode}</div>
-                                    <div className="text-muted">
-                                      {cMobile ? `${cMobile} · ` : ""}
-                                      {cLastIp}
-                                    </div>
-                                    <div className="text-muted">{formatDateTime(child.createdOn)}</div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
-                                  {formatCurrency(cExposure)}
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
-                                  {formatCurrency(cTake)}
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
-                                  {formatCurrency(cGive)}
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
-                                  {formatCurrency(cBalance)}
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
-                                  {formatCurrency(cCreditLimit)}
-                                </TableCell>
-                                <TableCell className="!px-4 !py-4 text-center">
-                                  <div className="flex flex-wrap items-center justify-center gap-1 text-primary">
-                                    {cId ? (
-                                      <Link
-                                        href={`/players/${encodeURIComponent(cId)}`}
-                                        className="rounded-sm p-0.5 hover:bg-info-subtle"
-                                        aria-label="View player"
-                                      >
-                                        <Eye className="h-4 w-4" aria-hidden />
-                                      </Link>
-                                    ) : null}
-                                    <button
-                                      type="button"
-                                      onClick={() => openCreditModal(cId, cUname)}
-                                      className="rounded-sm p-0.5 hover:bg-info-subtle"
-                                      aria-label="Open credit popup"
-                                    >
-                                      <Landmark className="h-4 w-4" aria-hidden />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => openBetConfigModal(cId, cUname)}
-                                      className="rounded-sm p-0.5 hover:bg-info-subtle"
-                                      aria-label="Open bet configuration popup"
-                                    >
-                                      <Code2 className="h-4 w-4" aria-hidden />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => void openCommissionModal(cId, cUname)}
-                                      className="rounded-sm p-0.5 hover:bg-info-subtle"
-                                      aria-label="Open commission popup"
-                                    >
-                                      <Percent className="h-4 w-4" aria-hidden />
-                                    </button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )
+                      {isExpanded && !isLeafUser && id ? (
+                        <DownlineExpansionRows
+                          parentId={id}
+                          depth={1}
+                          expandedRows={expandedRows}
+                          downlineRows={downlineRows}
+                          downlineLoading={downlineLoading}
+                          downlineError={downlineError}
+                          toggleDownline={toggleDownline}
+                          openQuickEditModal={openQuickEditModal}
+                          openBettingLockConfirm={openBettingLockConfirm}
+                          openCreditModal={openCreditModal}
+                          openBetConfigModal={openBetConfigModal}
+                          openCommissionModal={openCommissionModal}
+                        />
                       ) : null}
                       </Fragment>
                     );

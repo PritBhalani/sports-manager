@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -21,6 +21,7 @@ import { getBetHistory } from "@/services/betHistory.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
 
@@ -59,6 +60,21 @@ export default function BetHistoryPage() {
       .finally(() => setLoading(false));
   }, [page, pageSize, fromDate, toDate]);
 
+  const exportBetHistoryCsv = useCallback(() => {
+    downloadCsv(
+      `bet-history-${fromDate}-${toDate}.csv`,
+      ["Event / Market", "Selection", "Stake", "Odds", "Status", "Date"],
+      data.map((row) => [
+        String(row.eventName ?? row.marketName ?? ""),
+        String(row.selection ?? row.runnerName ?? ""),
+        Number(row.stake ?? 0),
+        String(row.odds ?? ""),
+        String(row.status ?? ""),
+        formatDateTime(row.createdAt ?? row.date),
+      ]),
+    );
+  }, [data, fromDate, toDate]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -92,7 +108,13 @@ export default function BetHistoryPage() {
               <Button variant="primary" size="sm" type="button">
                 Apply
               </Button>
-              <Button variant="primary" size="sm" type="button">
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                onClick={exportBetHistoryCsv}
+                disabled={loading || data.length === 0}
+              >
                 Export
               </Button>
             </div>

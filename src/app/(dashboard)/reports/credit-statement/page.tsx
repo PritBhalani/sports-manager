@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -22,6 +22,7 @@ import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
 
@@ -69,12 +70,36 @@ export default function CreditStatementPage() {
       .finally(() => setLoading(false));
   }, [page, pageSize, fromDate, toDate]);
 
+  const exportCreditCsv = useCallback(() => {
+    downloadCsv(
+      `credit-statement-${fromDate}-${toDate}.csv`,
+      ["Date", "Description", "Credit", "Debit", "Balance"],
+      data.map((row) => [
+        formatDateTime(row.date ?? row.createdAt ?? row.timestamp),
+        String(row.description ?? row.comment ?? ""),
+        Number(row.credit ?? row.amount ?? 0),
+        Number(row.debit ?? 0),
+        Number(row.balance ?? 0),
+      ]),
+    );
+  }, [data, fromDate, toDate]);
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="Credit Statement"
         breadcrumbs={["Bonus", "Statement"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportCreditCsv}
+            disabled={loading || data.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
       <ListPageFrame>
         <div className="flex w-full flex-col justify-center gap-0">

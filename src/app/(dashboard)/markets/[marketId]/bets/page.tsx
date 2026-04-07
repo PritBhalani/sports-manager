@@ -10,6 +10,7 @@ import {
   StatsCard,
   DataGrid,
 } from "@/components";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -27,12 +28,30 @@ const columns = [
 ];
 
 export default function MarketBetsPage() {
+  const onExportCsv = () => {
+    downloadCsv(
+      "market-bets.csv",
+      ["User", "Selection", "Stake", "Odds", "P&L"],
+      rows.map((r) => [
+        String(r.user ?? ""),
+        String(r.selection ?? ""),
+        Number(r.stake ?? 0),
+        Number(r.odds ?? 0),
+        Number(r.pnl ?? 0),
+      ]),
+    );
+  };
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Market Bets"
         breadcrumbs={["Manage Market", "Market", "Bets"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button variant="primary" size="sm" type="button" onClick={onExportCsv}>
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

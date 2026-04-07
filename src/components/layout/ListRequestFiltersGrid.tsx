@@ -99,6 +99,16 @@ function FiltersGridBody({
           >
             Search
           </button>
+          {onExport ? (
+            <button
+              type="button"
+              onClick={onExport}
+              disabled={exportDisabled}
+              className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-white disabled:opacity-70"
+            >
+              Export
+            </button>
+          ) : null}
         </div>
       </>
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -17,6 +17,7 @@ import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -131,12 +132,38 @@ export default function AccountsAnalyticsPage() {
     },
   ];
 
+  const exportAccountAnalyticsCsv = useCallback(() => {
+    downloadCsv(
+      `account-analytics-${fromDate}-${toDate}.csv`,
+      ["User", "User code", "Type", "Amount", "Balance after", "Status", "User ID"],
+      rows.map((row) => [
+        String(row.username ?? row.userId ?? ""),
+        String(row.userCode ?? ""),
+        String(row.type ?? row.dwType ?? row.description ?? ""),
+        getAmount(row),
+        Number(row.balance ?? row.balanceAfter ?? 0),
+        String(row.status ?? ""),
+        String(row.userId ?? ""),
+      ]),
+    );
+  }, [rows, fromDate, toDate]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Account Analytics"
         breadcrumbs={["Account", "Analytics"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportAccountAnalyticsCsv}
+            disabled={rows.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

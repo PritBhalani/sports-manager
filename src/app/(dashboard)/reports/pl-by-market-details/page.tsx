@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -19,6 +19,7 @@ import {
 import { getPlByMarketDetails } from "@/services/betHistory.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 /** README §5: GET /bethistory/getplbymarketdetails/{marketId}/ or /{marketId}/{parentId} */
 export default function PlByMarketDetailsPage() {
@@ -44,13 +45,36 @@ export default function PlByMarketDetailsPage() {
       .finally(() => setLoading(false));
   };
 
+  const exportDetailsCsv = useCallback(() => {
+    downloadCsv(
+      `pl-by-market-details-${marketId.trim() || "market"}.csv`,
+      ["Date", "Market / Selection", "Stake", "P&L"],
+      data.map((row) => [
+        formatDateTime(row.date ?? row.createdAt),
+        String(row.marketName ?? row.selection ?? ""),
+        Number(row.stake ?? 0),
+        Number(row.pl ?? row.profitLoss ?? 0),
+      ]),
+    );
+  }, [data, marketId]);
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="P&L by Market Details"
         breadcrumbs={["Reports", "P&L by Market Details"]}
         description="README §5: GET getplbymarketdetails/{marketId}/ or /{marketId}/{parentId}"
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportDetailsCsv}
+            disabled={loading || data.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
       {error && (
         <p className="mb-2 text-sm text-error" role="alert">{error}</p>

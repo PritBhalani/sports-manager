@@ -26,6 +26,7 @@ import {
 } from "@/services/betHistory.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
 
@@ -75,6 +76,32 @@ export default function PlByMarketPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const exportPlByMarketCsv = useCallback(() => {
+    const header = [
+      "Event",
+      "Market",
+      "Round",
+      "Winner",
+      "Stake",
+      "P&L",
+      "Commission",
+      "Market time",
+      "Settle time",
+    ];
+    const out = items.map((row) => [
+      row.eventName || "",
+      row.marketName || "",
+      row.roundId ?? "",
+      row.winner ?? "",
+      Number(row.stake ?? 0),
+      Number(row.pnl ?? row.win ?? 0),
+      Number(row.commission ?? 0),
+      row.marketTime ? formatDateTime(row.marketTime) : "",
+      row.settleTime ? formatDateTime(row.settleTime) : "",
+    ]);
+    downloadCsv(`pl-by-market-${fromDate}-${toDate}.csv`, header, out);
+  }, [items, fromDate, toDate]);
 
   const toggleExpand = useCallback(
     async (marketId: string) => {
@@ -154,7 +181,13 @@ export default function PlByMarketPage() {
               >
                 Apply
               </Button>
-              <Button variant="primary" size="sm" type="button">
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                onClick={exportPlByMarketCsv}
+                disabled={loading || items.length === 0}
+              >
                 Export
               </Button>
             </div>

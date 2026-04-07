@@ -26,6 +26,7 @@ import {
   type OffPayInRecord,
 } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 import { dateRangeToISO, formatDateTime } from "@/utils/date";
 
 const STATUS_OPTIONS = [
@@ -254,6 +255,35 @@ export default function TransactionsRequestDepositPage() {
               setPage(1);
               void load(1);
             }}
+            onExport={() => {
+              const header = [
+                "Username",
+                "Amount",
+                "Bonus",
+                "UTR",
+                "A/C",
+                "Status",
+                "Created",
+                "Updated",
+                "Timer (hh:mm:ss from created)",
+              ];
+              const out = rows.map((row) => {
+                const statusLabel = depositRowStatus(row);
+                return [
+                  String(row.user?.username ?? ""),
+                  Number(row.amount ?? 0),
+                  Number(row.bonusAmount ?? 0),
+                  String(row.utrNo ?? ""),
+                  String(row.acNo ?? ""),
+                  String(statusLabel),
+                  formatDateTime(row.createdOn),
+                  formatDateTime(row.updatedOn),
+                  formatTimer(row.createdOn),
+                ];
+              });
+              downloadCsv(`deposit-requests-${fromDate}-${toDate}.csv`, header, out);
+            }}
+            exportDisabled={loading || rows.length === 0}
           />
 
           {error ? (

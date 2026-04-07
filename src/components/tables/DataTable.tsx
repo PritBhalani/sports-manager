@@ -41,10 +41,14 @@ export function TableHead({
   children,
   className = "",
   align = "left",
+  colSpan,
+  rowSpan,
 }: {
   children: ReactNode;
   className?: string;
   align?: "left" | "center" | "right";
+  colSpan?: number;
+  rowSpan?: number;
 }) {
   const alignClass =
     align === "center"
@@ -54,6 +58,8 @@ export function TableHead({
         : "text-left";
   return (
     <th
+      colSpan={colSpan}
+      rowSpan={rowSpan}
       className={`px-5 py-3 text-[12px] font-semibold uppercase tracking-wide text-foreground-tertiary ${alignClass} ${className}`}
     >
       {children}

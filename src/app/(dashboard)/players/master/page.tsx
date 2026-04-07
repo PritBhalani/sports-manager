@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -20,6 +20,7 @@ import {
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatDateTime } from "@/utils/date";
+import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
 
@@ -57,12 +58,36 @@ export default function PlayerMasterPage() {
       .finally(() => setLoading(false));
   }, [page, pageSize, search]);
 
+  const exportMasterCsv = useCallback(() => {
+    downloadCsv(
+      "player-master.csv",
+      ["Username", "User code", "Type", "Status", "Registered"],
+      data.map((row) => [
+        String(row.username ?? ""),
+        String(row.userCode ?? ""),
+        String(row.type ?? ""),
+        String(row.status ?? ""),
+        formatDateTime(row.createdAt ?? row.registeredAt),
+      ]),
+    );
+  }, [data]);
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="Player Master"
         breadcrumbs={["Reports", "Player Master"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportMasterCsv}
+            disabled={loading || data.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
       <ListPageFrame>
         <div className="flex w-full flex-col justify-center gap-0">

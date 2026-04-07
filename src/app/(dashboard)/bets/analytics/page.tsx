@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -15,6 +15,7 @@ import {
 } from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { getLiveBets } from "@/services/bet.service";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -86,6 +87,22 @@ export default function BetsAnalyticsPage() {
       },
     },
   ];
+
+  const exportBetsAnalyticsCsv = useCallback(() => {
+    downloadCsv(
+      "bets-analytics.csv",
+      ["Sport", "Market", "Stake", "Potential payout", "Result", "Bet/Market ID"],
+      rows.map((row) => [
+        String(row.sport ?? row.eventType ?? ""),
+        String(row.market ?? row.marketName ?? ""),
+        Number(row.stake ?? row.amount ?? 0),
+        Number(row.potentialPayout ?? row.payout ?? 0),
+        String(row.result ?? row.status ?? ""),
+        String(row.id ?? row.marketId ?? ""),
+      ]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
@@ -119,7 +136,13 @@ export default function BetsAnalyticsPage() {
               >
                 More Filters
               </Button>
-              <Button variant="primary" size="sm">
+              <Button
+                variant="primary"
+                size="sm"
+                type="button"
+                onClick={exportBetsAnalyticsCsv}
+                disabled={rows.length === 0}
+              >
                 Export
               </Button>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -22,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 export default function ProfitLossPage() {
   const { page, pageSize, setPage, setPageSize, pageSizeOptions } = usePagination();
@@ -67,12 +68,35 @@ export default function ProfitLossPage() {
       .finally(() => setLoading(false));
   }, [page, pageSize, fromDate, toDate]);
 
+  const exportProfitLossCsv = useCallback(() => {
+    downloadCsv(
+      `profit-loss-${fromDate}-${toDate}.csv`,
+      ["Date", "Market / Event", "Stake", "P&L"],
+      data.map((row) => [
+        formatDateTime(row.date ?? row.createdAt),
+        String(row.marketName ?? row.eventName ?? ""),
+        Number(row.stake ?? 0),
+        Number(row.pl ?? row.profitLoss ?? 0),
+      ]),
+    );
+  }, [data, fromDate, toDate]);
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="Profit & Loss"
         breadcrumbs={["Reports", "Profit & Loss"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportProfitLossCsv}
+            disabled={loading || data.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
       {error && (
         <p className="mb-2 text-sm text-error" role="alert">

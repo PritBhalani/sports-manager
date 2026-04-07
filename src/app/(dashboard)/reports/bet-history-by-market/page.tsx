@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -21,6 +21,7 @@ import { getBetHistoryByMarketId } from "@/services/betHistory.service";
 import { usePagination } from "@/hooks/usePagination";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 function statusLabel(status: unknown, pl: unknown): string {
   const st = Number(status);
@@ -66,13 +67,38 @@ export default function BetHistoryByMarketPage() {
       .finally(() => setLoading(false));
   }, [marketId, status, page, pageSize, refreshKey]);
 
+  const exportByMarketCsv = useCallback(() => {
+    downloadCsv(
+      `bet-history-by-market-${marketId.trim() || "market"}.csv`,
+      ["Event / Market", "Selection", "Stake", "Odds", "Status", "Date"],
+      data.map((row) => [
+        String(row.eventName ?? row.marketName ?? ""),
+        String(row.selection ?? row.runnerName ?? ""),
+        Number(row.size ?? row.stake ?? 0),
+        String(row.price ?? row.odds ?? ""),
+        statusLabel(row.status, row.pl),
+        formatDateTime(row.createdOn ?? row.createdAt ?? row.date),
+      ]),
+    );
+  }, [data, marketId]);
+
   return (
     <div className="min-w-0">
       <PageHeader
         title="Bet History by Market"
         breadcrumbs={["Reports", "Bet History by Market"]}
         description="README §5: POST /bethistory/getbethistorybymarketid"
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportByMarketCsv}
+            disabled={loading || data.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
       {error && (
         <p className="mb-2 text-sm text-error" role="alert">{error}</p>

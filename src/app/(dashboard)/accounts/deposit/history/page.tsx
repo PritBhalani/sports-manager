@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -15,6 +15,7 @@ import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { dateRangeToISO, formatDateTime, todayRangeUTC } from "@/utils/date";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -91,12 +92,36 @@ export default function DepositHistoryPage() {
   }, [fromDate, toDate]);
 
   const rows = useMemo(() => statementRows.filter(isDepositRow), [statementRows]);
+
+  const exportDepositHistoryCsv = useCallback(() => {
+    downloadCsv(
+      `deposit-history-${fromDate}-${toDate}.csv`,
+      ["Date / Time", "User", "Amount", "Channel"],
+      rows.map((row) => [
+        formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
+        String(row.username ?? row.userCode ?? row.userId ?? ""),
+        getAmount(row),
+        String(row.channel ?? row.mode ?? row.source ?? ""),
+      ]),
+    );
+  }, [rows, fromDate, toDate]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Deposit History"
         breadcrumbs={["Account", "Deposit", "History"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportDepositHistoryCsv}
+            disabled={rows.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -15,6 +15,7 @@ import {
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -55,12 +56,30 @@ export default function DashboardUsersPage() {
       .then((res) => setRows(Array.isArray(res?.data) ? res.data : []))
       .catch(() => setRows([]));
   }, []);
+
+  const exportRows = useCallback(() => {
+    downloadCsv(
+      "dashboard-users.csv",
+      ["Username", "Type", "Status", "Balance"],
+      rows.map((p) => [
+        String(p.username ?? p.userCode ?? ""),
+        String(p.type ?? p.userType ?? ""),
+        String(p.status ?? ""),
+        Number(p.balance ?? p.chips ?? p.cash ?? 0),
+      ]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Dashboard Users"
         breadcrumbs={["Dashboard", "Users"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button variant="primary" size="sm" type="button" onClick={exportRows}>
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

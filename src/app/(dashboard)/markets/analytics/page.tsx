@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   PageHeader,
@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
 import { getPlByMarket } from "@/services/betHistory.service";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -101,12 +102,40 @@ export default function MarketsAnalyticsPage() {
       },
     },
   ];
+
+  const exportMarketsAnalyticsCsv = useCallback(() => {
+    downloadCsv(
+      "markets-analytics.csv",
+      ["Sport", "Event", "Market", "Status", "Matched", "Bets", "Start time", "Market ID"],
+      rows.map((row) => [
+        String(row.sport ?? row.eventType ?? ""),
+        String(row.eventName ?? row.event ?? ""),
+        String(row.marketName ?? row.market ?? ""),
+        String(row.status ?? ""),
+        Number(row.totalMatched ?? row.stake ?? row.amount ?? 0),
+        Number(row.totalBets ?? row.bets ?? 0),
+        formatDateTime(row.startTime ?? row.date ?? row.createdAt),
+        String(row.id ?? row.marketId ?? ""),
+      ]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Markets Analytics"
         breadcrumbs={["Manage Market", "Analytics"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportMarketsAnalyticsCsv}
+            disabled={rows.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

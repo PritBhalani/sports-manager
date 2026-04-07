@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -12,6 +12,7 @@ import {
   DataTable,
 } from "@/components";
 import { getPlByMarket } from "@/services/betHistory.service";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -30,12 +31,30 @@ export default function DashboardMarketsPage() {
       .then((res) => setRows((res.items ?? []) as Row[]))
       .catch(() => setRows([]));
   }, []);
+
+  const exportRows = useCallback(() => {
+    downloadCsv(
+      "dashboard-markets.csv",
+      ["Sport", "Event", "Market", "Status"],
+      rows.map((m) => [
+        String(m.sport ?? m.eventType ?? ""),
+        String(m.eventName ?? m.event ?? ""),
+        String(m.marketName ?? m.market ?? ""),
+        String(m.status ?? ""),
+      ]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Dashboard Markets"
         breadcrumbs={["Dashboard", "Markets"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button variant="primary" size="sm" type="button" onClick={exportRows}>
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

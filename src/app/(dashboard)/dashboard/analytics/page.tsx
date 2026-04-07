@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -12,6 +13,7 @@ import {
 } from "@/components";
 import ActivityFeed from "@/components/dashboard/ActivityFeed";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = {
   id: string;
@@ -33,12 +35,24 @@ export default function DashboardAnalyticsPage() {
     { id: "4", metric: "Players", value: stats.players },
   ];
 
+  const exportRows = useCallback(() => {
+    downloadCsv(
+      "dashboard-ggr-metrics.csv",
+      ["Metric", "Value"],
+      rows.map((r) => [r.metric, r.value]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6 px-6 py-6">
       <PageHeader
         title="GGR"
         breadcrumbs={["Reports", "GGR"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button variant="primary" size="sm" type="button" onClick={exportRows}>
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

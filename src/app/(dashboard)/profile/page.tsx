@@ -39,6 +39,7 @@ import { changePassword } from "@/services/auth.service";
 import type { MyInfo } from "@/types/user.types";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { downloadCsv } from "@/utils/csvDownload";
 import NotificationSettingsForm from "@/components/settings/NotificationSettingsForm";
 
 function formatNow(): string {
@@ -291,6 +292,53 @@ export default function ProfilePage() {
     return sum + (Number.isFinite(bal) && bal > 0 ? bal : 0);
   }, 0);
 
+  const exportStatementCsv = useCallback(() => {
+    const header = [
+      "Narration",
+      "Remarks",
+      "Comment",
+      "Debit",
+      "Credit",
+      "Balance",
+      "Date",
+    ];
+    const out = statementRows.map((row) => {
+      const r = row as {
+        narration?: unknown;
+        remarks?: unknown;
+        comment?: unknown;
+        balance?: unknown;
+        total?: unknown;
+        creditTotal?: unknown;
+        createdOn?: unknown;
+      };
+      const delta = Number(r.balance ?? 0);
+      const debit = Number.isFinite(delta) && delta < 0 ? Math.abs(delta) : 0;
+      const credit = Number.isFinite(delta) && delta > 0 ? delta : 0;
+      const created = r.createdOn ? new Date(String(r.createdOn)) : null;
+      const dateText =
+        created && !Number.isNaN(created.getTime())
+          ? created.toLocaleString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "";
+      return [
+        String(r.narration ?? ""),
+        String(r.remarks ?? ""),
+        String(r.comment ?? ""),
+        debit,
+        credit,
+        Number(r.total ?? r.creditTotal ?? 0),
+        dateText,
+      ];
+    });
+    downloadCsv(`account-statement-${fromDate}-${toDate}.csv`, header, out);
+  }, [statementRows, fromDate, toDate]);
+
   const { profileName, profileUsername, profilePhone } = useMemo(() => {
     const fromLogin = getLoginProfileFromSession();
     return {
@@ -407,6 +455,8 @@ export default function ProfilePage() {
                   variant="primary"
                   size="sm"
                   leftIcon={<Download className="h-4 w-4" aria-hidden />}
+                  onClick={exportStatementCsv}
+                  disabled={statementLoading || statementRows.length === 0}
                 >
                   Export
                 </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   PageHeader,
   ListPageFrame,
@@ -13,6 +13,7 @@ import {
 } from "@/components";
 import { formatDateTime } from "@/utils/date";
 import { getLoginHistory } from "@/services/token.service";
+import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
 
@@ -40,12 +41,37 @@ export default function CasinoStatsPage() {
       .catch(() => setRows([]));
   }, []);
 
+  const exportCasinoStatsCsv = useCallback(() => {
+    downloadCsv(
+      "casino-stats.csv",
+      ["Event type", "Module", "User", "Time", "IP", "Device"],
+      rows.map((row) => [
+        String(row.type ?? row.eventType ?? "Login"),
+        String(row.module ?? "Security"),
+        String(row.username ?? row.userCode ?? row.userId ?? ""),
+        formatDateTime(row.createdAt ?? row.date ?? row.timestamp),
+        String(row.ipAddress ?? row.ip ?? ""),
+        String(row.device ?? row.userAgent ?? ""),
+      ]),
+    );
+  }, [rows]);
+
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
         title="Casino | Stats"
         breadcrumbs={["Casino", "Stats"]}
-        action={<Button variant="primary" size="sm">Export</Button>}
+        action={
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={exportCasinoStatsCsv}
+            disabled={rows.length === 0}
+          >
+            Export
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
