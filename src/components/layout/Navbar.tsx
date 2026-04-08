@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Menu, X, LogOut } from "lucide-react";
+import { Banknote, HandCoins, LogOut, Menu, X } from "lucide-react";
 import { getAuthSession } from "@/store/authStore";
 import { useAuth } from "@/hooks/useAuth";
 import CommandPalette from "@/components/layout/CommandPalette";
@@ -19,6 +19,8 @@ type NavbarProps = {
   onMenuClick?: () => void;
   balances?: NavbarBalances;
   userInitial?: string;
+  pendingPayInCount?: number;
+  pendingPayOutCount?: number;
 };
 
 const DEFAULT_BALANCES: NavbarBalances = {
@@ -99,6 +101,8 @@ export default function Navbar({
   onMenuClick,
   balances: balancesProp,
   userInitial,
+  pendingPayInCount = 0,
+  pendingPayOutCount = 0,
 }: NavbarProps) {
   const balances = balancesProp ?? DEFAULT_BALANCES;
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -109,7 +113,6 @@ export default function Navbar({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const { logout } = useAuth();
   const [session, setSession] = useState(getAuthSession);
-console.log(balances);
   // Avoid hydration mismatch: server has no localStorage session; client may have
   // a different user initial. Render a stable placeholder until after mount.
   useEffect(() => {
@@ -215,6 +218,34 @@ console.log(balances);
 
       {/* Right: balance strip (GET /account/getbalance), profile */}
       <div className="flex flex-shrink-0 items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <Link
+            href="/transactions/requests/deposit"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-sm bg-surface-2 text-foreground-secondary transition-colors hover:bg-surface-muted hover:text-foreground sm:h-9 sm:w-9"
+            aria-label="Pending deposit requests"
+            title="Pending deposit requests"
+          >
+            <Banknote className="h-4 w-4" />
+            {pendingPayInCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-[1rem] rounded-full bg-error px-1 text-center text-[10px] font-semibold leading-4 text-white">
+                {pendingPayInCount > 99 ? "99+" : pendingPayInCount}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href="/transactions/requests/withdraw"
+            className="relative inline-flex h-8 w-8 items-center justify-center rounded-sm bg-surface-2 text-foreground-secondary transition-colors hover:bg-surface-muted hover:text-foreground sm:h-9 sm:w-9"
+            aria-label="Pending withdraw requests"
+            title="Pending withdraw requests"
+          >
+            <HandCoins className="h-4 w-4" />
+            {pendingPayOutCount > 0 ? (
+              <span className="absolute -right-1 -top-1 min-w-[1rem] rounded-full bg-error px-1 text-center text-[10px] font-semibold leading-4 text-white">
+                {pendingPayOutCount > 99 ? "99+" : pendingPayOutCount}
+              </span>
+            ) : null}
+          </Link>
+        </div>
         {(() => {
           const items = [
             { key: "balance", label: "Balance Up", value: balances.balance },

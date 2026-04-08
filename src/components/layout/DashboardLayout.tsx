@@ -5,10 +5,15 @@ import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { LayoutProps } from "@/types/layout.types";
 import { LAYOUT_BREAKPOINT_MD } from "@/utils/constants";
-import { getBalance } from "@/services/account.service";
+import {
+  getBalance,
+  getBalanceDetail,
+  getPendingPayInOutCount,
+} from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import type { BalanceResponse } from "@/types/account.types";
 import { useAuth } from "@/hooks/useAuth";
+import { getAuthSession } from "@/store/authStore";
 import {
   NotificationBannerProvider,
   useNotificationBanner,
@@ -54,6 +59,7 @@ function DashboardLayoutInner({ children }: LayoutProps) {
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
   );
+  const [pendingCounts, setPendingCounts] = useState({ payInCount: 0, payOutCount: 0 });
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth >= LAYOUT_BREAKPOINT_MD) {
@@ -64,16 +70,34 @@ function DashboardLayoutInner({ children }: LayoutProps) {
   useEffect(() => {
     if (!isAuthenticated) return;
     let cancelled = false;
-    getBalance()
-      .then((res) => {
-        if (cancelled) return;
-        setNavbarBalances(mapBalanceToNavbar(res));
-      })
-      .catch(() => {
-        /* keep Navbar defaults if balance fails */
-      });
+    const userId = String(getAuthSession()?.userId ?? "").trim();
+    const POLL_MS = 20_000;
+
+    const tick = async () => {
+      const [balanceResult, pendingResult] = await Promise.allSettled([
+        userId ? getBalanceDetail(userId) : getBalance(),
+        getPendingPayInOutCount(),
+      ]);
+      if (cancelled) return;
+
+      if (balanceResult.status === "fulfilled") {
+        setNavbarBalances(mapBalanceToNavbar(balanceResult.value));
+      }
+      if (pendingResult.status === "fulfilled") {
+        setPendingCounts({
+          payInCount: Number(pendingResult.value?.payInCount ?? 0) || 0,
+          payOutCount: Number(pendingResult.value?.payOutCount ?? 0) || 0,
+        });
+      }
+    };
+
+    void tick();
+    const id = window.setInterval(() => {
+      void tick();
+    }, POLL_MS);
     return () => {
       cancelled = true;
+      window.clearInterval(id);
     };
   }, [isAuthenticated]);
 
@@ -128,7 +152,12 @@ function DashboardLayoutInner({ children }: LayoutProps) {
             </button>
           </div>
         )}
-        <Navbar onMenuClick={toggleSidebar} balances={navbarBalances} />
+        <Navbar
+          onMenuClick={toggleSidebar}
+          balances={navbarBalances}
+          pendingPayInCount={pendingCounts.payInCount}
+          pendingPayOutCount={pendingCounts.payOutCount}
+        />
         <main
           ref={mainScrollRef}
           className="dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 p-4 sm:p-6 md:p-7"

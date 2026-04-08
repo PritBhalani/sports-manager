@@ -9,6 +9,7 @@ import {
   ListRequestFiltersGrid,
   ListTableSection,
   Badge,
+  Button,
   Table,
   TableHeader,
   TableHead,
@@ -17,12 +18,13 @@ import {
   TableCell,
   TableEmpty,
   TablePagination,
+  Modal,
 } from "@/components";
 import { ArrowUpFromLine, HandCoins } from "lucide-react";
+import DepositRequestUpdateModal from "@/components/transactions/DepositRequestUpdateModal";
 import {
   getOffPayIn,
   rollbackOffPayIn,
-  updateOffPayIn,
   type OffPayInRecord,
 } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -71,6 +73,8 @@ export default function TransactionsRequestDepositPage() {
   const [error, setError] = useState<string | null>(null);
   /** `"${id}-update"` | `"${id}-rollback"` while request in flight */
   const [rowActionKey, setRowActionKey] = useState<string | null>(null);
+  const [updateRow, setUpdateRow] = useState<OffPayInRecord | null>(null);
+  const [rollbackRow, setRollbackRow] = useState<OffPayInRecord | null>(null);
 
   type DepositUiStatus = "Init" | "Confirm" | "Cancel" | "Expired";
 
@@ -127,20 +131,13 @@ export default function TransactionsRequestDepositPage() {
     return { showUpdate, showRollback };
   };
 
-  const handleRowUpdate = async (id: string) => {
-    setRowActionKey(`${id}-update`);
-    try {
-      await updateOffPayIn({ id });
-      await load();
-    } finally {
-      setRowActionKey(null);
-    }
-  };
-
-  const handleRowRollback = async (id: string) => {
+  const handleConfirmRollback = async () => {
+    const id = rollbackRow?.id;
+    if (!id) return;
     setRowActionKey(`${id}-rollback`);
     try {
       await rollbackOffPayIn({ id });
+      setRollbackRow(null);
       await load();
     } finally {
       setRowActionKey(null);
@@ -205,6 +202,52 @@ export default function TransactionsRequestDepositPage() {
 
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
+      <DepositRequestUpdateModal
+        open={Boolean(updateRow)}
+        onClose={() => setUpdateRow(null)}
+        row={updateRow}
+        currentStatusLabel={
+          updateRow ? String(depositRowStatus(updateRow)) : "—"
+        }
+        onSaved={() => void load()}
+      />
+
+      <Modal
+        isOpen={Boolean(rollbackRow)}
+        onClose={() => setRollbackRow(null)}
+        title="Confirm"
+        maxWidthClassName="max-w-md"
+        bodyClassName="p-4 sm:p-5"
+        footer={
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRollbackRow(null)}
+            >
+              Reject
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={rowActionKey !== null}
+              onClick={() => void handleConfirmRollback()}
+            >
+              Proceed
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-sm text-foreground">
+          Are you sure you want to rollback{" "}
+          <span className="tabular-nums font-medium">
+            {rollbackRow ? formatCurrency(rollbackRow.amount) : "—"}
+          </span>
+          ?
+        </p>
+      </Modal>
+
       <PageHeader title="Request Deposit" breadcrumbs={["Transactions", "Requests", "Deposit"]} />
 
       <ListPageFrame>
@@ -316,7 +359,6 @@ export default function TransactionsRequestDepositPage() {
                   rows.map((row) => {
                     const statusLabel = depositRowStatus(row);
                     const { showUpdate, showRollback } = depositRowActionVisibility(row);
-                    const busyUpdate = rowActionKey === `${row.id}-update`;
                     const busyRollback = rowActionKey === `${row.id}-rollback`;
                     return (
                       <TableRow key={row.id} className="hover:!bg-gray-50">
@@ -345,26 +387,29 @@ export default function TransactionsRequestDepositPage() {
                         <TableCell className="!px-6 !py-3">
                           <div className="flex min-w-[5.5rem] flex-col items-stretch gap-1.5">
                             {showUpdate ? (
-                              <button
+                              <Button
                                 type="button"
+                                variant="outline"
+                                size="sm"
+                                fullWidth
                                 disabled={rowActionKey !== null}
-                                aria-busy={busyUpdate}
-                                onClick={() => void handleRowUpdate(row.id)}
-                                className="rounded border border-green-900/35 bg-green-700 px-2 py-1.5 text-center text-xs font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-green-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() => setUpdateRow(row)}
                               >
-                                {busyUpdate ? "…" : "Update"}
-                              </button>
+                                Update
+                              </Button>
                             ) : null}
                             {showRollback ? (
-                              <button
+                              <Button
                                 type="button"
+                                variant="outline"
+                                size="sm"
+                                fullWidth
                                 disabled={rowActionKey !== null}
                                 aria-busy={busyRollback}
-                                onClick={() => void handleRowRollback(row.id)}
-                                className="rounded border border-red-950/30 bg-red-700 px-2 py-1.5 text-center text-xs font-semibold leading-tight text-white shadow-sm transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                onClick={() => setRollbackRow(row)}
                               >
                                 {busyRollback ? "…" : "Rollback"}
-                              </button>
+                              </Button>
                             ) : null}
                             {!showUpdate && !showRollback ? (
                               <span className="py-1 text-center text-xs text-muted">—</span>

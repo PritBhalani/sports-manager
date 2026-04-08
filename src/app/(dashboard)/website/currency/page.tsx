@@ -1,11 +1,15 @@
 "use client";
 import { PageHeader, Card } from "@/components";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { formatAmountNoRate } from "@/utils/formatCurrency";
 import { getAuthSession } from "@/store/authStore";
+import { useEffect, useState } from "react";
 
 export default function WebsiteCurrencyPage() {
-  const session = getAuthSession();
-  const currency = session.currency;
+  const [currency, setCurrency] = useState<ReturnType<typeof getAuthSession>["currency"]>();
+
+  useEffect(() => {
+    setCurrency(getAuthSession().currency);
+  }, []);
 
   return (
     <div className="min-w-0">
@@ -36,7 +40,7 @@ export default function WebsiteCurrencyPage() {
             </p>
             <p className="mt-1 text-sm font-semibold text-foreground">
               {typeof currency?.rate === "number" && currency.rate !== 0
-                ? formatCurrency(currency.rate)
+                ? formatAmountNoRate(currency.rate)
                 : "—"}
             </p>
           </div>

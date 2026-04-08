@@ -137,7 +137,33 @@ export async function getBalance(): Promise<BalanceResponse> {
 export async function getBalanceDetail(
   userId: string
 ): Promise<BalanceResponse> {
-  return apiGet(`${ACCOUNT}/getbalancedetail/${encodeURIComponent(userId)}`);
+  const raw = await apiGet<unknown>(
+    `${ACCOUNT}/getbalancedetail/${encodeURIComponent(userId)}`,
+  );
+  if (!raw || typeof raw !== "object") return {} as BalanceResponse;
+  const env = raw as BalanceEnvelope;
+  if (env.data && typeof env.data === "object") {
+    return env.data as BalanceResponse;
+  }
+  return raw as BalanceResponse;
+}
+
+export type PendingPayInOutCountResponse = {
+  payInCount?: number;
+  payOutCount?: number;
+};
+
+/** GET /payment/getpendingpayinoutcount */
+export async function getPendingPayInOutCount(): Promise<PendingPayInOutCountResponse> {
+  const raw = await apiGet<
+    | PendingPayInOutCountResponse
+    | { success?: boolean; data?: PendingPayInOutCountResponse; messages?: unknown }
+  >("/payment/getpendingpayinoutcount");
+  if (!raw || typeof raw !== "object") return {};
+  if ("data" in raw && raw.data && typeof raw.data === "object") {
+    return raw.data as PendingPayInOutCountResponse;
+  }
+  return raw as PendingPayInOutCountResponse;
 }
 
 /** POST /account/transfer – paginated transfer list */
@@ -383,20 +409,37 @@ export async function getOffPayOut(
   return normalizeList<OffPayInRecord>(raw);
 }
 
-/**
- * Confirm / process a pending off-pay-in request.
- * If your backend uses a different path or body, change only this function.
- */
-export async function updateOffPayIn(body: { id: string }): Promise<unknown> {
-  return apiPost("/payment/updateoffpayin", body, { showSuccessToast: true });
+/** POST /payment/changeoffpayinrequeststatus */
+export type ChangeOffPayInRequestStatusBody = {
+  id: string;
+  status: string;
+  removeOffer: boolean;
+  amount: number;
+  bonusAmount: number;
+  comment: string;
+};
+
+export async function changeOffPayInRequestStatus(
+  body: ChangeOffPayInRequestStatusBody,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost("/payment/changeoffpayinrequeststatus", body, {
+    showSuccessToast: true,
+    ...options,
+  });
 }
 
-/**
- * Roll back an off-pay-in request.
- * If your backend uses a different path or body, change only this function.
- */
-export async function rollbackOffPayIn(body: { id: string }): Promise<unknown> {
-  return apiPost("/payment/rollbackoffpayin", body, { showSuccessToast: true });
+/** GET /payment/rollbackdeposit/{id} */
+export async function rollbackOffPayIn(
+  body: { id: string },
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  const id = encodeURIComponent(body.id);
+  return apiGet(`/payment/rollbackdeposit/${id}`, {
+    treatAsMutation: "delete",
+    showSuccessToast: true,
+    ...options,
+  });
 }
 
 /** Row from GET /payment/getbankdetails — `data[]` */
