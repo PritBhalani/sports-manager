@@ -145,27 +145,403 @@ const EMPTY_METRIC: Metric = {
   lifetime: 0,
 };
 
-function toMetric(raw: unknown): Metric {
-  const src = (raw ?? {}) as Partial<Record<RangeKey, unknown>>;
-  return {
-    day1: Number(src.day1 ?? 0),
-    day3: Number(src.day3 ?? 0),
-    day7: Number(src.day7 ?? 0),
-    day30: Number(src.day30 ?? 0),
-    lifetime: Number(src.lifetime ?? 0),
-  };
+/**
+ * Player Activity table (`/players/[playerId]`, Activity tab) — normalizes three GET responses into rolling metrics.
+ *
+ * Endpoints: `bethistory/getuseractivity`, `account/getinoutactivity`, `account/getcasinoactivity`.
+ *
+ * Why this exists (fixes empty or partial UI when the API still returns data):
+ * - Backends use mixed JSON shapes: PascalCase (`User`, `Win`), `{ data: [...] }` vs `{ data: { user } }`,
+ *   metrics on the root of `data`, and row arrays for in/out/casino like Account Activity.
+ * - Earlier code assumed only `data.user.*` with exact key names and treated in/out arrays like nested objects,
+ *   so deposit/withdraw sometimes worked after client-side aggregation but bet/casino stayed zero.
+ *
+ * What we do here:
+ * - `recordGetCI` / `metricFromPath`: case-insensitive property walk.
+ * - `activityPayloadRoot`: unwrap `data` whether it is an object or an array.
+ * - `toMetric`: scalar → lifetime; objects map Day1/d1/today/lifetime aliases; then legacy day1… keys.
+ * - `parseBetActivityFromRoot`: if payload is a row array, aggregate like D/W; else coalesce nested paths + top-level keys.
+ * - D/W + casino row loops: `recordGetCI` on date/amount/type and extra field names (createdAt, betDate, stake, …).
+ */
+function metricHasAny(m: Metric): boolean {
+  return (
+    m.day1 !== 0 ||
+    m.day3 !== 0 ||
+    m.day7 !== 0 ||
+    m.day30 !== 0 ||
+    m.lifetime !== 0
+  );
 }
 
+/** Case-insensitive property read (common in .NET-style JSON). */
+function recordGetCI(obj: Record<string, unknown>, key: string): unknown {
+  if (key in obj) return obj[key];
+  const lower = key.toLowerCase();
+  for (const k of Object.keys(obj)) {
+    if (k.toLowerCase() === lower) return obj[k];
+  }
+  return undefined;
+}
+
+/** Normalize object keys so Day_1 / day1 match the same bucket. */
+function normalizeMetricKey(k: string): string {
+  return k.replace(/_/g, "").toLowerCase();
+}
+
+/** Turn API leaf (number, metric object, or value/amount wrapper) into our five-bucket Metric. */
+function toMetric(raw: unknown): Metric {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return { ...EMPTY_METRIC, lifetime: raw };
+  }
+  if (typeof raw === "string" && raw.trim() !== "") {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return { ...EMPTY_METRIC, lifetime: n };
+  }
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ...EMPTY_METRIC };
+  }
+  const out: Metric = { ...EMPTY_METRIC };
+  const obj = raw as Record<string, unknown>;
+  for (const [k, v] of Object.entries(obj)) {
+    const nk = normalizeMetricKey(k);
+    let slot: RangeKey | null = null;
+    if (nk === "day1" || nk === "d1" || nk === "today") slot = "day1";
+    else if (nk === "day3" || nk === "d3") slot = "day3";
+    else if (nk === "day7" || nk === "d7") slot = "day7";
+    else if (nk === "day30" || nk === "d30") slot = "day30";
+    else if (
+      nk === "lifetime" ||
+      nk === "lifetimetotal" ||
+      nk === "alltime" ||
+      nk === "all"
+    )
+      slot = "lifetime";
+    if (!slot) continue;
+    const n = typeof v === "number" ? v : Number(v);
+    if (Number.isFinite(n)) out[slot] = n;
+  }
+  if (
+    !metricHasAny(out) &&
+    (recordGetCI(obj, "value") !== undefined || recordGetCI(obj, "amount") !== undefined)
+  ) {
+    const v = recordGetCI(obj, "value") ?? recordGetCI(obj, "amount");
+    const n = typeof v === "number" ? v : Number(v);
+    if (Number.isFinite(n)) return { ...EMPTY_METRIC, lifetime: n };
+  }
+  if (!metricHasAny(out)) {
+    const src = obj as Partial<Record<RangeKey, unknown>>;
+    return {
+      day1: Number(src.day1 ?? 0),
+      day3: Number(src.day3 ?? 0),
+      day7: Number(src.day7 ?? 0),
+      day30: Number(src.day30 ?? 0),
+      lifetime: Number(src.lifetime ?? 0),
+    };
+  }
+  return out;
+}
+
+/** Walk `source.key1.key2…` using case-insensitive segment lookup; leaf passed through `toMetric`. */
 function metricFromPath(
   source: unknown,
   ...path: string[]
 ): Metric {
   let cur: unknown = source;
   for (const key of path) {
-    if (!cur || typeof cur !== "object") return EMPTY_METRIC;
-    cur = (cur as Record<string, unknown>)[key];
+    if (!cur || typeof cur !== "object" || Array.isArray(cur)) return EMPTY_METRIC;
+    cur = recordGetCI(cur as Record<string, unknown>, key);
   }
   return toMetric(cur);
+}
+
+/**
+ * Unwrap API envelope: `data` object or `data` array (both are used by backends).
+ */
+function activityPayloadRoot(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const o = raw as Record<string, unknown>;
+  const d = o.data;
+  if (Array.isArray(d)) return d;
+  if (d != null && typeof d === "object") return d;
+  return raw;
+}
+
+function firstMetricFromPaths(root: unknown, paths: string[][]): Metric {
+  for (const p of paths) {
+    const m = metricFromPath(root, ...p);
+    if (metricHasAny(m)) return m;
+  }
+  return paths.length ? metricFromPath(root, ...paths[0]) : EMPTY_METRIC;
+}
+
+/** Top-level or shallow keys on the payload (some APIs omit a `user` wrapper). */
+function metricFromRootKeys(root: unknown, ...keyHints: string[]): Metric {
+  if (!root || typeof root !== "object" || Array.isArray(root)) return EMPTY_METRIC;
+  const o = root as Record<string, unknown>;
+  for (const hint of keyHints) {
+    const v = recordGetCI(o, hint);
+    const m = toMetric(v);
+    if (metricHasAny(m)) return m;
+  }
+  return EMPTY_METRIC;
+}
+
+/** Return the first metric with any non-zero bucket (nested path vs flat keys). */
+function coalesceMetric(...candidates: Metric[]): Metric {
+  for (const c of candidates) {
+    if (metricHasAny(c)) return c;
+  }
+  return candidates[0] ?? EMPTY_METRIC;
+}
+
+const MS_PER_DAY = 86400000;
+
+function rowNumericField(row: Record<string, unknown>, keys: string[]): number {
+  for (const key of keys) {
+    const v = recordGetCI(row, key);
+    if (v === undefined || v === null) continue;
+    const n = typeof v === "number" ? v : Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return NaN;
+}
+
+function rowEventTimeMs(row: Record<string, unknown>): number {
+  const rawT =
+    recordGetCI(row, "date") ??
+    recordGetCI(row, "timestamp") ??
+    recordGetCI(row, "createdOn") ??
+    recordGetCI(row, "createdAt") ??
+    recordGetCI(row, "betDate") ??
+    recordGetCI(row, "settleTime");
+  if (rawT == null) return NaN;
+  const t = new Date(String(rawT)).getTime();
+  return Number.isFinite(t) ? t : NaN;
+}
+
+/** When `getuseractivity` returns a row list (same envelope style as in/out). */
+function aggregateBetActivityRows(rows: Record<string, unknown>[]): {
+  win: Metric;
+  commission: Metric;
+  pnl: Metric;
+  turnover: Metric;
+} {
+  const win: Metric = { ...EMPTY_METRIC };
+  const commission: Metric = { ...EMPTY_METRIC };
+  const pnl: Metric = { ...EMPTY_METRIC };
+  const turnover: Metric = { ...EMPTY_METRIC };
+  const now = Date.now();
+  const inRollingWindow = (t: number, days: number) => t >= now - days * MS_PER_DAY;
+
+  const addRolling = (target: Metric, amt: number, t: number) => {
+    if (!Number.isFinite(amt) || amt === 0) return;
+    target.lifetime += amt;
+    if (!Number.isFinite(t)) return;
+    if (inRollingWindow(t, 30)) target.day30 += amt;
+    if (inRollingWindow(t, 7)) target.day7 += amt;
+    if (inRollingWindow(t, 3)) target.day3 += amt;
+    if (inRollingWindow(t, 1)) target.day1 += amt;
+  };
+
+  for (const row of rows) {
+    const t = rowEventTimeMs(row);
+    const nestedUser = recordGetCI(row, "user");
+    const source =
+      nestedUser && typeof nestedUser === "object" && !Array.isArray(nestedUser)
+        ? (nestedUser as Record<string, unknown>)
+        : row;
+
+    addRolling(
+      win,
+      rowNumericField(source, ["win", "totalWin", "Win", "TotalWin"]),
+      t,
+    );
+    addRolling(
+      commission,
+      rowNumericField(source, ["comm", "commission", "Comm", "Commission"]),
+      t,
+    );
+    addRolling(
+      pnl,
+      rowNumericField(source, ["pnl", "Pnl", "profitLoss", "pl", "PL"]),
+      t,
+    );
+    addRolling(
+      turnover,
+      rowNumericField(source, [
+        "to",
+        "turnover",
+        "totalTurnover",
+        "stake",
+        "Stake",
+      ]),
+      t,
+    );
+  }
+
+  return { win, commission, pnl, turnover };
+}
+
+/** Build win/comm/pnl/turnover metrics from getuseractivity payload (object and/or row list). */
+function parseBetActivityFromRoot(root: unknown): {
+  win: Metric;
+  commission: Metric;
+  pnl: Metric;
+  turnover: Metric;
+} {
+  if (Array.isArray(root)) {
+    return aggregateBetActivityRows(root);
+  }
+  return {
+    win: coalesceMetric(
+      firstMetricFromPaths(root, [
+        ["user", "win"],
+        ["user", "totalWin"],
+        ["win"],
+        ["totalWin"],
+      ]),
+      metricFromRootKeys(root, "win", "totalWin", "TotalWin"),
+    ),
+    commission: coalesceMetric(
+      firstMetricFromPaths(root, [
+        ["user", "commission"],
+        ["user", "comm"],
+        ["commission"],
+        ["comm"],
+      ]),
+      metricFromRootKeys(root, "commission", "comm", "Commission", "Comm"),
+    ),
+    pnl: coalesceMetric(
+      firstMetricFromPaths(root, [["user", "pnl"], ["pnl"]]),
+      metricFromRootKeys(root, "pnl", "Pnl", "profitLoss", "PL"),
+    ),
+    turnover: coalesceMetric(
+      firstMetricFromPaths(root, [
+        ["user", "to"],
+        ["user", "turnover"],
+        ["user", "totalTurnover"],
+        ["to"],
+        ["turnover"],
+        ["totalTurnover"],
+      ]),
+      metricFromRootKeys(root, "to", "turnover", "totalTurnover", "stake", "Stake"),
+    ),
+  };
+}
+
+/** Sum in/out rows into rolling windows; row keys via CI (PascalCase / createdAt). */
+function aggregateDwRowsIntoMetrics(rows: Record<string, unknown>[]): {
+  deposit: Metric;
+  withdrawal: Metric;
+} {
+  const deposit: Metric = { ...EMPTY_METRIC };
+  const withdrawal: Metric = { ...EMPTY_METRIC };
+  const now = Date.now();
+
+  const inRollingWindow = (t: number, days: number) => t >= now - days * MS_PER_DAY;
+
+  for (const row of rows) {
+    const rawT =
+      recordGetCI(row, "date") ??
+      recordGetCI(row, "timestamp") ??
+      recordGetCI(row, "createdOn") ??
+      recordGetCI(row, "createdAt");
+    const t = rawT ? new Date(String(rawT)).getTime() : NaN;
+    if (!Number.isFinite(t)) continue;
+    const amt = Number(recordGetCI(row, "amount") ?? recordGetCI(row, "chips") ?? 0);
+    if (!Number.isFinite(amt)) continue;
+
+    const typ = String(
+      recordGetCI(row, "type") ?? recordGetCI(row, "dwType") ?? "",
+    )
+      .trim()
+      .toUpperCase();
+    const isDeposit =
+      typ === "D" ||
+      typ === "DEPOSIT" ||
+      typ.includes("DEPOSIT") ||
+      typ.includes("PAYIN");
+    const isWithdraw =
+      typ === "W" ||
+      typ === "WITHDRAW" ||
+      typ === "WD" ||
+      typ.includes("WITHDRAW") ||
+      typ.includes("PAYOUT");
+    const target = isDeposit ? deposit : isWithdraw ? withdrawal : null;
+    if (!target) continue;
+
+    target.lifetime += amt;
+    if (inRollingWindow(t, 30)) target.day30 += amt;
+    if (inRollingWindow(t, 7)) target.day7 += amt;
+    if (inRollingWindow(t, 3)) target.day3 += amt;
+    if (inRollingWindow(t, 1)) target.day1 += amt;
+  }
+  return { deposit, withdrawal };
+}
+
+/** Row array from service → aggregate; else read pre-aggregated metrics from object envelope. */
+function parseInOutActivity(raw: unknown): {
+  deposit: Metric;
+  withdrawal: Metric;
+} {
+  if (Array.isArray(raw)) {
+    return aggregateDwRowsIntoMetrics(raw);
+  }
+  const root = activityPayloadRoot(raw);
+  const dep = metricFromPath(root, "user", "totalDeposit");
+  const wd = metricFromPath(root, "user", "totalWithdrawal");
+  if (metricHasAny(dep) || metricHasAny(wd)) {
+    return { deposit: dep, withdrawal: wd };
+  }
+  return {
+    deposit: metricFromPath(root, "totalDeposit"),
+    withdrawal: metricFromPath(root, "totalWithdrawal"),
+  };
+}
+
+/** Sum casino activity rows; amount may live on stake/turnover/pnl depending on API. */
+function aggregateCasinoRowsIntoMetrics(rows: Record<string, unknown>[]): Metric {
+  const m: Metric = { ...EMPTY_METRIC };
+  const now = Date.now();
+  const inRollingWindow = (t: number, days: number) => t >= now - days * MS_PER_DAY;
+
+  for (const row of rows) {
+    const rawT =
+      recordGetCI(row, "date") ??
+      recordGetCI(row, "timestamp") ??
+      recordGetCI(row, "createdOn") ??
+      recordGetCI(row, "createdAt") ??
+      recordGetCI(row, "betDate");
+    const t = rawT ? new Date(String(rawT)).getTime() : NaN;
+    if (!Number.isFinite(t)) continue;
+    const amt = Number(
+      recordGetCI(row, "amount") ??
+        recordGetCI(row, "chips") ??
+        recordGetCI(row, "pnl") ??
+        recordGetCI(row, "stake") ??
+        recordGetCI(row, "turnover") ??
+        0,
+    );
+    if (!Number.isFinite(amt)) continue;
+
+    m.lifetime += amt;
+    if (inRollingWindow(t, 30)) m.day30 += amt;
+    if (inRollingWindow(t, 7)) m.day7 += amt;
+    if (inRollingWindow(t, 3)) m.day3 += amt;
+    if (inRollingWindow(t, 1)) m.day1 += amt;
+  }
+  return m;
+}
+
+/** Row list → rolling sums; object payload → nested pnl / profitLoss metrics. */
+function parseCasinoActivity(raw: unknown): Metric {
+  if (Array.isArray(raw)) {
+    return aggregateCasinoRowsIntoMetrics(raw);
+  }
+  const root = activityPayloadRoot(raw);
+  const userPnl = metricFromPath(root, "user", "pnl");
+  if (metricHasAny(userPnl)) return userPnl;
+  return firstMetricFromPaths(root, [["pnl"], ["totalPnl"], ["profitLoss"]]);
 }
 
 type ActivityRows = {
@@ -659,6 +1035,7 @@ export default function PlayerDetailPage() {
     setLoadingActivity(true);
     setActivityError(null);
 
+    // Load three activity sources; parsers match variable envelope/casing/row-list shapes (see block comment above).
     Promise.all([
       getUserActivity(playerId),
       getInOutActivity(playerId),
@@ -666,14 +1043,19 @@ export default function PlayerDetailPage() {
     ])
       .then(([betActivity, inOutActivity, casinoActivity]) => {
         if (cancelled) return;
+        const betParsed = parseBetActivityFromRoot(
+          activityPayloadRoot(betActivity),
+        );
+        const dwParsed = parseInOutActivity(inOutActivity);
+        const casinoParsed = parseCasinoActivity(casinoActivity);
         setActivityRows({
-          win: metricFromPath(betActivity, "data", "user", "win"),
-          commission: metricFromPath(betActivity, "data", "user", "commission"),
-          pnl: metricFromPath(betActivity, "data", "user", "pnl"),
-          turnover: metricFromPath(betActivity, "data", "user", "to"),
-          deposit: metricFromPath(inOutActivity, "data", "user", "totalDeposit"),
-          withdrawal: metricFromPath(inOutActivity, "data", "user", "totalWithdrawal"),
-          casino: metricFromPath(casinoActivity, "data", "user", "pnl"),
+          win: betParsed.win,
+          commission: betParsed.commission,
+          pnl: betParsed.pnl,
+          turnover: betParsed.turnover,
+          deposit: dwParsed.deposit,
+          withdrawal: dwParsed.withdrawal,
+          casino: casinoParsed,
         });
       })
       .catch((e) => {

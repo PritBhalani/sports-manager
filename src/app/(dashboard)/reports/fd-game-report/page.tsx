@@ -94,7 +94,7 @@ export default function FdGameReportPage() {
       .catch((e) => {
         setItems([]);
         setTotal(0);
-        setError(e instanceof Error ? e.message : "Failed to load FD game report.");
+        setError(e instanceof Error ? e.message : "Failed to load Casino game report.");
       })
       .finally(() => setLoading(false));
   }, [page, pageSize, fromDate, toDate, refreshKey]);
@@ -123,8 +123,8 @@ export default function FdGameReportPage() {
   return (
     <div className="min-w-0 space-y-4 sm:space-y-6">
       <PageHeader
-        title="P&L Report By FD Game"
-        breadcrumbs={["Reports", "FD Game Report"]}
+        title="P&L Report By Casino Game"
+        breadcrumbs={["Reports", "Casino Game Report"]}
         action={
           <Button
             variant="primary"

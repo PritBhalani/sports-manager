@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Button,
-  DialogFormRow,
+  DialogActions,
   DialogSection,
   Input,
   Modal,
@@ -14,7 +14,8 @@ import {
   changeOffPayInRequestStatus,
   type OffPayInRecord,
 } from "@/services/account.service";
-import { formatCurrency } from "@/utils/formatCurrency";
+import { getAuthSession } from "@/store/authStore";
+import { formatAmountNoRate, formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
 
 const MODAL_STATUS_OPTIONS: SelectOption[] = [
@@ -23,6 +24,17 @@ const MODAL_STATUS_OPTIONS: SelectOption[] = [
   { value: "3", label: "Cancel" },
   { value: "4", label: "Expired" },
 ];
+
+function getDisplayCurrencyRate(): number {
+  const r = Number(getAuthSession()?.currency?.rate ?? 1);
+  return Number.isFinite(r) && r > 0 ? r : 1;
+}
+
+function toDisplayAmount(raw: number | undefined, rate: number): string {
+  const n = Number(raw ?? 0);
+  if (!Number.isFinite(n)) return formatAmountNoRate(0);
+  return formatAmountNoRate(n * rate);
+}
 
 export type DepositRequestUpdateModalProps = {
   open: boolean;
@@ -57,9 +69,10 @@ export default function DepositRequestUpdateModal({
 
   useEffect(() => {
     if (!open || !row) return;
+    const r = getDisplayCurrencyRate();
     setStatus(String(row.status ?? "1"));
-    setAmount(String(row.amount ?? ""));
-    setBonusAmount(String(row.bonusAmount ?? 0));
+    setAmount(toDisplayAmount(row.amount, r));
+    setBonusAmount(toDisplayAmount(row.bonusAmount, r));
     setComment("");
     setRemoveOffer(false);
     setFormError(null);
@@ -67,25 +80,26 @@ export default function DepositRequestUpdateModal({
 
   const handleSave = async () => {
     if (!row?.id) return;
-    const amt = parseFloat(String(amount).replace(/,/g, ""));
-    const bonus = parseFloat(String(bonusAmount).replace(/,/g, ""));
-    if (!Number.isFinite(amt) || amt < 0) {
+    const amtDisplay = parseFloat(String(amount).replace(/,/g, ""));
+    const bonusDisplay = parseFloat(String(bonusAmount).replace(/,/g, ""));
+    if (!Number.isFinite(amtDisplay) || amtDisplay < 0) {
       setFormError("Enter a valid amount.");
       return;
     }
-    if (!Number.isFinite(bonus) || bonus < 0) {
+    if (!Number.isFinite(bonusDisplay) || bonusDisplay < 0) {
       setFormError("Enter a valid bonus amount.");
       return;
     }
     setFormError(null);
     setSaving(true);
     try {
+      const r = getDisplayCurrencyRate();
       await changeOffPayInRequestStatus({
         id: row.id,
         status,
         removeOffer,
-        amount: amt,
-        bonusAmount: bonus,
+        amount: amtDisplay / r,
+        bonusAmount: bonusDisplay / r,
         comment: comment.trim(),
       });
       onSaved();
@@ -105,77 +119,80 @@ export default function DepositRequestUpdateModal({
 
   const when = row.createdOn ? formatDateTime(row.createdOn) : "—";
 
+  const detailRow = (label: string, value: ReactNode) => (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border/80 py-2.5 last:border-b-0 last:pb-0 first:pt-0">
+      <span className="text-xs font-medium uppercase tracking-wide text-foreground-tertiary">
+        {label}
+      </span>
+      <span className="min-w-0 text-right text-sm font-semibold text-foreground tabular-nums">
+        {value}
+      </span>
+    </div>
+  );
+
   return (
     <Modal
       isOpen={open}
       onClose={onClose}
       title="Change deposit request status"
       maxWidthClassName="max-w-3xl"
-      bodyClassName="space-y-4"
+      bodyClassName="space-y-5 p-4 sm:p-5"
       footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
+        <DialogActions>
           <Button
             type="button"
-            size="sm"
+            variant="primary"
+            size="md"
             disabled={saving}
             onClick={() => void handleSave()}
           >
             {saving ? "Saving…" : "Save"}
           </Button>
-        </div>
+          <Button type="button" variant="outline" size="md" onClick={onClose}>
+            Cancel
+          </Button>
+        </DialogActions>
       }
     >
       <DialogSection>
-        <div className="grid gap-6 sm:grid-cols-2">
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-foreground-secondary">Deposit request of:</span>{" "}
-              <span className="font-medium">{row.user?.username ?? "—"}</span>
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
+          {/* Summary — matches list/card panels */}
+          <div className="flex flex-col rounded-lg border border-border bg-surface-2/60 shadow-sm">
+            <div className="border-b border-border px-4 py-3 sm:px-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
+                Request details
+              </h3>
             </div>
-            <div>
-              <span className="text-foreground-secondary">Amount:</span>{" "}
-              <span className="tabular-nums">{formatCurrency(row.amount)}</span>
-            </div>
-            <div>
-              <span className="text-foreground-secondary">Bonus amount:</span>{" "}
-              <span className="tabular-nums">{formatCurrency(row.bonusAmount ?? 0)}</span>
-            </div>
-            <div>
-              <span className="text-foreground-secondary">Current status:</span>{" "}
-              <span>{currentStatusLabel}</span>
-            </div>
-            <div>
-              <span className="text-foreground-secondary">UTR no.:</span>{" "}
-              <span className="tabular-nums">{row.utrNo ?? "—"}</span>
-            </div>
-            <div>
-              <span className="text-foreground-secondary">A/C no.:</span>{" "}
-              <span>{row.acNo ?? "—"}</span>
-            </div>
-            {acHolder ? (
-              <div>
-                <span className="text-foreground-secondary">A/C holder:</span>{" "}
-                <span>{acHolder}</span>
-              </div>
-            ) : null}
-            <div>
-              <span className="text-foreground-secondary">Date:</span> <span>{when}</span>
+            <div className="px-4 pb-4 pt-1 sm:px-5">
+              {detailRow("Deposit request of", row.user?.username ?? "—")}
+              {detailRow("Amount", formatCurrency(row.amount))}
+              {detailRow("Bonus amount", formatCurrency(row.bonusAmount ?? 0))}
+              {detailRow("Current status", currentStatusLabel)}
+              {detailRow("UTR no.", row.utrNo ?? "—")}
+              {detailRow("A/C no.", row.acNo ?? "—")}
+              {acHolder ? detailRow("A/C holder", acHolder) : null}
+              {detailRow("Date", when)}
             </div>
           </div>
 
-          <div className="space-y-3">
-            <DialogFormRow>
+          {/* Form — single column, no DialogFormRow 2-col grid */}
+          <div className="flex flex-col rounded-lg border border-border bg-surface shadow-sm">
+            <div className="border-b border-border px-4 py-3 sm:px-5">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-tertiary">
+                Update
+              </h3>
+              <p className="mt-1 text-xs text-foreground-tertiary">
+                Amount and bonus use your session display scale (same as the table). Values are
+                converted back for the API on save.
+              </p>
+            </div>
+            <div className="space-y-4 px-4 pb-4 pt-4 sm:px-5">
               <Select
                 label="Status"
                 options={MODAL_STATUS_OPTIONS}
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
               />
-            </DialogFormRow>
-            <DialogFormRow>
               <Input
                 label="Amount"
                 type="text"
@@ -183,19 +200,15 @@ export default function DepositRequestUpdateModal({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-            </DialogFormRow>
-            <DialogFormRow>
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <label className="flex cursor-pointer items-center gap-2.5 rounded-md border border-border bg-surface-2 px-3 py-2.5 text-sm text-foreground-secondary transition-colors hover:bg-surface-muted">
                 <input
                   type="checkbox"
-                  className="h-4 w-4 rounded border-border-strong"
+                  className="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary/30"
                   checked={removeOffer}
                   onChange={(e) => setRemoveOffer(e.target.checked)}
                 />
                 Remove offer?
               </label>
-            </DialogFormRow>
-            <DialogFormRow>
               <Input
                 label="Bonus"
                 type="text"
@@ -203,8 +216,6 @@ export default function DepositRequestUpdateModal({
                 value={bonusAmount}
                 onChange={(e) => setBonusAmount(e.target.value)}
               />
-            </DialogFormRow>
-            <DialogFormRow>
               <Input
                 label="Comment"
                 type="text"
@@ -212,38 +223,45 @@ export default function DepositRequestUpdateModal({
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
               />
-            </DialogFormRow>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => presetComment("Payment Received")}
-              >
-                Payment received
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => presetComment("Payment Not Received")}
-              >
-                Payment not received
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => presetComment("Used Slip")}
-              >
-                Used slip
-              </Button>
+
+              <div className="border-t border-border pt-4">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-foreground-tertiary">
+                  Quick comment
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => presetComment("Payment Received")}
+                  >
+                    Payment received
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => presetComment("Payment Not Received")}
+                  >
+                    Payment not received
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => presetComment("Used Slip")}
+                  >
+                    Used slip
+                  </Button>
+                </div>
+              </div>
+
+              {formError ? (
+                <p className="text-sm text-error" role="alert">
+                  {formError}
+                </p>
+              ) : null}
             </div>
-            {formError ? (
-              <p className="text-sm text-error" role="alert">
-                {formError}
-              </p>
-            ) : null}
           </div>
         </div>
       </DialogSection>

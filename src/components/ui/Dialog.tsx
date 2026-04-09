@@ -23,7 +23,7 @@ export default function Dialog({
   children,
   footer,
   maxWidthClassName = "max-w-lg",
-  bodyClassName = "max-h-[60vh] overflow-y-auto p-4 sm:p-5",
+  bodyClassName = "p-4 sm:p-5",
   closeOnBackdrop = true,
 }: DialogProps) {
   const { acquire, release } = useDialogManager();
@@ -70,26 +70,28 @@ export default function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
-        className={`relative max-h-[90vh] w-full ${maxWidthClassName} overflow-hidden rounded-xl bg-surface shadow-xl focus:outline-none`}
+        className={`relative flex max-h-[90vh] w-full ${maxWidthClassName} flex-col overflow-hidden rounded-xl bg-surface shadow-xl focus:outline-none`}
       >
         {title ? (
-          <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
+          <div className="flex shrink-0 items-center justify-between border-b border-primary/25 bg-primary/10 px-4 py-3 sm:px-5">
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
               {title}
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-sm p-1 text-muted hover:bg-surface-2 hover:text-foreground"
+              className="rounded-sm p-1 text-primary hover:bg-primary/15 hover:text-foreground"
               aria-label="Close"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
         ) : null}
-        <div className={bodyClassName}>{children}</div>
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${bodyClassName}`}>
+          {children}
+        </div>
         {footer ? (
-          <div className="flex justify-end gap-2 border-t border-border px-4 py-3 sm:px-5">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-primary/20 bg-surface-2 px-4 py-3 sm:px-5">
             {footer}
           </div>
         ) : null}

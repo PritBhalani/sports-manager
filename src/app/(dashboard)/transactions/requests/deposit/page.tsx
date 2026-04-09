@@ -222,19 +222,19 @@ export default function TransactionsRequestDepositPage() {
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setRollbackRow(null)}
-            >
-              Reject
-            </Button>
-            <Button
-              type="button"
               size="sm"
               disabled={rowActionKey !== null}
               onClick={() => void handleConfirmRollback()}
             >
               Proceed
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRollbackRow(null)}
+            >
+              Reject
             </Button>
           </div>
         }
@@ -364,9 +364,16 @@ export default function TransactionsRequestDepositPage() {
                       <TableRow key={row.id} className="hover:!bg-gray-50">
                         <TableCell className="!px-6 !py-3">
                           <div className="flex items-baseline gap-1.5">
-                            <a className="text-blue-600" href="#" onClick={(e) => e.preventDefault()}>
-                              {row.user?.username ?? "—"}
-                            </a>
+                            {row.user?.id ? (
+                              <Link
+                                href={`/players/${encodeURIComponent(String(row.user.id))}`}
+                                className="text-primary hover:underline"
+                              >
+                                {row.user?.username ?? "—"}
+                              </Link>
+                            ) : (
+                              <span className="text-foreground">{row.user?.username ?? "—"}</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center">{formatCurrency(row.amount)}</TableCell>
@@ -389,7 +396,7 @@ export default function TransactionsRequestDepositPage() {
                             {showUpdate ? (
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="primary"
                                 size="sm"
                                 fullWidth
                                 disabled={rowActionKey !== null}
@@ -401,7 +408,7 @@ export default function TransactionsRequestDepositPage() {
                             {showRollback ? (
                               <Button
                                 type="button"
-                                variant="outline"
+                                variant="danger"
                                 size="sm"
                                 fullWidth
                                 disabled={rowActionKey !== null}

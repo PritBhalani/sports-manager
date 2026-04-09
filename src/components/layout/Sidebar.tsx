@@ -178,7 +178,7 @@ const menuConfig: MenuItem[] = [
       { href: "/reports/downline-summary", label: "Agent P&L Summary", icon: IconClipboardCheck },
       { href: "/reports/b2c-summary", label: "B2C Summary", icon: IconUsers },
       { href: "/reports/b2c-activity", label: "B2C Activity", icon: IconUsers },
-      { href: "/reports/fd-game-report", label: "FD Game Report", icon: IconReports },
+      { href: "/reports/casino-game-report", label: "Casino Game Report", icon: IconReports },
       // { href: "/reports/bet-history", label: "Bet History", icon: IconBetlist },
       // { href: "/reports/bet-history-by-market", label: "Bet History by Market", icon: IconBetlist },
       { href: "/reports/pl-by-agent", label: "P&L by Agent", icon: IconReports },
