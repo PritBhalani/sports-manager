@@ -8,6 +8,9 @@ import {
   ListTableSection,
   Button,
   Dialog,
+  DialogActions,
+  DialogSection,
+  DIALOG_BODY_DEFAULT,
   Input,
   Select,
   Table,
@@ -488,17 +491,19 @@ export default function BonusManageOffersPage() {
         onClose={closeDialog}
         title={dialogTitle}
         maxWidthClassName="max-w-6xl"
+        bodyClassName={DIALOG_BODY_DEFAULT}
         footer={
-          <>
-            <Button variant="primary" onClick={() => void handleSave()} disabled={saving}>
+          <DialogActions>
+            <Button variant="primary" size="md" onClick={() => void handleSave()} disabled={saving}>
               {saving ? "Saving..." : "Save"}
             </Button>
-            <Button variant="ghost" onClick={closeDialog} disabled={saving}>
+            <Button variant="outline" size="md" onClick={closeDialog} disabled={saving}>
               Cancel
             </Button>
-          </>
+          </DialogActions>
         }
       >
+        <DialogSection>
         <div className="space-y-3">
           {formError ? (
             <p className="text-sm text-error" role="alert">
@@ -686,6 +691,7 @@ export default function BonusManageOffersPage() {
             />
           </div>
         </div>
+        </DialogSection>
       </Dialog>
     </div>
   );

@@ -2,7 +2,17 @@
 
 import { useEffect, useState, type ChangeEvent } from "react";
 import Image from "next/image";
-import { PageHeader, Card, Button, Select, Dialog, Input } from "@/components";
+import {
+  PageHeader,
+  Card,
+  Button,
+  Select,
+  Dialog,
+  DialogActions,
+  DialogSection,
+  DIALOG_BODY_DEFAULT,
+  Input,
+} from "@/components";
 import { Plus, Trash2 } from "lucide-react";
 import {
   addAgentBanner,
@@ -334,17 +344,19 @@ export default function WebsiteBannersPage() {
         onClose={closeAddDialog}
         title="Add Banner"
         maxWidthClassName="max-w-3xl"
+        bodyClassName={DIALOG_BODY_DEFAULT}
         footer={
-          <>
-            <Button variant="primary" onClick={() => void handleAddBanner()} disabled={adding}>
+          <DialogActions>
+            <Button variant="primary" size="md" onClick={() => void handleAddBanner()} disabled={adding}>
               {adding ? "Saving..." : "Save"}
             </Button>
-            <Button variant="ghost" onClick={closeAddDialog} disabled={adding}>
+            <Button variant="outline" size="md" onClick={closeAddDialog} disabled={adding}>
               Cancel
             </Button>
-          </>
+          </DialogActions>
         }
       >
+        <DialogSection>
         <div className="space-y-4">
           <p className="text-sm text-foreground-secondary">
             <span className="font-semibold text-error">Note:</span> For better performance, upload
@@ -369,6 +381,7 @@ export default function WebsiteBannersPage() {
             </label>
           </div>
         </div>
+        </DialogSection>
       </Dialog>
     </div>
   );

@@ -12,6 +12,11 @@ import {
   DialogActions,
   DialogFormRow,
   DialogSection,
+  DialogPanel,
+  DialogPanelHeader,
+  DialogPanelBody,
+  DIALOG_BODY_DEFAULT,
+  DIALOG_BODY_COMPACT,
   Input,
   Select,
   Modal,
@@ -675,12 +680,13 @@ function PlayerQuickEditModal({
       onClose={onClose}
       title="Information"
       maxWidthClassName="max-w-4xl"
+      bodyClassName={DIALOG_BODY_DEFAULT}
       footer={
         <DialogActions>
-          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={state.saving || state.loading}>
+          <Button type="button" variant="primary" size="md" onClick={onSave} disabled={state.saving || state.loading}>
             {state.saving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={state.saving}>
+          <Button type="button" variant="outline" size="md" onClick={onClose} disabled={state.saving}>
             Cancel
           </Button>
         </DialogActions>
@@ -688,15 +694,16 @@ function PlayerQuickEditModal({
     >
       <DialogSection>
         <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-surface p-4 sm:p-5">
-          <p className="text-sm font-semibold text-foreground">
-            User Name (Usercode)
-          </p>
-          <p className="mt-1 text-sm text-foreground-secondary">
-            {state.username || "—"}
-            {state.userCode ? ` (${state.userCode})` : ""}
-          </p>
-        </div>
+        <DialogPanel>
+          <DialogPanelHeader title="Member" />
+          <DialogPanelBody>
+            <p className="text-sm font-semibold text-foreground">User Name (Usercode)</p>
+            <p className="mt-1 text-sm text-foreground-secondary">
+              {state.username || "—"}
+              {state.userCode ? ` (${state.userCode})` : ""}
+            </p>
+          </DialogPanelBody>
+        </DialogPanel>
 
         {state.loading ? (
           <div className="flex items-center gap-2 text-sm text-muted">
@@ -776,7 +783,7 @@ function PlayerQuickEditModal({
             placeholder="Add notes about this user"
             rows={4}
             disabled={state.loading || state.saving}
-            className="box-border w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-gray-50 disabled:text-muted"
+            className="box-border w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-surface-muted disabled:text-muted"
           />
         </div>
         </div>
@@ -815,12 +822,14 @@ function CreditActionModal({
       isOpen={state.open}
       onClose={onClose}
       title={`${mode === "D" ? "Deposit" : "Withdraw"} - ${state.username || "User"}`}
+      maxWidthClassName="max-w-lg"
+      bodyClassName={DIALOG_BODY_DEFAULT}
       footer={
         <DialogActions>
-          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving}>
+          <Button type="button" variant="primary" size="md" onClick={onSave} disabled={saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" size="md" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
         </DialogActions>
@@ -902,22 +911,22 @@ function BetConfigModal({
       onClose={onClose}
       title={`Update Bet Configuration - ${state.username || "User"}`}
       maxWidthClassName="max-w-[95vw]"
-      bodyClassName="p-3 sm:p-4"
+      bodyClassName="space-y-4 p-4 sm:p-5"
       footer={
         <DialogActions>
           <Button
             type="button"
             variant="primary"
-            size="sm"
+            size="md"
             onClick={onApplyToAllChild}
             disabled={saving || loading}
           >
             Apply To All Child
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={saving || loading}>
+          <Button type="button" variant="primary" size="md" onClick={onSave} disabled={saving || loading}>
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" size="md" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
         </DialogActions>
@@ -991,12 +1000,13 @@ function CommissionModal({
       onClose={onClose}
       title="Set Commission"
       maxWidthClassName="max-w-3xl"
+      bodyClassName={DIALOG_BODY_DEFAULT}
       footer={
         <DialogActions>
-          <Button type="button" variant="primary" size="sm" onClick={onSave} disabled={loading || saving}>
+          <Button type="button" variant="primary" size="md" onClick={onSave} disabled={loading || saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={loading || saving}>
+          <Button type="button" variant="outline" size="md" onClick={onClose} disabled={loading || saving}>
             Cancel
           </Button>
         </DialogActions>
@@ -1981,38 +1991,41 @@ export default function PlayersPage() {
         onClose={closeBettingLockConfirm}
         title="Confirm"
         maxWidthClassName="max-w-md"
-        bodyClassName="p-4 sm:p-5"
+        bodyClassName={DIALOG_BODY_COMPACT}
         footer={
-          <>
+          <DialogActions>
             <Button
               type="button"
               variant="primary"
-              size="sm"
+              size="md"
               disabled={bettingLockConfirm.saving}
               onClick={() => void confirmBettingLockChange()}
             >
               {bettingLockConfirm.saving ? "…" : "Proceed"}
             </Button>
-            <button
+            <Button
               type="button"
-              className="text-sm font-medium text-primary hover:underline disabled:opacity-50"
+              variant="outline"
+              size="md"
               disabled={bettingLockConfirm.saving}
               onClick={closeBettingLockConfirm}
             >
               Reject
-            </button>
-          </>
+            </Button>
+          </DialogActions>
         }
       >
-        <p className="text-sm text-foreground">
-          Are you sure you want to {bettingLockConfirm.nextLocked ? "lock" : "unlock"}{" "}
-          <span className="font-semibold">{bettingLockConfirm.label}</span>?
-        </p>
-        {bettingLockConfirm.error ? (
-          <p className="mt-3 text-sm text-error" role="alert">
-            {bettingLockConfirm.error}
+        <DialogSection>
+          <p className="text-sm text-foreground">
+            Are you sure you want to {bettingLockConfirm.nextLocked ? "lock" : "unlock"}{" "}
+            <span className="font-semibold">{bettingLockConfirm.label}</span>?
           </p>
-        ) : null}
+          {bettingLockConfirm.error ? (
+            <p className="text-sm text-error" role="alert">
+              {bettingLockConfirm.error}
+            </p>
+          ) : null}
+        </DialogSection>
       </Modal>
       <CreateMemberModal
         open={createMemberOpen}

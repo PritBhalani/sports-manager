@@ -74,6 +74,16 @@ export type OffPayInRecord = {
   amount: number;
   bonusAmount?: number;
   acNo?: string;
+  /** Withdraw / getoffpayout — bank detail fields */
+  bankName?: string;
+  ifscCode?: string;
+  acName?: string;
+  /** Payout channel type (e.g. bank vs cash); optional. */
+  type?: number;
+  /** When false, hide the slip preview icon on the withdraw list; omit/true = show when row is editable. */
+  hasPayOutSlip?: boolean;
+  /** Payout slip document id — pass to GET `/payment/getpayinoutslip/{imageId}` (not the request row `id`). */
+  imageId?: string;
   detailType?: number;
   utrNo?: string;
   createdOn?: string;
@@ -427,6 +437,45 @@ export async function changeOffPayInRequestStatus(
     showSuccessToast: true,
     ...options,
   });
+}
+
+/** POST /payment/changeoffpayoutrequeststatus — `payOutSlip` is optional data URL (e.g. `data:image/png;base64,...`). */
+export type ChangeOffPayOutRequestStatusBody = {
+  id: string;
+  status: string;
+  comment?: string;
+  payOutSlip?: string;
+};
+
+export async function changeOffPayOutRequestStatus(
+  body: ChangeOffPayOutRequestStatusBody,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost("/payment/changeoffpayoutrequeststatus", body, {
+    showSuccessToast: true,
+    ...options,
+  });
+}
+
+/**
+ * GET /payment/getpayinoutslip/{imageId}
+ * `imageId` is the value from the payout row (`imageId`), not the withdrawal request `id`.
+ * Returns a data URL string for the slip image, or null when missing / invalid.
+ */
+export async function getPayInOutSlip(imageId: string): Promise<string | null> {
+  const raw = await apiGet<unknown>(
+    `/payment/getpayinoutslip/${encodeURIComponent(imageId)}`,
+  );
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as { success?: boolean; data?: unknown };
+  if (o.success === false) {
+    throw new Error(readEnvelopeErrorMessage(raw));
+  }
+  const d = o.data;
+  if (typeof d !== "string") return null;
+  const s = d.trim();
+  if (!s.startsWith("data:")) return null;
+  return s;
 }
 
 /** GET /payment/rollbackdeposit/{id} */

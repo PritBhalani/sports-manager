@@ -11,6 +11,7 @@ export type ModalProps = {
   footer?: ReactNode;
   maxWidthClassName?: string;
   bodyClassName?: string;
+  closeOnBackdrop?: boolean;
 };
 
 export default function Modal({
@@ -21,6 +22,7 @@ export default function Modal({
   footer,
   maxWidthClassName,
   bodyClassName,
+  closeOnBackdrop,
 }: ModalProps) {
   return (
     <Dialog
@@ -30,6 +32,7 @@ export default function Modal({
       footer={footer}
       maxWidthClassName={maxWidthClassName}
       bodyClassName={bodyClassName}
+      closeOnBackdrop={closeOnBackdrop}
     >
       {children}
     </Dialog>

@@ -17,6 +17,8 @@ import {
   Modal,
   DialogActions,
   DialogSection,
+  DIALOG_BODY_DEFAULT,
+  DIALOG_BODY_COMPACT,
 } from "@/components";
 import { Pencil, Plus, Loader2, Trash2 } from "lucide-react";
 import {
@@ -473,19 +475,25 @@ export default function WebsiteBankingPage() {
         onClose={closeBankForm}
         title="Add/Edit Bank"
         maxWidthClassName="max-w-lg"
-        bodyClassName="p-4 sm:p-5"
+        bodyClassName={DIALOG_BODY_DEFAULT}
         footer={
           <DialogActions>
             <Button
               type="button"
               variant="primary"
-              size="sm"
+              size="md"
               disabled={bankFormSaving}
               onClick={() => void submitBankForm()}
             >
               {bankFormSaving ? "Saving…" : "Save"}
             </Button>
-            <Button type="button" variant="secondary" size="sm" disabled={bankFormSaving} onClick={closeBankForm}>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              disabled={bankFormSaving}
+              onClick={closeBankForm}
+            >
               Cancel
             </Button>
           </DialogActions>
@@ -564,33 +572,36 @@ export default function WebsiteBankingPage() {
         }}
         title="Confirm"
         maxWidthClassName="max-w-md"
-        bodyClassName="p-4 sm:p-5"
+        bodyClassName={DIALOG_BODY_COMPACT}
         footer={
-          <>
+          <DialogActions>
             <Button
               type="button"
               variant="primary"
-              size="sm"
+              size="md"
               disabled={deleteSubmitting}
               onClick={() => void confirmDeleteProceed()}
             >
               {deleteSubmitting ? "…" : "Proceed"}
             </Button>
-            <button
+            <Button
               type="button"
-              className="text-sm font-medium text-primary hover:underline disabled:opacity-50"
+              variant="outline"
+              size="md"
               disabled={deleteSubmitting}
               onClick={() => setConfirmDelete(null)}
             >
               Reject
-            </button>
-          </>
+            </Button>
+          </DialogActions>
         }
       >
-        <p className="text-sm text-foreground">
-          Are you sure you want to delete{" "}
-          <span className="font-semibold">{confirmDelete?.label ?? ""}</span>?
-        </p>
+        <DialogSection>
+          <p className="text-sm text-foreground">
+            Are you sure you want to delete{" "}
+            <span className="font-semibold">{confirmDelete?.label ?? ""}</span>?
+          </p>
+        </DialogSection>
       </Modal>
     </div>
   );

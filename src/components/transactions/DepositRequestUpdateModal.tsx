@@ -5,6 +5,7 @@ import {
   Button,
   DialogActions,
   DialogSection,
+  DIALOG_BODY_DEFAULT,
   Input,
   Modal,
   Select,
@@ -136,7 +137,7 @@ export default function DepositRequestUpdateModal({
       onClose={onClose}
       title="Change deposit request status"
       maxWidthClassName="max-w-3xl"
-      bodyClassName="space-y-5 p-4 sm:p-5"
+      bodyClassName={DIALOG_BODY_DEFAULT}
       footer={
         <DialogActions>
           <Button

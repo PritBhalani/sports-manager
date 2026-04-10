@@ -5,6 +5,7 @@ import {
   Button,
   DialogActions,
   DialogSection,
+  DIALOG_BODY_DEFAULT,
   Input,
   Modal,
 } from "@/components";
@@ -196,21 +197,22 @@ export default function CreateMemberModal({
       onClose={handleClose}
       title="Create member"
       maxWidthClassName="max-w-5xl"
+      bodyClassName={DIALOG_BODY_DEFAULT}
       footer={
         <DialogActions>
           <Button
             type="submit"
             form="create-member-form"
             variant="primary"
-            size="sm"
+            size="md"
             disabled={saving || codeLoading}
           >
             {saving ? "Creating…" : "Create"}
           </Button>
           <Button
             type="button"
-            variant="secondary"
-            size="sm"
+            variant="outline"
+            size="md"
             onClick={handleClose}
             disabled={saving}
           >
@@ -365,7 +367,7 @@ export default function CreateMemberModal({
                   onChange={(e) => setNotes(e.target.value)}
                   rows={6}
                   placeholder="Optional notes"
-                  className="box-border w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="box-border w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground shadow-sm placeholder:text-muted transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
             </div>

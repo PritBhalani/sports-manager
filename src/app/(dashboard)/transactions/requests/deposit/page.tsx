@@ -19,6 +19,9 @@ import {
   TableEmpty,
   TablePagination,
   Modal,
+  DialogActions,
+  DialogSection,
+  DIALOG_BODY_COMPACT,
 } from "@/components";
 import { ArrowUpFromLine, HandCoins } from "lucide-react";
 import DepositRequestUpdateModal from "@/components/transactions/DepositRequestUpdateModal";
@@ -217,12 +220,13 @@ export default function TransactionsRequestDepositPage() {
         onClose={() => setRollbackRow(null)}
         title="Confirm"
         maxWidthClassName="max-w-md"
-        bodyClassName="p-4 sm:p-5"
+        bodyClassName={DIALOG_BODY_COMPACT}
         footer={
-          <div className="flex flex-wrap justify-end gap-2">
+          <DialogActions>
             <Button
               type="button"
-              size="sm"
+              variant="primary"
+              size="md"
               disabled={rowActionKey !== null}
               onClick={() => void handleConfirmRollback()}
             >
@@ -231,21 +235,23 @@ export default function TransactionsRequestDepositPage() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="md"
               onClick={() => setRollbackRow(null)}
             >
               Reject
             </Button>
-          </div>
+          </DialogActions>
         }
       >
-        <p className="text-sm text-foreground">
-          Are you sure you want to rollback{" "}
-          <span className="tabular-nums font-medium">
-            {rollbackRow ? formatCurrency(rollbackRow.amount) : "—"}
-          </span>
-          ?
-        </p>
+        <DialogSection>
+          <p className="text-sm text-foreground">
+            Are you sure you want to rollback{" "}
+            <span className="tabular-nums font-medium">
+              {rollbackRow ? formatCurrency(rollbackRow.amount) : "—"}
+            </span>
+            ?
+          </p>
+        </DialogSection>
       </Modal>
 
       <PageHeader title="Request Deposit" breadcrumbs={["Transactions", "Requests", "Deposit"]} />

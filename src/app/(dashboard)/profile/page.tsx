@@ -701,73 +701,83 @@ export default function ProfilePage() {
           setPasswordModalOpen(false);
         }}
         title="Change password"
-      >
-        <form onSubmit={handleChangePassword} className="space-y-4" autoComplete="off">
-          <DialogSection>
-          <Input
-            type="password"
-            label="Current password"
-            value={currentPassword}
-            onChange={(ev) => setCurrentPassword(ev.target.value)}
-            className="bg-surface"
-            autoComplete="current-password"
-          />
-          <Input
-            type="password"
-            label="New password"
-            value={newPassword}
-            onChange={(ev) => setNewPassword(ev.target.value)}
-            className="bg-surface"
-            autoComplete="new-password"
-          />
-          <Input
-            type="password"
-            label="Confirm new password"
-            value={confirmPassword}
-            onChange={(ev) => setConfirmPassword(ev.target.value)}
-            className="bg-surface"
-            autoComplete="new-password"
-          />
-          </DialogSection>
+        footer={
           <DialogActions>
             <Button
               type="submit"
+              form="profile-change-password-form"
               variant="primary"
-              size="sm"
+              size="md"
               disabled={passwordSubmitting}
             >
               {passwordSubmitting ? "Updating…" : "Change password"}
             </Button>
             <Button
               type="button"
-              variant="secondary"
-              size="sm"
+              variant="outline"
+              size="md"
               disabled={passwordSubmitting}
               onClick={() => setPasswordModalOpen(false)}
             >
               Cancel
             </Button>
           </DialogActions>
+        }
+      >
+        <form
+          id="profile-change-password-form"
+          onSubmit={handleChangePassword}
+          className="space-y-4"
+          autoComplete="off"
+        >
+          <DialogSection>
+            <Input
+              type="password"
+              label="Current password"
+              value={currentPassword}
+              onChange={(ev) => setCurrentPassword(ev.target.value)}
+              className="bg-surface"
+              autoComplete="current-password"
+            />
+            <Input
+              type="password"
+              label="New password"
+              value={newPassword}
+              onChange={(ev) => setNewPassword(ev.target.value)}
+              className="bg-surface"
+              autoComplete="new-password"
+            />
+            <Input
+              type="password"
+              label="Confirm new password"
+              value={confirmPassword}
+              onChange={(ev) => setConfirmPassword(ev.target.value)}
+              className="bg-surface"
+              autoComplete="new-password"
+            />
+          </DialogSection>
         </form>
       </Modal>
       <Modal
         isOpen={notificationsModalOpen}
         onClose={() => setNotificationsModalOpen(false)}
         title="Notifications"
+        footer={
+          <DialogActions>
+            <Button
+              type="button"
+              variant="outline"
+              size="md"
+              onClick={() => setNotificationsModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogActions>
+        }
       >
         <DialogSection>
           <NotificationSettingsForm />
         </DialogSection>
-        <DialogActions>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setNotificationsModalOpen(false)}
-          >
-            Close
-          </Button>
-        </DialogActions>
       </Modal>
       </div>
     );

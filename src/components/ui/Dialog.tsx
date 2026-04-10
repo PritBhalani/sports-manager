@@ -23,7 +23,7 @@ export default function Dialog({
   children,
   footer,
   maxWidthClassName = "max-w-lg",
-  bodyClassName = "p-4 sm:p-5",
+  bodyClassName = "space-y-5 p-4 sm:p-5",
   closeOnBackdrop = true,
 }: DialogProps) {
   const { acquire, release } = useDialogManager();

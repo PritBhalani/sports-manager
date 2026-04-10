@@ -5,7 +5,16 @@ export { default as DataTable } from "./DataTable";
 export { default as FilterBar } from "./FilterBar";
 export { default as Dialog } from "./Dialog";
 export { DialogProvider } from "./DialogContext";
-export { DialogSection, DialogFormRow, DialogActions } from "./dialogParts";
+export {
+  DIALOG_BODY_DEFAULT,
+  DIALOG_BODY_COMPACT,
+  DialogSection,
+  DialogFormRow,
+  DialogActions,
+  DialogPanel,
+  DialogPanelHeader,
+  DialogPanelBody,
+} from "./dialogParts";
 export { default as Modal } from "./Modal";
 export { default as PageHeader } from "./PageHeader";
 export { default as Switch } from "./Switch";
