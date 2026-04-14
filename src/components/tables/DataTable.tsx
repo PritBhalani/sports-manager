@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 const tableBase = "min-w-full border-collapse";
 
@@ -74,13 +74,15 @@ export function TableBody({ children }: { children: ReactNode }) {
 export function TableRow({
   children,
   className = "",
+  ...props
 }: {
   children: ReactNode;
   className?: string;
-}) {
+} & ComponentPropsWithoutRef<"tr">) {
   return (
     <tr
       className={`bg-surface transition-colors hover:bg-surface-muted ${className}`}
+      {...props}
     >
       {children}
     </tr>
@@ -91,10 +93,14 @@ export function TableCell({
   children,
   className = "",
   align = "left",
+  colSpan,
+  rowSpan,
 }: {
   children: ReactNode;
   className?: string;
   align?: "left" | "center" | "right";
+  colSpan?: number;
+  rowSpan?: number;
 }) {
   const alignClass =
     align === "center"
@@ -104,6 +110,8 @@ export function TableCell({
         : "text-left";
   return (
     <td
+      colSpan={colSpan}
+      rowSpan={rowSpan}
       className={`px-5 py-4 text-sm text-foreground ${alignClass} ${className}`}
     >
       {children}

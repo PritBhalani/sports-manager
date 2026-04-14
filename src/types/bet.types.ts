@@ -8,10 +8,15 @@ export type LiveBetSearchQuery = {
   eventTypeId?: string;
   marketTypeCode?: string;
   eventName?: string;
+  /** Scope live bets to one event (e.g. POST /bet/getlivebetsbyeventid). */
+  eventId?: string;
+  /** Optional: narrow event-scoped live bets to one market (omit = all markets). */
+  marketId?: string;
   oddsfrom?: number;
   oddsto?: number;
   stakefrom?: number;
   staketo?: number;
+  /** Often `"1"` = Back, `"2"` = Lay, `"-1"` = all sides (see sports bet list). */
   side?: string;
   inplay?: boolean;
 };

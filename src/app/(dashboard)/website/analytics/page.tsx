@@ -4,12 +4,10 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
-  type Dispatch,
-  type SetStateAction,
 } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PlayCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import {
   PageHeader,
@@ -28,205 +26,23 @@ import { getEventType, type EventTypeRecord } from "@/services/eventtype.service
 import {
   getMarketByEventTypeId,
   type MarketByEventRow,
-  type MarketByEventMarketRunnerEntry,
 } from "@/services/position.service";
 import { getLiveBets } from "@/services/bet.service";
-import { getAuthSession } from "@/store/authStore";
 import { formatCurrency } from "@/utils/formatCurrency";
-
-const WS_SINGLETON_KEY = "__sportsManagerWebsiteAnalyticsWs";
-
-const DEFAULT_WS =
-  (typeof process !== "undefined"
-    ? (process.env.NEXT_PUBLIC_WEBSITE_ANALYTICS_WS_URL as string | undefined) ||
-      (process.env.NEXT_PUBLIC_WS_URL as string | undefined)
-    : undefined) || "wss://ws1bde3a1550.one247.io/ws";
-
-/** Outbound subscribe for match-odds markets; server pushes runner books as `wsMessageType: 8`. */
-const WS_SUBSCRIBE_MARKETS_MESSAGE_TYPE = 7;
-
-function serializeSubscribeMarketsMessage(mids: string[]): string {
-  return JSON.stringify({
-    MessageType: WS_SUBSCRIBE_MARKETS_MESSAGE_TYPE,
-    Mids: mids,
-  });
-}
-
-/** WebSocket `wsMessageType` 8 — compressed price book per market (`data[]`). */
-type WsPriceLevel = {
-  price?: number;
-  size?: number;
-  p?: number;
-  s?: number;
-  v?: number;
-  /** Some feeds send `[decimalOdds, stake]` */
-  0?: number;
-  1?: number;
-};
-type WsRunnerBookRow = {
-  rId?: string;
-  rs?: number;
-  bp?: WsPriceLevel[];
-  lp?: WsPriceLevel[];
-};
-type WsMarketBookPayload = {
-  id?: string;
-  eid?: string;
-  ip?: boolean;
-  mr?: WsRunnerBookRow[];
-  /** Total matched / traded on market — when present from socket. */
-  tm?: number;
-  totalMatched?: number;
-  traded?: number;
-  volume?: number;
-  matched?: number;
-};
-
-function normWsType(v: unknown): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : NaN;
-}
-
-/** Detect API price-book array `{ wsMessageType: 8, data: [...] }`. */
-function isWsMarketBookPayloadArray(data: unknown): data is WsMarketBookPayload[] {
-  if (!Array.isArray(data) || data.length === 0) return false;
-  const first = data[0];
-  if (!first || typeof first !== "object") return false;
-  const mr = (first as WsMarketBookPayload).mr;
-  if (!Array.isArray(mr) || mr.length === 0) return false;
-  const r0 = mr[0];
-  if (!r0 || typeof r0 !== "object") return false;
-  return Array.isArray((r0 as WsRunnerBookRow).bp) || Array.isArray((r0 as WsRunnerBookRow).lp);
-}
-
-function mergePriceBooksPayload(
-  data: WsMarketBookPayload[],
-  setPriceBooks: Dispatch<SetStateAction<Record<string, WsMarketBookPayload>>>,
-) {
-  setPriceBooks((prev) => {
-    const next = { ...prev };
-    for (const row of data) {
-      if (row?.id) next[String(row.id)] = row;
-    }
-    return next;
-  });
-}
-
-/** Parse socket text; handle double-encoded JSON strings. */
-function parseWsJsonObject(raw: string): Record<string, unknown> | null {
-  let s = raw.trim();
-  for (let i = 0; i < 4; i++) {
-    try {
-      const v = JSON.parse(s) as unknown;
-      if (v && typeof v === "object" && !Array.isArray(v)) {
-        return v as Record<string, unknown>;
-      }
-      if (typeof v === "string") {
-        s = v;
-        continue;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-async function messageEventToText(ev: MessageEvent): Promise<string> {
-  const d = ev.data;
-  if (typeof d === "string") return d;
-  if (d instanceof Blob) return d.text();
-  if (d instanceof ArrayBuffer) return new TextDecoder().decode(d);
-  return String(d ?? "");
-}
-
-function formatLiquidity(size: number | undefined): string {
-  if (size == null || !Number.isFinite(size)) return "";
-  const n = Number(size);
-  if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  if (Math.abs(n) >= 100) return n.toFixed(0);
-  return n.toFixed(1);
-}
-
-/** Same scaling as `formatCurrency` — depth sizes from the feed are in exchange units. */
-function getDisplayCurrencyRate(): number {
-  const r = Number(getAuthSession()?.currency?.rate ?? 1);
-  return Number.isFinite(r) && r > 0 ? r : 1;
-}
-
-function coerceAmount(v: unknown): number | undefined {
-  if (v === undefined || v === null || v === "") return undefined;
-  const n =
-    typeof v === "string" ? parseFloat(v.replace(/,/g, "")) : Number(v);
-  if (!Number.isFinite(n)) return undefined;
-  return n;
-}
-
-/** Match-odds decimal prices are almost always in this band; stakes are often larger integers. */
-function isLikelyDecimalOdds(n: number): boolean {
-  return n >= 1.001 && n < 500;
-}
-
-/**
- * Some sockets send `price`/`size` reversed, or tuple `[odds, stake]`. Pick odds vs liquidity safely.
- */
-function applyOddsStakeHeuristic(
-  a: number | undefined,
-  b: number | undefined,
-): { price?: number; size?: number } {
-  if (a == null && b == null) return {};
-  if (b == null && a != null) return { price: a };
-  if (a == null && b != null) return { price: b };
-
-  let x = a!;
-  let y = b!;
-  const xOdds = isLikelyDecimalOdds(x);
-  const yOdds = isLikelyDecimalOdds(y);
-
-  if (yOdds && !xOdds) return { price: y, size: x };
-  if (xOdds && !yOdds) return { price: x, size: y };
-
-  if (xOdds && yOdds) {
-    const xFrac = x % 1 !== 0;
-    const yFrac = y % 1 !== 0;
-    if (xFrac && !yFrac && y >= x * 2) return { price: x, size: y };
-    if (yFrac && !xFrac && x >= y * 2) return { price: y, size: x };
-    const lo = Math.min(x, y);
-    const hi = Math.max(x, y);
-    if (isLikelyDecimalOdds(lo) && hi > lo * 5) return { price: lo, size: hi };
-    return { price: lo, size: hi };
-  }
-
-  const lo = Math.min(x, y);
-  const hi = Math.max(x, y);
-  if (isLikelyDecimalOdds(lo) && hi >= 100 && hi > lo * 5) return { price: lo, size: hi };
-  return { price: x, size: y };
-}
-
-function normalizePriceLevel(level: unknown): { price?: number; size?: number } {
-  if (level == null) return {};
-  if (Array.isArray(level) && level.length >= 2) {
-    return applyOddsStakeHeuristic(coerceAmount(level[0]), coerceAmount(level[1]));
-  }
-  if (typeof level !== "object") return {};
-  const o = level as Record<string, unknown>;
-  const a = coerceAmount(o.price ?? o.p ?? o.P ?? o.Price);
-  const b = coerceAmount(
-    o.size ?? o.s ?? o.sz ?? o.v ?? o.vol ?? o.Volume ?? o.stake,
-  );
-  if (a == null && b == null) return {};
-  return applyOddsStakeHeuristic(a, b);
-}
-
-function formatOddsPrice(n: number | undefined): string {
-  if (n == null || !Number.isFinite(n)) return "—";
-  if (n >= 100) return n.toFixed(2);
-  if (n % 1 === 0) return String(n);
-  const t = n.toFixed(3).replace(/\.?0+$/, "");
-  return t || "—";
-}
+import {
+  coerceAmount,
+  collectMatchOddsMarketIds,
+  findMatchOddsMarket,
+  formatLiquidity,
+  formatOddsPrice,
+  getDisplayCurrencyRate,
+  lookupRunnerBook,
+  normalizePriceLevel,
+  partitionMatchOddsRunners,
+  useWebsitePriceBookWs,
+  type WsMarketBookPayload,
+  type WsRunnerBookRow,
+} from "./_lib/websitePriceBook";
 
 /** Sum best back + best lay size across runners (liquidity proxy when API matched is missing). */
 function sumTopBookLiquidity(book: WsMarketBookPayload | undefined): number {
@@ -320,18 +136,6 @@ function formatEventWhen(value: unknown): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function lookupRunnerBook(
-  books: Record<string, WsMarketBookPayload>,
-  marketId: string | undefined,
-  runnerId: string | undefined,
-): WsRunnerBookRow | undefined {
-  if (!marketId || !runnerId) return undefined;
-  const m = books[marketId];
-  if (!m?.mr?.length) return undefined;
-  const rid = String(runnerId);
-  return m.mr.find((r) => String(r.rId) === rid);
 }
 
 function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
@@ -440,69 +244,6 @@ function eventTypeMeta(et: EventTypeRecord): { id: string; label: string } | nul
   return { id, label: name };
 }
 
-function isDrawRunner(name: string): boolean {
-  return /^the\s+draw$/i.test(name.trim()) || /^draw$/i.test(name.trim());
-}
-
-function partitionMatchOddsRunners(entries: MarketByEventMarketRunnerEntry[] | undefined) {
-  const list = Array.isArray(entries) ? entries : [];
-  const runners = list
-    .map((e) => ({
-      entry: e,
-      name: String(e.runner?.name ?? "").trim() || "—",
-    }))
-    .filter((x) => x.name !== "—");
-  const drawIdx = runners.findIndex((r) => isDrawRunner(r.name));
-  if (drawIdx >= 0) {
-    const others = runners.filter((_, i) => i !== drawIdx);
-    return {
-      col1: others[0] ?? null,
-      colX: runners[drawIdx] ?? null,
-      col2: others[1] ?? null,
-    };
-  }
-  return {
-    col1: runners[0] ?? null,
-    colX: null,
-    col2: runners[1] ?? null,
-  };
-}
-
-function findMatchOddsMarket(event: MarketByEventRow) {
-  const markets = Array.isArray(event.markets) ? event.markets : [];
-  return (
-    markets.find((m) => String(m.marketType ?? "").toUpperCase() === "MATCH_ODDS") ??
-    markets[0]
-  );
-}
-
-/** Match-odds market ids for WebSocket `MessageType` 7 subscription. */
-function collectMatchOddsMarketIds(rows: MarketByEventRow[]): string[] {
-  const ids = new Set<string>();
-  for (const ev of rows) {
-    const m = findMatchOddsMarket(ev);
-    if (m?.id != null && String(m.id).trim()) ids.add(String(m.id));
-  }
-  return [...ids];
-}
-
-/**
- * Server often sends `data` as a JSON string (e.g. wsMessageType 2). Unwrap recursively (bounded).
- */
-function unwrapWsData(raw: unknown, depth = 0): unknown {
-  if (raw == null || depth > 4) return raw;
-  if (typeof raw === "string") {
-    const s = raw.trim();
-    if (!s) return raw;
-    try {
-      return unwrapWsData(JSON.parse(s), depth + 1);
-    } catch {
-      return raw;
-    }
-  }
-  return raw;
-}
-
 type SportTab = { id: string; label: string };
 
 function buildSportTabs(list: EventTypeRecord[]): SportTab[] {
@@ -538,6 +279,7 @@ function buildSportTabs(list: EventTypeRecord[]): SportTab[] {
 }
 
 export default function WebsiteAnalyticsPage() {
+  const router = useRouter();
   const [eventTypes, setEventTypes] = useState<SportTab[]>([]);
   const [activeSportId, setActiveSportId] = useState<string>("-1");
   const [showAllEvents, setShowAllEvents] = useState(true);
@@ -551,15 +293,15 @@ export default function WebsiteAnalyticsPage() {
   const [liveBetTotal, setLiveBetTotal] = useState(0);
 
   const [refreshKey, setRefreshKey] = useState(0);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [wsAuthed, setWsAuthed] = useState(false);
-  const [wsNote, setWsNote] = useState<string | null>(null);
-  /** Live prices from WebSocket `wsMessageType` 8, keyed by market `id`. */
-  const [priceBooks, setPriceBooks] = useState<Record<string, WsMarketBookPayload>>(
-    {},
-  );
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const matchOddsMarketIds = useMemo(
+    () => collectMatchOddsMarketIds(marketRows),
+    [marketRows],
+  );
+  const { priceBooks, wsConnected, wsAuthed, wsNote } = useWebsitePriceBookWs({
+    marketIds: matchOddsMarketIds,
+    onRefreshSignal: () => setRefreshKey((k) => k + 1),
+  });
 
   useEffect(() => {
     getEventType()
@@ -622,218 +364,6 @@ export default function WebsiteAnalyticsPage() {
   useEffect(() => {
     loadLiveBets();
   }, [loadLiveBets]);
-
-  /** After auth, subscribe so the gateway streams updated `mr`/`bp`/`lp` for these market ids. */
-  useEffect(() => {
-    const w = wsRef.current;
-    if (!w || w.readyState !== WebSocket.OPEN || !wsAuthed) return;
-    const mids = collectMatchOddsMarketIds(marketRows);
-    if (mids.length === 0) return;
-    try {
-      w.send(serializeSubscribeMarketsMessage(mids));
-    } catch {
-      // ignore
-    }
-  }, [marketRows, wsConnected, wsAuthed]);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let pingTimer: number | null = null;
-    let cancelled = false;
-    let reconnectTimer: number | null = null;
-    let reconnectDelayMs = 2000;
-
-    const stopPing = () => {
-      if (pingTimer != null) {
-        window.clearInterval(pingTimer);
-        pingTimer = null;
-      }
-    };
-
-    const startPing = () => {
-      stopPing();
-      pingTimer = window.setInterval(() => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) return;
-        try {
-          ws.send(JSON.stringify({ messageType: 9 }));
-        } catch {
-          // ignore
-        }
-      }, 25000);
-    };
-
-    const getWsAuthPayload = (): { token: string; authToken: string } | null => {
-      const session = getAuthSession();
-      const token = String(session.token ?? "").trim();
-      const authToken = String(session.primaryToken ?? "").trim();
-      if (!token || !authToken) return null;
-      return { token, authToken };
-    };
-
-    const closeExistingSingleton = () => {
-      if (typeof window === "undefined") return;
-      const g = window as unknown as Record<string, unknown>;
-      const existing = g[WS_SINGLETON_KEY];
-      if (!existing || typeof existing !== "object") return;
-      const existingWs = (existing as { ws?: WebSocket }).ws;
-      if (!existingWs || existingWs.readyState === WebSocket.CLOSED) return;
-      try {
-        existingWs.close();
-      } catch {
-        // ignore
-      }
-    };
-
-    const bumpRefresh = () => setRefreshKey((k) => k + 1);
-
-    const scheduleReconnect = () => {
-      if (reconnectTimer != null) window.clearTimeout(reconnectTimer);
-      reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = null;
-        if (cancelled) return;
-        connect();
-      }, reconnectDelayMs);
-      reconnectDelayMs = Math.min(reconnectDelayMs * 2, 30000);
-    };
-
-    const connect = () => {
-      if (cancelled) return;
-      const auth = getWsAuthPayload();
-      if (!auth) {
-        setWsConnected(false);
-        setWsAuthed(false);
-        setWsNote("Sign in to connect WebSocket.");
-        return;
-      }
-      closeExistingSingleton();
-      setWsNote(null);
-      try {
-        ws = new WebSocket(DEFAULT_WS);
-      } catch {
-        setWsLast();
-        scheduleReconnect();
-        return;
-      }
-      if (typeof window !== "undefined") {
-        const g = window as unknown as Record<string, unknown>;
-        g[WS_SINGLETON_KEY] = { ws };
-      }
-
-      ws.onopen = () => {
-        if (cancelled) return;
-        reconnectDelayMs = 2000;
-        wsRef.current = ws;
-        setWsConnected(true);
-        setWsAuthed(false);
-        stopPing();
-        const auth = getWsAuthPayload();
-        if (!auth) return;
-        try {
-          ws?.send(JSON.stringify({ ...auth, messageType: 1 }));
-        } catch {
-          // ignore
-        }
-      };
-
-      ws.onmessage = (ev) => {
-        if (cancelled) return;
-        void (async () => {
-          const raw = await messageEventToText(ev);
-          if (!raw.trim()) return;
-
-          const msg = parseWsJsonObject(raw);
-          if (!msg) {
-            try {
-              const v = JSON.parse(raw.trim()) as unknown;
-              if (Array.isArray(v) && isWsMarketBookPayloadArray(v)) {
-                mergePriceBooksPayload(v, setPriceBooks);
-              }
-            } catch {
-              /* ignore */
-            }
-            return;
-          }
-
-          let t = normWsType(
-            msg.wsMessageType ?? msg.MessageType ?? msg["WsMessageType"],
-          );
-          let data: unknown = unwrapWsData(msg.data);
-
-          /* Nested envelope e.g. data: { wsMessageType: 8, data: [...] } */
-          if (data && typeof data === "object" && !Array.isArray(data)) {
-            const inner = data as Record<string, unknown>;
-            const innerT = normWsType(inner.wsMessageType ?? inner.MessageType);
-            if (innerT === 8 && inner.data !== undefined) {
-              t = 8;
-              data = unwrapWsData(inner.data);
-            }
-          }
-
-          if (t === 1) {
-            const authedOk =
-              data === true ||
-              data === "true" ||
-              (msg.success === true && (data === true || data === undefined));
-            if (authedOk) {
-              setWsAuthed(true);
-              startPing();
-            }
-            return;
-          }
-
-          if (t === 9) return;
-
-          if (t === 2 || t === 4) {
-            bumpRefresh();
-            return;
-          }
-
-          const arr = Array.isArray(data) ? data : null;
-          if (
-            arr &&
-            isWsMarketBookPayloadArray(arr) &&
-            (t === 8 || (!Number.isFinite(t) && msg.success === true))
-          ) {
-            mergePriceBooksPayload(arr, setPriceBooks);
-          }
-        })();
-      };
-
-      ws.onerror = () => {
-        setWsLast();
-      };
-
-      ws.onclose = () => {
-        wsRef.current = null;
-        setWsConnected(false);
-        setWsAuthed(false);
-        stopPing();
-        if (!cancelled) scheduleReconnect();
-      };
-
-      function setWsLast() {
-        setWsNote("WebSocket error — retrying…");
-      }
-    };
-
-    connect();
-
-    return () => {
-      cancelled = true;
-      wsRef.current = null;
-      stopPing();
-      if (reconnectTimer != null) window.clearTimeout(reconnectTimer);
-      try {
-        ws?.close();
-      } catch {
-        // ignore
-      }
-      if (typeof window !== "undefined") {
-        const g = window as unknown as Record<string, unknown>;
-        delete g[WS_SINGLETON_KEY];
-      }
-    };
-  }, []);
 
   const emptyFilterMsg =
     !marketsLoading &&
@@ -975,9 +505,43 @@ export default function WebsiteAnalyticsPage() {
                     const matched = readMatchedDisplay(ev, wsBook);
                     const matchedLabel =
                       matched.source === "liquidity" ? "Book liquidity" : "Matched";
+                    const eventIdStr =
+                      ev.id != null && String(ev.id).trim()
+                        ? String(ev.id).trim()
+                        : pickStr(ev as Record<string, unknown>, [
+                            "eventId",
+                            "_id",
+                          ]) ?? "";
+                    const canOpenEvent = Boolean(eventIdStr);
+                    const openEventDetail = () => {
+                      if (!eventIdStr) return;
+                      router.push(
+                        `/website/analytics/event/${encodeURIComponent(eventIdStr)}?eventTypeId=${encodeURIComponent(activeSportId)}`,
+                      );
+                    };
 
                     return (
-                      <TableRow key={String(ev.id ?? title)}>
+                      <TableRow
+                        key={String(ev.id ?? title)}
+                        className={canOpenEvent ? "cursor-pointer" : undefined}
+                        onClick={canOpenEvent ? openEventDetail : undefined}
+                        onKeyDown={
+                          canOpenEvent
+                            ? (e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  openEventDetail();
+                                }
+                              }
+                            : undefined
+                        }
+                        tabIndex={canOpenEvent ? 0 : undefined}
+                        aria-label={
+                          canOpenEvent
+                            ? `Open market view for ${title}`
+                            : undefined
+                        }
+                      >
                         <TableCell className="align-top">
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                             <div className="min-w-0 flex-1 space-y-1">

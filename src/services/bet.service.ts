@@ -46,3 +46,38 @@ export async function getLiveBets(
     pageSize: inner?.pageSize ?? params.pageSize ?? 50,
   };
 }
+
+/** POST /bet/getlivebetsbyeventid — live bets for one event; optional marketId narrows to one market */
+export async function getLiveBetsByEventId(
+  params: ListParams,
+  searchQuery: LiveBetSearchQuery & { eventId: string },
+  id?: string
+): Promise<GetLiveBetsResponse> {
+  type Envelope = {
+    data?: {
+      result?: LiveBetRow[];
+      total?: number;
+      pageIndex?: number;
+      pageSize?: number;
+    };
+  };
+  const res = await apiPost<Envelope>("/bet/getlivebetsbyeventid", {
+    params: {
+      pageSize: params.pageSize ?? 50,
+      groupBy: params.groupBy ?? "",
+      page: params.page ?? 1,
+      orderBy: params.orderBy ?? "",
+      orderByDesc: params.orderByDesc ?? false,
+      ...params,
+    },
+    searchQuery,
+    ...(id ? { id } : {}),
+  });
+  const inner = res?.data;
+  return {
+    items: inner?.result ?? [],
+    total: inner?.total ?? 0,
+    pageIndex: inner?.pageIndex ?? params.page ?? 1,
+    pageSize: inner?.pageSize ?? params.pageSize ?? 50,
+  };
+}

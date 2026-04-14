@@ -32,10 +32,84 @@ export type MarketByEventMarket = {
   name?: string;
   marketType?: string;
   inPlay?: boolean;
+  /** 2 = ball running (one247 `tbody.ball`). */
+  temporaryStatus?: number;
+  /** 3 = suspended, 4 = closed (backend-specific). */
+  marketStatus?: number;
+  bettingType?: number;
   marketRunner?: MarketByEventMarketRunnerEntry[];
   eventType?: { id?: string };
   [key: string]: unknown;
 };
+
+/**
+ * Merge `markets[]` from two GET /position/getmarketbyeventtypeid rows for the same event.
+ * Some backends return a fuller catalog when `allFlag` is false vs true.
+ */
+export function mergeMarketCatalogForEvent(
+  primary: MarketByEventRow | null | undefined,
+  secondary: MarketByEventRow | null | undefined,
+): MarketByEventRow | null {
+  if (!primary && !secondary) return null;
+  if (!primary) return secondary ?? null;
+  if (!secondary) return primary;
+  const byId = new Map<string, MarketByEventMarket>();
+  const add = (m: MarketByEventMarket) => {
+    const id = m?.id != null ? String(m.id).trim() : "";
+    if (id) {
+      if (!byId.has(id)) byId.set(id, m);
+      return;
+    }
+    const k = `__noid_${byId.size}_${String(m.name ?? "")}`;
+    byId.set(k, m);
+  };
+  for (const m of primary.markets ?? []) add(m);
+  for (const m of secondary.markets ?? []) add(m);
+  return { ...primary, markets: [...byId.values()] };
+}
+
+/** Append/replace markets on an event row by market `id` (deduped). */
+export function mergeMarketsIntoEvent(
+  event: MarketByEventRow,
+  extra: MarketByEventMarket[],
+): MarketByEventRow {
+  const byId = new Map<string, MarketByEventMarket>();
+  const add = (m: MarketByEventMarket) => {
+    const id = m?.id != null ? String(m.id).trim() : "";
+    if (id) {
+      byId.set(id, m);
+      return;
+    }
+    const k = `__noid_${byId.size}_${String(m.name ?? "")}`;
+    byId.set(k, m);
+  };
+  for (const m of event.markets ?? []) add(m);
+  for (const m of extra) add(m);
+  return { ...event, markets: [...byId.values()] };
+}
+
+/**
+ * GET /position/getmarketpositionbymarketid/{marketId}
+ * Returns full market catalogue fields (Match Odds, runners, marketType) — `data` may be object or array.
+ */
+export async function getMarketCatalogByMarketId(
+  marketId: string,
+): Promise<MarketByEventMarket | null> {
+  const raw = await apiGet<
+    | { data?: MarketByEventMarket | MarketByEventMarket[]; success?: boolean }
+    | MarketByEventMarket
+  >(`/position/getmarketpositionbymarketid/${encodeURIComponent(marketId)}`);
+  if (!raw || typeof raw !== "object") return null;
+  if ("data" in raw && raw.data !== undefined) {
+    const d = raw.data;
+    if (Array.isArray(d)) return (d[0] as MarketByEventMarket | undefined) ?? null;
+    return d as MarketByEventMarket;
+  }
+  if ("id" in raw && ("marketRunner" in raw || "name" in raw)) {
+    return raw as MarketByEventMarket;
+  }
+  return null;
+}
 
 /** GET /position/geteventtypeposition */
 export async function getEventTypePosition(): Promise<PositionRecord[]> {

@@ -1,0 +1,329 @@
+/* One247-style exchange / session ladder (matches .table-score semantics). */
+
+.table-score {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #fff;
+  table-layout: fixed;
+}
+
+.table-score .bet-all th,
+.table-score .bet-all td {
+  border: 1px solid #c0c0c0;
+  padding: 6px 4px;
+  vertical-align: middle;
+  background: #ececec;
+  font-weight: 700;
+}
+
+.table-score .th-col {
+  text-align: left;
+  font-weight: 700;
+}
+
+.table-score .sb-head-spacer {
+  border: 1px solid #c0c0c0;
+  padding: 0;
+  background: #ececec;
+}
+
+.table-score .sb-head-mid {
+  border: 1px solid #c0c0c0;
+  background: #ececec;
+}
+
+.table-score .sb-back-lay-labels th {
+  border: 1px solid #c0c0c0;
+  padding: 6px 4px;
+  vertical-align: middle;
+  background: #f2f2f2;
+  color: #444;
+}
+
+.table-score .sb-corner {
+  width: 22%;
+  min-width: 7rem;
+}
+
+.table-score .tr-data th.match-title,
+.table-score .tr-data td {
+  border: 1px solid #c0c0c0;
+  padding: 2px;
+  vertical-align: middle;
+}
+
+.table-score .match-title {
+  text-align: left;
+  font-weight: 700;
+  background: #fafafa;
+  padding: 8px 10px !important;
+}
+
+.table-score .match-title p {
+  margin: 0;
+}
+
+.table-score .tr-data.even .match-title {
+  background: #f5f5f5;
+}
+
+/* Back: light → strong toward the centre (back-1). */
+.table-score .back-3 {
+  background: #e2f5ff !important;
+}
+.table-score .back-2 {
+  background: #d6eefc !important;
+}
+.table-score .back-1 {
+  background: #b5e1ff !important;
+}
+
+/* Lay: strong at lay-1 (touching back), lighter outward. */
+.table-score .lay-1 {
+  background: #f9b9c9 !important;
+}
+.table-score .lay-2 {
+  background: #fcd5df !important;
+}
+.table-score .lay-3 {
+  background: #fee2e9 !important;
+}
+
+/* Empty ladder slot — no back/lay tint (live site). */
+.table-score .sb-odds-neutral {
+  background: #fff !important;
+}
+
+.table-score .bet-all .th-col {
+  vertical-align: top;
+}
+
+.table-score .sb-market-title {
+  display: block;
+  line-height: 1.3;
+}
+
+.table-score .sb-market-icons {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 4px;
+}
+
+.table-score .align-c {
+  text-align: center;
+}
+
+.table-score .align-l {
+  text-align: left;
+}
+
+.table-score .align-r {
+  text-align: right;
+}
+
+.table-score a.price,
+.table-score button.price,
+.table-score .price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 4px;
+  color: #111;
+  text-decoration: none;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: default;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  font: inherit;
+  appearance: none;
+}
+
+.table-score a.price.onlyprice,
+.table-score .price.onlyprice {
+  min-height: 2.25rem;
+}
+
+.table-score .size {
+  display: block;
+  font-weight: 600;
+  font-size: 11px;
+  color: #555;
+  line-height: 1.2;
+}
+
+.table-score .sb-odds-price {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.table-score .size.percentage {
+  color: #b91c1c;
+}
+
+.table-score .sb-ball-running {
+  padding: 8px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #0d9488;
+  text-transform: uppercase;
+  background: #f4f4f5 !important;
+}
+
+/* Fancy tab bar (Bootstrap nav-tabs feel). */
+.sb-nav-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  gap: 2px;
+  background: #e8e8e8;
+  border-bottom: 1px solid #c0c0c0;
+}
+
+.sb-nav-tabs li {
+  margin: 0;
+}
+
+.sb-nav-tabs li > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  font-weight: 600;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.sb-nav-tabs li.active > button {
+  background: #4a4a4a;
+  color: #fff;
+  border-color: #3d3d3d;
+}
+
+.sb-nav-tabs .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #d4d4d4;
+  color: #262626;
+}
+
+.sb-nav-tabs li.active .badge {
+  background: #737373;
+  color: #fff;
+}
+
+.dark .table-score {
+  background: rgb(9 9 11 / 0.35);
+}
+
+.dark .table-score .bet-all th,
+.dark .table-score .bet-all td,
+.dark .table-score .sb-head-spacer,
+.dark .table-score .sb-head-mid {
+  background: rgb(39 39 42 / 0.85);
+  border-color: rgb(63 63 70);
+  color: rgb(244 244 245);
+}
+
+.dark .table-score .sb-back-lay-labels th {
+  background: rgb(24 24 27 / 0.9);
+  border-color: rgb(63 63 70);
+  color: rgb(161 161 170);
+}
+
+.dark .table-score .match-title {
+  background: rgb(24 24 27 / 0.95);
+  color: rgb(250 250 250);
+}
+
+.dark .table-score .tr-data.even .match-title {
+  background: rgb(39 39 42 / 0.6);
+}
+
+.dark .table-score .back-3 {
+  background: rgb(30 58 138 / 0.35) !important;
+}
+.dark .table-score .back-2 {
+  background: rgb(30 64 175 / 0.45) !important;
+}
+.dark .table-score .back-1 {
+  background: rgb(37 99 235 / 0.55) !important;
+}
+.dark .table-score .lay-1 {
+  background: rgb(157 23 77 / 0.45) !important;
+}
+.dark .table-score .lay-2 {
+  background: rgb(131 24 67 / 0.35) !important;
+}
+.dark .table-score .lay-3 {
+  background: rgb(88 28 28 / 0.3) !important;
+}
+
+.dark .table-score .sb-odds-neutral {
+  background: rgb(24 24 27 / 0.25) !important;
+}
+
+.dark .table-score a.price,
+.dark .table-score button.price,
+.dark .table-score .price {
+  color: rgb(250 250 250);
+}
+
+.dark .table-score .size {
+  color: rgb(212 212 216);
+}
+
+.dark .table-score .size.percentage {
+  color: rgb(252 165 165);
+}
+
+.dark .table-score .sb-ball-running {
+  background: rgb(39 39 42 / 0.8) !important;
+  color: rgb(45 212 191);
+}
+
+.dark .sb-nav-tabs {
+  background: rgb(39 39 42);
+  border-bottom-color: rgb(63 63 70);
+}
+
+.dark .sb-nav-tabs li > button {
+  color: rgb(212 212 216);
+}
+
+.dark .sb-nav-tabs li.active > button {
+  background: rgb(82 82 91);
+  color: #fff;
+  border-color: rgb(63 63 70);
+}
+
+.dark .sb-nav-tabs .badge {
+  background: rgb(63 63 70);
+  color: rgb(228 228 231);
+}
+
+.dark .sb-nav-tabs li.active .badge {
+  background: rgb(82 82 91);
+  color: #fff;
+}
