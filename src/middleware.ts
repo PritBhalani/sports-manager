@@ -1,9 +1,8 @@
 /**
- * Next.js 16: route protection (replaces middleware.ts).
+ * Cloudflare-compatible route protection middleware.
  * Redirects to /login when session cookie is missing on protected paths.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { apiConfig } from "@/config/api.config";
 
 const PROTECTED_PREFIXES = [
   "/dashboard",
@@ -18,16 +17,17 @@ const PROTECTED_PREFIXES = [
   "/settings",
 ];
 
+const AUTH_COOKIE_NAME = "sm_session";
+
 function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
-  const cookieName = apiConfig.authCookieName;
-  const hasSession = request.cookies.has(cookieName) && request.cookies.get(cookieName)?.value;
+  const hasSession = request.cookies.has(AUTH_COOKIE_NAME);
 
   if (!hasSession) {
     const loginUrl = new URL("/login", request.url);
