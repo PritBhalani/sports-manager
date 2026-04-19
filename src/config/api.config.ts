@@ -3,7 +3,7 @@ const isBrowser = typeof window !== "undefined";
 
 const upstreamBaseUrl =
   (env?.NEXT_PUBLIC_API_BASE as string) ||
-  "https://5043ee2d3639.igamingpro.app";
+  "https://f768dafd155e.drpapaya.in";
 
 const baseUrl = isBrowser ? "/api/backend" : upstreamBaseUrl;
 export const apiConfig = {
