@@ -149,6 +149,7 @@ export async function getCaptcha(): Promise<CaptchaResponse> {
   const url = `${apiConfig.baseUrl}${AUTH}/captcha`;
   const res = await fetch(url, {
     method: "GET",
+    headers: { "Content-Type": "application/json" },
   });
   if (!res.ok) throw new Error(`Captcha error ${res.status}: ${res.statusText}`);
   const json: unknown = await res.json();
@@ -177,6 +178,7 @@ export async function login(
   const res = await fetch(url, {
     method: "POST",
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Basic ${basic}`,
     },
     body: JSON.stringify({

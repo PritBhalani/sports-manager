@@ -27,7 +27,7 @@ export type ApiMutationOptions = {
 
 function authHeaders(): Record<string, string> {
   const t = getAuthTokens();
-  const h: Record<string, string> = {};
+  const h: Record<string, string> = { "Content-Type": "application/json" };
   if (t.primaryToken) h["Primary-Token"] = t.primaryToken;
   if (t.token) h["Token"] = t.token;
   if (t.imei) h["Content-Decoding"] = t.imei;
