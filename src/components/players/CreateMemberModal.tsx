@@ -20,6 +20,7 @@ import {
 export type CreateMemberModalProps = {
   open: boolean;
   onClose: () => void;
+  parentId?: string | null;
   /** Called after successful create (refresh list, etc.). */
   onCreated?: () => void;
 };
@@ -27,6 +28,7 @@ export type CreateMemberModalProps = {
 export default function CreateMemberModal({
   open,
   onClose,
+  parentId,
   onCreated,
 }: CreateMemberModalProps) {
   const [codeLoading, setCodeLoading] = useState(false);
@@ -73,13 +75,13 @@ export default function CreateMemberModal({
   useEffect(() => {
     if (!open) return;
     resetForm();
-    const parentId = getSessionMemberId();
-    if (!parentId) {
+    const resolvedParentId = parentId?.trim() || getSessionMemberId();
+    if (!resolvedParentId) {
       setFormError("Not logged in. Cannot load user code.");
       return;
     }
     setCodeLoading(true);
-    getNextUserCode(parentId)
+    getNextUserCode(resolvedParentId)
       .then((code) => {
         const full = code.trim();
         if (full.length >= 2) {
@@ -96,7 +98,7 @@ export default function CreateMemberModal({
         setFormError("Could not load next user code.");
       })
       .finally(() => setCodeLoading(false));
-  }, [open, resetForm]);
+  }, [open, parentId, resetForm]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,8 +123,8 @@ export default function CreateMemberModal({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    const parentId = getSessionMemberId();
-    if (!parentId) {
+    const resolvedParentId = parentId?.trim() || getSessionMemberId();
+    if (!resolvedParentId) {
       setFormError("Not logged in.");
       return;
     }
@@ -170,7 +172,7 @@ export default function CreateMemberModal({
           pt: pt.trim() || "0",
           notes: notes.trim(),
           userCode: assembledUserCode,
-          parentId,
+          parentId: resolvedParentId,
         },
         { showSuccessToast: true },
       );
@@ -259,10 +261,10 @@ export default function CreateMemberModal({
                     />
                   </div>
                 )}
-                <p className="text-xs text-muted">
+                {/* <p className="text-xs text-muted">
                   Full code:{" "}
                   <span className="font-mono text-foreground">{assembledUserCode || "—"}</span>
-                </p>
+                </p> */}
               </div>
 
               <Input

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import {
   PageHeader,
@@ -67,7 +67,7 @@ function statusForPlayerType(playerType: string): string {
 function rowStatusLabel(status: unknown): { text: string; active: boolean } {
   const n = typeof status === "number" ? status : Number(status);
   if (n === 2 || n === 1) return { text: "ACTIVE", active: true };
-  if (n === -1 || Number.isNaN(n)) return { text: "INACTIVE", active: false };
+  if (n === -1 || n === 3 || Number.isNaN(n)) return { text: "INACTIVE", active: false };
   return { text: String(status ?? "—"), active: false };
 }
 
@@ -127,6 +127,8 @@ function DownlineExpansionRows({
       </TableRow>
     );
   }
+
+  console.log(downlineRows[parentId]);
   return (
     <DownlineTableRows
       records={list}
@@ -1108,11 +1110,48 @@ export default function PlayersPage() {
   });
   const [createMemberOpen, setCreateMemberOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+  const [activeExpandedRowId, setActiveExpandedRowId] = useState<string | null>(null);
   const [downlineRows, setDownlineRows] = useState<Record<string, DownlineRecord[]>>({});
   const [downlineLoading, setDownlineLoading] = useState<Record<string, boolean>>({});
   const [downlineError, setDownlineError] = useState<Record<string, string | null>>({});
   const [bettingLockConfirm, setBettingLockConfirm] =
     useState<BettingLockConfirmState>(INITIAL_BETTING_LOCK_CONFIRM);
+
+  const parentByChildId = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const [parentId, list] of Object.entries(downlineRows)) {
+      for (const row of list ?? []) {
+        const childId = String((row as { id?: unknown }).id ?? "");
+        if (!childId) continue;
+        map[childId] = parentId;
+      }
+    }
+    return map;
+  }, [downlineRows]);
+
+  const findUserTypeById = useCallback(
+    (id: string): number => {
+      if (!id) return 0;
+      const fromTop = rows.find((r) => String(r.id ?? "") === id);
+      if (fromTop) return Number(fromTop.userType ?? 0);
+      for (const list of Object.values(downlineRows)) {
+        const hit = list?.find((r) => String((r as { id?: unknown }).id ?? "") === id);
+        if (hit) return Number((hit as { userType?: unknown }).userType ?? 0);
+      }
+      return 0;
+    },
+    [downlineRows, rows],
+  );
+
+  const createMemberButtonLabel = (() => {
+    if (!activeExpandedRowId) return "New MA";
+    const userType = findUserTypeById(activeExpandedRowId);
+    // Common hierarchy: 3=MA, 4=AG, 5=PL (leaf). If we expand an AG, we create a PL.
+    if (userType === 4) return "New PL";
+    return "New AG";
+  })();
+
+  const createMemberParentId = activeExpandedRowId || getSessionMemberId() || null;
 
   const patchBettingLockInList = useCallback((userId: string, bettingLock: boolean) => {
     setRows((prev) =>
@@ -1202,6 +1241,7 @@ export default function PlayersPage() {
         setRows(Array.isArray(res.data) ? res.data : []);
         setTotal(typeof res.total === "number" ? res.total : 0);
         setExpandedRows({});
+        setActiveExpandedRowId(null);
         setDownlineRows({});
         setDownlineLoading({});
         setDownlineError({});
@@ -1209,6 +1249,7 @@ export default function PlayersPage() {
       .catch((e) => {
         setRows([]);
         setTotal(0);
+        setActiveExpandedRowId(null);
         setError(e instanceof Error ? e.message : "Failed to load players.");
       })
       .finally(() => setLoading(false));
@@ -1221,12 +1262,27 @@ export default function PlayersPage() {
   const toggleDownline = async (parentId: string) => {
     if (!parentId) return;
     const currentlyOpen = Boolean(expandedRows[parentId]);
+
+    const ancestorIds: string[] = [];
+    let cursor = parentByChildId[parentId];
+    while (cursor) {
+      ancestorIds.unshift(cursor);
+      cursor = parentByChildId[cursor];
+    }
+
     if (currentlyOpen) {
-      setExpandedRows((prev) => ({ ...prev, [parentId]: false }));
+      const next: Record<string, boolean> = {};
+      for (const id of ancestorIds) next[id] = true;
+      setExpandedRows(next);
+      setActiveExpandedRowId(ancestorIds.at(-1) ?? null);
       return;
     }
 
-    setExpandedRows((prev) => ({ ...prev, [parentId]: true }));
+    const next: Record<string, boolean> = {};
+    for (const id of ancestorIds) next[id] = true;
+    next[parentId] = true;
+    setExpandedRows(next);
+    setActiveExpandedRowId(parentId);
     if (downlineRows[parentId]) return;
 
     setDownlineLoading((prev) => ({ ...prev, [parentId]: true }));
@@ -1694,7 +1750,7 @@ export default function PlayersPage() {
                       onClick={() => setCreateMemberOpen(true)}
                       className="flex h-9 max-w-max items-center rounded-md bg-primary px-4 text-sm font-medium text-white"
                     >
-                      Create
+                      {createMemberButtonLabel}
                     </button>
                   </div>
                 </div>
@@ -2030,6 +2086,7 @@ export default function PlayersPage() {
       <CreateMemberModal
         open={createMemberOpen}
         onClose={() => setCreateMemberOpen(false)}
+        parentId={createMemberParentId}
         onCreated={() => {
           setPage(1);
           loadDownline();
