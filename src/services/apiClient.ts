@@ -27,7 +27,7 @@ export type ApiMutationOptions = {
 
 function authHeaders(): Record<string, string> {
   const t = getAuthTokens();
-  const h: Record<string, string> = { "Content-Type": "application/json" };
+  const h: Record<string, string> = {};
   if (t.primaryToken) h["Primary-Token"] = t.primaryToken;
   if (t.token) h["Token"] = t.token;
   if (t.imei) h["Content-Decoding"] = t.imei;
@@ -192,7 +192,6 @@ async function apiRequest<T>(
   const res = await fetch(url, {
     method,
     headers: authHeaders(),
-    credentials: "include",
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   return parseJsonResponse<T>(method, path, res, options);
