@@ -8,6 +8,8 @@ export type LiveBetSearchQuery = {
   eventTypeId?: string;
   marketTypeCode?: string;
   eventName?: string;
+  /** Filter live bets by member login (POST /bet/getlivebets). */
+  username?: string;
   /** Scope live bets to one event (e.g. POST /bet/getlivebetsbyeventid). */
   eventId?: string;
   /** Optional: narrow event-scoped live bets to one market (omit = all markets). */

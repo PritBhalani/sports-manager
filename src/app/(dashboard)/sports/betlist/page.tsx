@@ -25,6 +25,7 @@ import {
   type MarketTypeMapping,
 } from "@/services/market.service";
 import { getLiveBets, type LiveBetRow } from "@/services/bet.service";
+import { formatOddsPrice } from "@/app/(dashboard)/website/analytics/_lib/websitePriceBook";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
 import { getAuthSession } from "@/store/authStore";
@@ -138,7 +139,7 @@ export default function SportsBetlistPage() {
         marketTypeCode: marketTypeCode || "",
         stakefrom: stakeInputToApi(stakeFrom, rate),
         staketo: stakeInputToApi(stakeTo, rate),
-        eventName: memberName.trim() ? memberName.trim() : undefined,
+        username: memberName.trim() ? memberName.trim() : undefined,
       },
     )
       .then((res) => {
@@ -501,12 +502,27 @@ export default function SportsBetlistPage() {
                 const member = String(user.username ?? user.userCode ?? "—");
                 const eventName = String(event.name ?? "—");
                 const marketName = String(market.name ?? "—");
-                const selection = String(r.runnerName ?? "—");
-                const oddReq = Number(r.price ?? 0);
-                const avgMatched = Number(r.avgPrice ?? r.avgMatched ?? 0);
+                const runnerLabel = String(r.runnerName ?? "").trim();
+                const linePrice = Number(r.price ?? 0);
+                const selection =
+                  runnerLabel && Number.isFinite(linePrice) && linePrice !== 0
+                    ? `${formatOddsPrice(linePrice)} ${runnerLabel}`
+                    : runnerLabel || "—";
+                const sizeTotal = Number(r.size ?? 0);
                 const matched = Number(r.sizeMatched ?? 0);
+                const oddReqStake = sizeTotal || matched;
                 const unmatched = Number(r.sizeRemaining ?? 0);
-                const pnl = Number(r.pl ?? r.profitLiability ?? 0);
+                const directPl = r.pl ?? r.profitLiability;
+                const pnlFromDetails = Array.isArray(r.betDetails)
+                  ? (r.betDetails as Record<string, unknown>[]).reduce((acc, d) => {
+                      const x = Number(d?.pl);
+                      return acc + (Number.isFinite(x) ? x : 0);
+                    }, 0)
+                  : 0;
+                const pnl =
+                  directPl != null && directPl !== "" && Number.isFinite(Number(directPl))
+                    ? Number(directPl)
+                    : pnlFromDetails;
                 const ip = String(r.remoteIp ?? "—");
                 const updated = formatDateTime(r.createdOn ?? r.updatedOn ?? r.createdAt);
 
@@ -517,10 +533,10 @@ export default function SportsBetlistPage() {
                     <TableCell>{marketName}</TableCell>
                     <TableCell>{selection}</TableCell>
                     <TableCell align="right" className="tabular-nums">
-                      {oddReq ? String(oddReq) : "—"}
+                      {oddReqStake ? formatCurrency(oddReqStake) : "—"}
                     </TableCell>
                     <TableCell align="right" className="tabular-nums">
-                      {avgMatched ? String(avgMatched) : "—"}
+                      {matched ? formatCurrency(matched) : "—"}
                     </TableCell>
                     <TableCell align="right" className="tabular-nums">
                       {formatCurrency(matched)}

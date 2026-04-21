@@ -58,7 +58,6 @@ type MenuLink = {
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
-  badge?: "beta";
   /** When true, item is shown but does not navigate. */
   disabled?: boolean;
   children?: never;
@@ -73,7 +72,6 @@ type MenuDropdown = {
   children: {
     href: string;
     label: string;
-    badge?: "beta";
     icon?: ComponentType<{ className?: string }>;
     /** When true, shown but does not navigate. */
     disabled?: boolean;
@@ -92,8 +90,8 @@ const menuConfig: MenuItem[] = [
     icon: IconTransaction,
     children: [
       { href: "/transactions/requests", label: "Request", icon: IconRequest },
-      { href: "/accounts/deposit", label: "Auto", icon: IconAuto, disabled: true },
-      { href: "/accounts/withdraw", label: "Manual", icon: IconManual, disabled: true },
+      // { href: "/accounts/deposit", label: "Auto", icon: IconAuto, disabled: true },
+      // { href: "/accounts/withdraw", label: "Manual", icon: IconManual, disabled: true },
     ],
   },
 
@@ -105,13 +103,13 @@ const menuConfig: MenuItem[] = [
     label: "Sports",
     icon: IconTrophy,
     children: [
-      { href: "/sports/betlist", label: "Betlist", badge: "beta", icon: IconBetlist },
-      { href: "/sports/spm-sports", label: "SPM Sports", icon: IconTrophy, disabled: true },
-      { href: "/sports/betfair", label: "Betfair", icon: IconGamepad2, disabled: true },
-      { href: "/sports/betby", label: "Betby", icon: IconLink2, disabled: true },
-      { href: "/sports/atlas", label: "Atlas", icon: IconGlobe, disabled: true },
-      { href: "/sports/ig-pixel", label: "IG Pixel", icon: IconFlag, disabled: true },
-      { href: "/sports/alt-gaming", label: "Alt Gaming", icon: IconGamepad2, disabled: true },
+      { href: "/sports/betlist", label: "Betlist", icon: IconBetlist },
+      // { href: "/sports/spm-sports", label: "SPM Sports", icon: IconTrophy, disabled: true },
+      // { href: "/sports/betfair", label: "Betfair", icon: IconGamepad2, disabled: true },
+      // { href: "/sports/betby", label: "Betby", icon: IconLink2, disabled: true },
+      // { href: "/sports/atlas", label: "Atlas", icon: IconGlobe, disabled: true },
+      // { href: "/sports/ig-pixel", label: "IG Pixel", icon: IconFlag, disabled: true },
+      // { href: "/sports/alt-gaming", label: "Alt Gaming", icon: IconGamepad2, disabled: true },
     ],
   },
 
@@ -120,9 +118,9 @@ const menuConfig: MenuItem[] = [
     label: "Casino",
     icon: IconCasino,
     children: [
-      { href: "/casino/stats", label: "Stats", badge: "beta", icon: IconBarChart3, disabled: true },
+      // { href: "/casino/stats", label: "Stats", icon: IconBarChart3, disabled: true },
       { href: "/casino/bet-list", label: "Bet List", icon: IconBetlist },
-      { href: "/casino/games", label: "Games", icon: IconGamepad2, disabled: true },
+      // { href: "/casino/games", label: "Games", icon: IconGamepad2, disabled: true },
     ],
   },
 
@@ -132,8 +130,8 @@ const menuConfig: MenuItem[] = [
     icon: IconGift,
     children: [
       { href: "/bonus/bonus", label: "Bonus", icon: IconGift },
-      { href: "/bonus/claims", label: "Claims", icon: IconClipboardCheck, disabled: true },
-      { href: "/bonus/statment", label: "Statment", icon: IconFileText, disabled: true },
+      // { href: "/bonus/claims", label: "Claims", icon: IconClipboardCheck, disabled: true },
+      // { href: "/bonus/statment", label: "Statment", icon: IconFileText, disabled: true },
     ],
   },
 
@@ -150,19 +148,19 @@ const menuConfig: MenuItem[] = [
       { href: "/website/banking", label: "Banking", icon: IconBanknote },
       { href: "/website/gatways", label: "Gateways", icon: IconGateways },
       { href: "/website/currency", label: "Currency", icon: IconCurrency },
-      { href: "/website/forms", label: "Forms", badge: "beta", icon: IconFileCheck2, disabled: true },
-      {
-        href: "/website/external-integrations",
-        label: "External Integrations",
-        icon: IconGateways,
-        disabled: true,
-      },
-      {
-        href: "/website/data-integrations",
-        label: "Data Integrations",
-        icon: IconDatabase,
-        disabled: true,
-      },
+      // { href: "/website/forms", label: "Forms", icon: IconFileCheck2, disabled: true },
+      // {
+      //   href: "/website/external-integrations",
+      //   label: "External Integrations",
+      //   icon: IconGateways,
+      //   disabled: true,
+      // },
+      // {
+      //   href: "/website/data-integrations",
+      //   label: "Data Integrations",
+      //   icon: IconDatabase,
+      //   disabled: true,
+      // },
     ],
   },
 
@@ -201,7 +199,7 @@ const menuConfig: MenuItem[] = [
       //   icon: IconZeroDepositPlayers,
       // },
       // { href: "/players/inactive", label: "Inactive Players", icon: IconInactivePlayers },
-      // { href: "/players/master", label: "Player Master", badge: "beta", icon: IconPlayerMaster },
+      // { href: "/players/master", label: "Player Master", icon: IconPlayerMaster },
     ],
   },
 
@@ -210,9 +208,9 @@ const menuConfig: MenuItem[] = [
     label: "Security",
     icon: IconSecurity,
     children: [
-      { href: "/security/token-history", label: "Roles", icon: IconRoles, disabled: true },
+      // { href: "/security/token-history", label: "Roles", icon: IconRoles, disabled: true },
       { href: "/security/activity", label: "Activity", icon: IconDashboardActivity },
-      { href: "/security/token-history", label: "Fraud Logs", icon: IconFraudLogs, disabled: true },
+      // { href: "/security/token-history", label: "Fraud Logs", icon: IconFraudLogs, disabled: true },
     ],
   },
 
@@ -227,22 +225,21 @@ const menuConfig: MenuItem[] = [
   // },
 
   // Settings / wallets / profile
-  {
-    label: "Settings",
-    icon: IconSettings,
-    disabled: true,
-    children: [
-      { href: "/settings", label: "Settings", icon: IconSettings },
-      { href: "/settings/notifications", label: "Notifications", icon: IconAnnouncement },
-    ],
-  },
-  {
-    href: "/wallets",
-    label: "Wallets",
-    icon: IconWallets,
-    badge: "beta",
-    disabled: true,
-  },
+  // {
+  //   label: "Settings",
+  //   icon: IconSettings,
+  //   disabled: true,
+  //   children: [
+  //     { href: "/settings", label: "Settings", icon: IconSettings },
+  //     { href: "/settings/notifications", label: "Notifications", icon: IconAnnouncement },
+  //   ],
+  // },
+  // {
+  //   href: "/wallets",
+  //   label: "Wallets",
+  //   icon: IconWallets,
+  //   disabled: true,
+  // },
   { href: "/profile", label: "My Profile", icon: IconMyProfile },
 ];
 
@@ -331,11 +328,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                     >
                       <Icon className="h-5 w-5 flex-shrink-0" />
                       <span>{item.label}</span>
-                      {item.badge === "beta" && (
-                        <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                          beta
-                        </span>
-                      )}
                     </span>
                   </li>
                 );
@@ -351,11 +343,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     <span>{item.label}</span>
-                    {item.badge === "beta" && (
-                      <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                        beta
-                      </span>
-                    )}
                   </Link>
                 </li>
               );
@@ -421,11 +408,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                                     <ChildIcon className="h-4 w-4 flex-shrink-0" />
                                   ) : null}
                                   <span>{child.label}</span>
-                                  {child.badge === "beta" && (
-                                    <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                                      beta
-                                    </span>
-                                  )}
                                 </div>
                               </span>
                             </li>
@@ -449,11 +431,6 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                                   <ChildIcon className="h-4 w-4 flex-shrink-0" />
                                 ) : null}
                                 <span>{child.label}</span>
-                                {child.badge === "beta" && (
-                                  <span className="rounded-full bg-warning/90 px-2 py-0.5 text-[10px] font-semibold text-foreground">
-                                    beta
-                                  </span>
-                                )}
                               </div>
                             </Link>
                           </li>
