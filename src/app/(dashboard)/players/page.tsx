@@ -39,6 +39,7 @@ import {
   Landmark,
   Code2,
   Percent,
+  Settings,
 } from "lucide-react";
 import { deposit, getDownline, withdraw } from "@/services/account.service";
 import {
@@ -48,12 +49,15 @@ import {
   setCommission,
   updateBetConfig,
   updateMember,
+  getReferralSetting,
+  updateReferralSetting,
   type UpdateBetConfigItem,
 } from "@/services/user.service";
 import { formatDateTime, timestampMs } from "@/utils/date";
 import type { DownlineRecord } from "@/types/account.types";
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 import CreateMemberModal from "@/components/players/CreateMemberModal";
 
@@ -82,6 +86,7 @@ type DownlineTableContext = {
   openCreditModal: (id: string, uname: string) => void;
   openBetConfigModal: (id: string, uname: string) => void;
   openCommissionModal: (id: string, uname: string) => void | Promise<void>;
+  openReferralSettingsModal: (id: string, uname: string) => void | Promise<void>;
 };
 
 function DownlineExpansionRows({
@@ -97,6 +102,7 @@ function DownlineExpansionRows({
   openCreditModal,
   openBetConfigModal,
   openCommissionModal,
+  openReferralSettingsModal,
 }: { parentId: string; depth: number } & DownlineTableContext) {
   if (downlineLoading[parentId]) {
     return (
@@ -128,7 +134,6 @@ function DownlineExpansionRows({
     );
   }
 
-  console.log(downlineRows[parentId]);
   return (
     <DownlineTableRows
       records={list}
@@ -143,6 +148,7 @@ function DownlineExpansionRows({
       openCreditModal={openCreditModal}
       openBetConfigModal={openBetConfigModal}
       openCommissionModal={openCommissionModal}
+      openReferralSettingsModal={openReferralSettingsModal}
     />
   );
 }
@@ -160,6 +166,7 @@ function DownlineTableRows({
   openCreditModal,
   openBetConfigModal,
   openCommissionModal,
+  openReferralSettingsModal,
 }: DownlineTableContext & { records: DownlineRecord[]; depth: number }) {
   const firstCellPadStyle =
     depth >= 1 ? ({ paddingLeft: `${16 + depth * 16}px` } as const) : undefined;
@@ -302,19 +309,19 @@ function DownlineTableRows({
                   </Link>
                 ) : null}
               </TableCell>
-              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cExposure ?? 0))}`}>
                 {formatCurrency(cExposure)}
               </TableCell>
-              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cTake ?? 0))}`}>
                 {formatCurrency(cTake)}
               </TableCell>
-              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cGive ?? 0))}`}>
                 {formatCurrency(cGive)}
               </TableCell>
-              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cBalance ?? 0))}`}>
                 {formatCurrency(cBalance)}
               </TableCell>
-              <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cCreditLimit ?? 0))}`}>
                 {formatCurrency(cCreditLimit)}
               </TableCell>
               <TableCell className="!px-4 !py-4 text-center">
@@ -343,6 +350,14 @@ function DownlineTableRows({
                   >
                     <Percent className="h-4 w-4" aria-hidden />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => void openReferralSettingsModal(cId, cUname)}
+                    className="rounded-sm p-0.5 hover:bg-info-subtle"
+                    aria-label="Open referral settings"
+                  >
+                    <Settings className="h-4 w-4" aria-hidden />
+                  </button>
                 </div>
               </TableCell>
             </TableRow>
@@ -360,6 +375,7 @@ function DownlineTableRows({
                 openCreditModal={openCreditModal}
                 openBetConfigModal={openBetConfigModal}
                 openCommissionModal={openCommissionModal}
+                openReferralSettingsModal={openReferralSettingsModal}
               />
             ) : null}
           </Fragment>
@@ -396,6 +412,20 @@ type CommissionModalState = {
   open: boolean;
   userId: string;
   username: string;
+};
+
+type ReferralSettingsModalState = {
+  open: boolean;
+  userId: string;
+  username: string;
+};
+
+type ReferralSettingsFormState = {
+  bonus: string;
+  lockingDays: string;
+  minDeposit: string;
+  minWithdrawalAmount: string;
+  minimumBalanceRequired: string;
 };
 
 type BettingLockConfirmState = {
@@ -1051,6 +1081,127 @@ function CommissionModal({
   );
 }
 
+function ReferralSettingsModal({
+  state,
+  form,
+  loading,
+  error,
+  saving,
+  onClose,
+  onFieldChange,
+  onApplyAll,
+  onSave,
+}: {
+  state: ReferralSettingsModalState;
+  form: ReferralSettingsFormState;
+  loading: boolean;
+  error: string | null;
+  saving: boolean;
+  onClose: () => void;
+  onFieldChange: (key: keyof ReferralSettingsFormState, value: string) => void;
+  onApplyAll: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <Modal
+      isOpen={state.open}
+      onClose={onClose}
+      title="Settings"
+      maxWidthClassName="max-w-lg"
+      bodyClassName={DIALOG_BODY_DEFAULT}
+      footer={
+        <DialogActions>
+          <Button type="button" variant="primary" size="md" onClick={onApplyAll} disabled={loading || saving}>
+            Apply All
+          </Button>
+          <Button type="button" variant="primary" size="md" onClick={onSave} disabled={loading || saving}>
+            {saving ? "Saving..." : "Save"}
+          </Button>
+          <Button type="button" variant="outline" size="md" onClick={onClose} disabled={saving}>
+            Close
+          </Button>
+        </DialogActions>
+      }
+    >
+      <DialogSection>
+        {loading ? (
+          <div className="flex items-center gap-2 py-1 text-sm text-foreground-tertiary">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            Loading settings…
+          </div>
+        ) : null}
+        {error ? (
+          <p className="text-sm text-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        <div className="space-y-2">
+          <div className="grid grid-cols-[minmax(140px,200px)_1fr] items-center gap-3">
+            <label className="text-sm text-foreground" htmlFor="referral-bonus">
+              Bonus %
+            </label>
+            <Input
+              id="referral-bonus"
+              value={form.bonus}
+              onChange={(e) => onFieldChange("bonus", e.target.value)}
+              className="h-8"
+              disabled={loading || saving}
+            />
+          </div>
+          <div className="grid grid-cols-[minmax(140px,200px)_1fr] items-center gap-3">
+            <label className="text-sm text-foreground" htmlFor="referral-locking">
+              Locking Days
+            </label>
+            <Input
+              id="referral-locking"
+              value={form.lockingDays}
+              onChange={(e) => onFieldChange("lockingDays", e.target.value)}
+              className="h-8"
+              disabled={loading || saving}
+            />
+          </div>
+          <div className="grid grid-cols-[minmax(140px,200px)_1fr] items-center gap-3">
+            <label className="text-sm text-foreground" htmlFor="referral-min-dep">
+              Min Deposit
+            </label>
+            <Input
+              id="referral-min-dep"
+              value={form.minDeposit}
+              onChange={(e) => onFieldChange("minDeposit", e.target.value)}
+              className="h-8"
+              disabled={loading || saving}
+            />
+          </div>
+          <div className="grid grid-cols-[minmax(140px,200px)_1fr] items-center gap-3">
+            <label className="text-sm text-foreground" htmlFor="referral-min-wd">
+              Min Withdrawal
+            </label>
+            <Input
+              id="referral-min-wd"
+              value={form.minWithdrawalAmount}
+              onChange={(e) => onFieldChange("minWithdrawalAmount", e.target.value)}
+              className="h-8"
+              disabled={loading || saving}
+            />
+          </div>
+          <div className="grid grid-cols-[minmax(140px,200px)_1fr] items-center gap-3">
+            <label className="text-sm text-foreground" htmlFor="referral-min-bal">
+              Min Balance
+            </label>
+            <Input
+              id="referral-min-bal"
+              value={form.minimumBalanceRequired}
+              onChange={(e) => onFieldChange("minimumBalanceRequired", e.target.value)}
+              className="h-8"
+              disabled={loading || saving}
+            />
+          </div>
+        </div>
+      </DialogSection>
+    </Modal>
+  );
+}
+
 export default function PlayersPage() {
   const [username, setUsername] = useState("");
   const [userCode, setUserCode] = useState("");
@@ -1093,6 +1244,21 @@ export default function PlayersPage() {
   const [commissionLoading, setCommissionLoading] = useState(false);
   const [commissionError, setCommissionError] = useState<string | null>(null);
   const [commissionSaving, setCommissionSaving] = useState(false);
+  const [referralModal, setReferralModal] = useState<ReferralSettingsModalState>({
+    open: false,
+    userId: "",
+    username: "",
+  });
+  const [referralForm, setReferralForm] = useState<ReferralSettingsFormState>({
+    bonus: "0",
+    lockingDays: "0",
+    minDeposit: "0",
+    minWithdrawalAmount: "0",
+    minimumBalanceRequired: "0",
+  });
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [referralError, setReferralError] = useState<string | null>(null);
+  const [referralSaving, setReferralSaving] = useState(false);
   const [quickEditModal, setQuickEditModal] = useState<PlayerQuickEditModalState>({
     open: false,
     userId: "",
@@ -1554,6 +1720,85 @@ export default function PlayersPage() {
     }
   };
 
+  const openReferralSettingsModal = async (userId: string, username: string) => {
+    const uid = userId.trim();
+    if (!uid) return;
+    setReferralModal({ open: true, userId: uid, username: username.trim() });
+    setReferralError(null);
+    setReferralLoading(true);
+    setReferralForm({
+      bonus: "0",
+      lockingDays: "0",
+      minDeposit: "0",
+      minWithdrawalAmount: "0",
+      minimumBalanceRequired: "0",
+    });
+    try {
+      const d = await getReferralSetting(uid);
+      setReferralForm({
+        bonus: String(d?.bonus ?? "0"),
+        lockingDays: String(d?.lockingDays ?? "0"),
+        minDeposit: String(d?.minDeposit ?? "0"),
+        minWithdrawalAmount: String(d?.minWithdrawalAmount ?? "0"),
+        minimumBalanceRequired: String(d?.minimumBalanceRequired ?? "0"),
+      });
+    } catch (e) {
+      setReferralError(
+        e instanceof Error ? e.message : "Failed to load referral settings.",
+      );
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const closeReferralSettingsModal = () => {
+    if (referralSaving) return;
+    setReferralModal((prev) => ({ ...prev, open: false }));
+  };
+
+  const updateReferralFormField = (key: keyof ReferralSettingsFormState, value: string) => {
+    setReferralForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const persistReferralSettings = async (applyAll: boolean) => {
+    const userId = referralModal.userId.trim();
+    if (!userId) return;
+    const bonus = Number(referralForm.bonus);
+    const lockingDays = Number(referralForm.lockingDays);
+    const minDeposit = Number(referralForm.minDeposit);
+    const minWithdrawalAmount = Number(referralForm.minWithdrawalAmount);
+    const minimumBalanceRequired = Number(referralForm.minimumBalanceRequired);
+    if (
+      !Number.isFinite(bonus) ||
+      !Number.isFinite(lockingDays) ||
+      !Number.isFinite(minDeposit) ||
+      !Number.isFinite(minWithdrawalAmount) ||
+      !Number.isFinite(minimumBalanceRequired)
+    ) {
+      setReferralError("Enter valid numbers.");
+      return;
+    }
+    setReferralError(null);
+    setReferralSaving(true);
+    try {
+      await updateReferralSetting({
+        userId,
+        applyAll,
+        bonus,
+        lockingDays,
+        minDeposit,
+        minWithdrawalAmount,
+        minimumBalanceRequired,
+      });
+      setReferralModal((prev) => ({ ...prev, open: false }));
+      loadDownline();
+    } catch (e) {
+      setReferralError(e instanceof Error ? e.message : "Save failed.");
+    } finally {
+      setReferralSaving(false);
+    }
+  };
+
   const openQuickEditModal = async (
     userId: string,
     usernameValue: string,
@@ -1912,19 +2157,19 @@ export default function PlayersPage() {
                               </Link>
                             ) : null}
                         </TableCell>
-                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(exposure ?? 0))}`}>
                           {formatCurrency(exposure)}
                         </TableCell>
-                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(take ?? 0))}`}>
                           {formatCurrency(take)}
                         </TableCell>
-                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(give ?? 0))}`}>
                           {formatCurrency(give)}
                         </TableCell>
-                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(balance ?? 0))}`}>
                           {formatCurrency(balance)}
                         </TableCell>
-                        <TableCell className="!px-4 !py-4 text-right tabular-nums text-foreground">
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(creditLimit ?? 0))}`}>
                           {formatCurrency(creditLimit)}
                         </TableCell>
                         <TableCell className="!px-4 !py-4 text-center">
@@ -1953,6 +2198,14 @@ export default function PlayersPage() {
                             >
                               <Percent className="h-4 w-4" aria-hidden />
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => void openReferralSettingsModal(id, uname)}
+                              className="rounded-sm p-0.5 hover:bg-info-subtle"
+                              aria-label="Open referral settings"
+                            >
+                              <Settings className="h-4 w-4" aria-hidden />
+                            </button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1970,6 +2223,7 @@ export default function PlayersPage() {
                           openCreditModal={openCreditModal}
                           openBetConfigModal={openBetConfigModal}
                           openCommissionModal={openCommissionModal}
+                          openReferralSettingsModal={openReferralSettingsModal}
                         />
                       ) : null}
                       </Fragment>
@@ -2042,6 +2296,17 @@ export default function PlayersPage() {
         onFieldChange={updateCommissionValue}
         onSave={() => void saveCommission()}
       />
+      <ReferralSettingsModal
+        state={referralModal}
+        form={referralForm}
+        loading={referralLoading}
+        error={referralError}
+        saving={referralSaving}
+        onClose={closeReferralSettingsModal}
+        onFieldChange={updateReferralFormField}
+        onApplyAll={() => void persistReferralSettings(true)}
+        onSave={() => void persistReferralSettings(false)}
+      />
       <Modal
         isOpen={bettingLockConfirm.open}
         onClose={closeBettingLockConfirm}
@@ -2073,7 +2338,7 @@ export default function PlayersPage() {
       >
         <DialogSection>
           <p className="text-sm text-foreground">
-            Are you sure you want to {bettingLockConfirm.nextLocked ? "lock" : "unlock"}{" "}
+            Are you sure you want to {bettingLockConfirm.nextLocked ? "lock" : "unlock"}
             <span className="font-semibold">{bettingLockConfirm.label}</span>?
           </p>
           {bettingLockConfirm.error ? (

@@ -257,9 +257,16 @@ export async function checkUsername(username: string): Promise<{ available: bool
   return { available: false };
 }
 
-/** GET /user/getreferralsetting/{userId} — referral settings (README §3) */
+/** GET /user/getreferralsetting/{userId} — returns `data` object when wrapped in envelope. */
 export async function getReferralSetting(userId: string): Promise<Record<string, unknown>> {
-  return apiGet(`${USER}/getreferralsetting/${encodeURIComponent(userId)}`);
+  const raw = await apiGet<unknown>(
+    `${USER}/getreferralsetting/${encodeURIComponent(userId)}`,
+    { suppressSuccessToast: true },
+  );
+  if (!raw || typeof raw !== "object") return {};
+  const r = raw as { data?: Record<string, unknown> };
+  if (r.data && typeof r.data === "object") return r.data;
+  return raw as Record<string, unknown>;
 }
 
 /** GET /user/getmyreferralmember/{userId} — referred users for this member */
@@ -310,6 +317,13 @@ export async function updateBetConfig(
 }
 
 /** POST /user/updatereferralsetting — Body: userId, applyAll, bonus, lockingDays, etc. (README §3) */
-export async function updateReferralSetting(body: Record<string, unknown>): Promise<unknown> {
-  return apiPost(`${USER}/updatereferralsetting`, body);
+export async function updateReferralSetting(
+  body: Record<string, unknown>,
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost(`${USER}/updatereferralsetting`, body, {
+    showSuccessToast: true,
+    successMessage: "Updated successfully.",
+    ...options,
+  });
 }

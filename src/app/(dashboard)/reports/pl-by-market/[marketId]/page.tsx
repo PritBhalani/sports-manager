@@ -22,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { getBetHistoryByMarketId } from "@/services/betHistory.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 type BetRow = Record<string, unknown>;
@@ -214,14 +215,14 @@ export default function PlByMarketDetailPage() {
             <TableHead>Member</TableHead>
             <TableHead>Placed</TableHead>
             <TableHead>Selection</TableHead>
-            <TableHead align="right">Bet ID</TableHead>
-            <TableHead align="center">In Play</TableHead>
-            <TableHead align="center">1-Click</TableHead>
+            <TableHead >Bet ID</TableHead>
+            <TableHead >In Play</TableHead>
+            <TableHead >1-Click</TableHead>
             <TableHead>Side</TableHead>
-            <TableHead align="right">Odds</TableHead>
-            <TableHead align="right">Stake</TableHead>
+            <TableHead >Odds</TableHead>
+            <TableHead >Stake</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead align="right">Win/Loss</TableHead>
+            <TableHead >Win/Loss</TableHead>
             <TableHead>IP Address</TableHead>
           </TableHeader>
           <TableBody>
@@ -242,8 +243,8 @@ export default function PlByMarketDetailPage() {
                 const oneClick = oneClickLabel(r.betFrom);
                 const side = sideLabel(r.side);
                 const odds = text(r.price ?? r.odds);
-                const stake = formatCurrency(r.size ?? r.stake);
-                const pl = formatCurrency(r.pl ?? r.pnl ?? r.netWin);
+                const stakeNum = Number(r.size ?? r.stake ?? 0);
+                const plNum = Number(r.pl ?? r.pnl ?? r.netWin ?? 0);
                 const statusText = statusLabel(r.status, r.pl ?? r.pnl);
                 const ip = text(r.remoteIp ?? r.ipAddress);
 
@@ -252,21 +253,21 @@ export default function PlByMarketDetailPage() {
                     <TableCell>{member}</TableCell>
                     <TableCell>{placed}</TableCell>
                     <TableCell>{selection}</TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell  className="tabular-nums">
                       {betId || "—"}
                     </TableCell>
-                    <TableCell align="center">{inPlay}</TableCell>
-                    <TableCell align="center">{oneClick}</TableCell>
+                    <TableCell >{inPlay}</TableCell>
+                    <TableCell >{oneClick}</TableCell>
                     <TableCell>{side}</TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell  className="tabular-nums">
                       {odds}
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums">
-                      {stake}
+                    <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeNum)}`}>
+                      {formatCurrency(r.size ?? r.stake)}
                     </TableCell>
                     <TableCell>{statusText}</TableCell>
-                    <TableCell align="right" className="tabular-nums">
-                      {pl}
+                    <TableCell  className={`tabular-nums ${signedAmountTextClass(plNum)}`}>
+                      {formatCurrency(r.pl ?? r.pnl ?? r.netWin)}
                     </TableCell>
                     <TableCell>{ip}</TableCell>
                   </TableRow>

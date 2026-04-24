@@ -22,6 +22,7 @@ import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
@@ -123,9 +124,9 @@ export default function CreditStatementPage() {
           <TableHeader>
             <TableHead>Date</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead align="right">Credit</TableHead>
-            <TableHead align="right">Debit</TableHead>
-            <TableHead align="right">Balance</TableHead>
+            <TableHead >Credit</TableHead>
+            <TableHead >Debit</TableHead>
+            <TableHead >Balance</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -133,17 +134,22 @@ export default function CreditStatementPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={5} message="No credit statement data yet." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const creditN = Number(row.credit ?? row.amount ?? 0);
+                const debitN = Number(row.debit ?? 0);
+                const balN = Number(row.balance ?? 0);
+                return (
                 <TableRow key={i}>
                   <TableCell>
                     {formatDateTime(row.date ?? row.createdAt ?? row.timestamp)}
                   </TableCell>
                   <TableCell>{String(row.description ?? row.comment ?? "—")}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.credit ?? row.amount)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.debit)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.balance)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(creditN)}`}>{formatCurrency(row.credit ?? row.amount)}</TableCell>
+                  <TableCell  className={`tabular-nums ${debitN > 0 ? "text-error" : "text-foreground"}`}>{formatCurrency(row.debit)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(balN)}`}>{formatCurrency(row.balance)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

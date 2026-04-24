@@ -22,6 +22,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { getSessionMemberId } from "@/services/user.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 export default function ProfitLossPage() {
@@ -124,8 +125,8 @@ export default function ProfitLossPage() {
           <TableHeader>
             <TableHead>Date</TableHead>
             <TableHead>Market / Event</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">P&amp;L</TableHead>
+            <TableHead >Stake</TableHead>
+            <TableHead >P&amp;L</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -133,14 +134,18 @@ export default function ProfitLossPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={4} message="No P&amp;L data yet." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const stakeN = Number(row.stake ?? 0);
+                const plN = Number(row.pl ?? row.profitLoss ?? 0);
+                return (
                 <TableRow key={String(row.id ?? row.statementId ?? i)}>
                   <TableCell>{formatDateTime(row.date ?? row.createdAt)}</TableCell>
                   <TableCell>{String(row.marketName ?? row.eventName ?? "—")}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.stake)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeN)}`}>{formatCurrency(row.stake)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(plN)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

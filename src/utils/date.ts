@@ -1,18 +1,19 @@
-/** Format a date/time value for display; accepts unknown (e.g. from API row) for use in tables. */
+/**
+ * Format a date/time for tables: `DD/MM/YY (HH:MM:SS)` in local time, 24h clock.
+ * Accepts unknown (e.g. from API rows).
+ */
 export function formatDateTime(value: unknown): string {
   if (value === undefined || value === null) return "—";
   if (typeof value !== "number" && typeof value !== "string") return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-IN", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const dD = String(date.getDate()).padStart(2, "0");
+  const dM = String(date.getMonth() + 1).padStart(2, "0");
+  const dY = String(date.getFullYear() % 100).padStart(2, "0");
+  const h = String(date.getHours()).padStart(2, "0");
+  const mi = String(date.getMinutes()).padStart(2, "0");
+  const s = String(date.getSeconds()).padStart(2, "0");
+  return `${dD}/${dM}/${dY} ${h}:${mi}:${s}`;
 }
 
 /** Time between last update and original create (updatedOn − createdOn). */

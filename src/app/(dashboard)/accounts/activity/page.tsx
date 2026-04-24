@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import {
@@ -23,6 +23,7 @@ import {
 } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatDateTime } from "@/utils/date";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatCurrency } from "@/utils/formatCurrency";
 
 export default function AccountActivityPage() {
@@ -107,7 +108,7 @@ export default function AccountActivityPage() {
                   <TableHeader>
                     <TableHead>Date</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead align="right">Amount</TableHead>
+                    <TableHead >Amount</TableHead>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
@@ -115,13 +116,16 @@ export default function AccountActivityPage() {
                     ) : inOutData.length === 0 ? (
                       <TableEmpty colSpan={3} message="No in/out activity." />
                     ) : (
-                      inOutData.map((row, i) => (
+                      inOutData.map((row, i) => {
+                        const amt = Number(row.amount ?? row.chips ?? 0);
+                        return (
                         <TableRow key={i}>
                           <TableCell>{formatDateTime(row.date ?? row.timestamp)}</TableCell>
-                          <TableCell>{String(row.type ?? row.dwType ?? "—")}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.amount ?? row.chips)}</TableCell>
+                          <TableCell>{String(row.type ?? row.dwType ?? "")}</TableCell>
+                          <TableCell  className={`tabular-nums ${signedAmountTextClass(amt)}`}>{formatCurrency(row.amount ?? row.chips)}</TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -137,7 +141,7 @@ export default function AccountActivityPage() {
                   <TableHeader>
                     <TableHead>Date</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead align="right">Amount</TableHead>
+                    <TableHead >Amount</TableHead>
                   </TableHeader>
                   <TableBody>
                     {loading ? (
@@ -145,13 +149,16 @@ export default function AccountActivityPage() {
                     ) : casinoData.length === 0 ? (
                       <TableEmpty colSpan={3} message="No casino activity." />
                     ) : (
-                      casinoData.map((row, i) => (
+                      casinoData.map((row, i) => {
+                        const amt = Number(row.amount ?? row.chips ?? 0);
+                        return (
                         <TableRow key={i}>
                           <TableCell>{formatDateTime(row.date ?? row.timestamp)}</TableCell>
-                          <TableCell>{String(row.description ?? "—")}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.amount ?? row.chips)}</TableCell>
+                          <TableCell>{String(row.description ?? "")}</TableCell>
+                          <TableCell  className={`tabular-nums ${signedAmountTextClass(amt)}`}>{formatCurrency(row.amount ?? row.chips)}</TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>

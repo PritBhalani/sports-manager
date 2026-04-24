@@ -26,6 +26,7 @@ import {
 } from "@/services/betHistory.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
@@ -249,13 +250,13 @@ export default function PlByMarketPage() {
                         </div>
                       </TableCell>
                       <TableCell>{row.winner ?? "—"}</TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
+                      <TableCell  className={`tabular-nums ${signedAmountTextClass(Number(row.stake ?? 0))}`}>
                         {formatCurrency(row.stake)}
                       </TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
+                      <TableCell  className={`tabular-nums ${signedAmountTextClass(Number(row.pnl ?? row.win ?? 0))}`}>
                         {formatCurrency(row.pnl ?? row.win)}
                       </TableCell>
-                      <TableCell align="right" className="tabular-nums text-foreground">
+                      <TableCell  className={`tabular-nums ${signedAmountTextClass(Number(row.commission ?? 0))}`}>
                         {formatCurrency(row.commission)}
                       </TableCell>
                       <TableCell>{formatDateTime(row.marketTime)}</TableCell>
@@ -297,6 +298,8 @@ export default function PlByMarketPage() {
                                       const userType = Number(user.userType ?? NaN);
                                       const badge =
                                         userType === 5 ? "Member" : "User";
+                                      const nw = Number(d.netWin ?? d.win ?? 0);
+                                      const comm = Number(d.comm ?? 0);
                                       return (
                                         <tr key={String(user.id ?? idx)} className="border-t border-border">
                                           <td className="px-3 py-2 text-sm text-foreground">
@@ -305,10 +308,10 @@ export default function PlByMarketPage() {
                                               <span className="truncate">{username}</span>
                                             </div>
                                           </td>
-                                          <td className="px-3 py-2 text-right text-sm tabular-nums text-foreground">
+                                          <td className={`px-3 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(nw)}`}>
                                             {formatCurrency(d.netWin ?? d.win)}
                                           </td>
-                                          <td className="px-3 py-2 text-right text-sm tabular-nums text-foreground">
+                                          <td className={`px-3 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(comm)}`}>
                                             {formatCurrency(d.comm)}
                                           </td>
                                         </tr>

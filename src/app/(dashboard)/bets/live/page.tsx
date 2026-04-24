@@ -21,6 +21,7 @@ import { getLiveBets } from "@/services/bet.service";
 import { todayRangeUTC } from "@/utils/date";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 const PAGE_SIZE = 15;
@@ -143,16 +144,19 @@ export default function LiveBetsPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={6} message="No live bets." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const stakeN = Number(row.stake ?? 0);
+                return (
                 <TableRow key={i}>
                   <TableCell>{String(row.eventName ?? row.marketName ?? "—")}</TableCell>
                   <TableCell>{String(row.selection ?? row.runnerName ?? "—")}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.stake)}</TableCell>
-                  <TableCell align="right">{String(row.odds ?? "—")}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeN)}`}>{formatCurrency(row.stake)}</TableCell>
+                  <TableCell >{String(row.odds ?? "—")}</TableCell>
                   <TableCell>{String(row.status ?? "—")}</TableCell>
                   <TableCell>{formatDateTime(row.createdAt ?? row.date)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
               </TableBody>
             </Table>

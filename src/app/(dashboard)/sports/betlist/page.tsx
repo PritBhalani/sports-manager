@@ -28,6 +28,7 @@ import { getLiveBets, type LiveBetRow } from "@/services/bet.service";
 import { formatOddsPrice } from "@/app/(dashboard)/website/analytics/_lib/websitePriceBook";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { formatDateTime } from "@/utils/date";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { getAuthSession } from "@/store/authStore";
 
 const PAGE_SIZE = 50;
@@ -480,11 +481,11 @@ export default function SportsBetlistPage() {
             <TableHead>Event</TableHead>
             <TableHead>Market Name</TableHead>
             <TableHead>Selection</TableHead>
-            <TableHead align="right">Odd Req.</TableHead>
-            <TableHead align="right">Avg. Matched</TableHead>
-            <TableHead align="right">Matched</TableHead>
-            <TableHead align="right">Unmatched</TableHead>
-            <TableHead align="right">Profit/Liability</TableHead>
+            <TableHead >Odd Req.</TableHead>
+            <TableHead >Avg. Matched</TableHead>
+            <TableHead >Matched</TableHead>
+            <TableHead >Unmatched</TableHead>
+            <TableHead >Profit/Liability</TableHead>
             <TableHead>IP</TableHead>
             <TableHead>Last Updated</TableHead>
           </TableHeader>
@@ -532,19 +533,28 @@ export default function SportsBetlistPage() {
                     <TableCell>{eventName}</TableCell>
                     <TableCell>{marketName}</TableCell>
                     <TableCell>{selection}</TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell
+                      
+                      className={`tabular-nums ${oddReqStake ? signedAmountTextClass(oddReqStake) : "text-foreground"}`}
+                    >
                       {oddReqStake ? formatCurrency(oddReqStake) : "—"}
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell
+                      
+                      className={`tabular-nums ${matched ? signedAmountTextClass(matched) : "text-foreground"}`}
+                    >
                       {matched ? formatCurrency(matched) : "—"}
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell  className={`tabular-nums ${signedAmountTextClass(matched)}`}>
                       {formatCurrency(matched)}
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell  className={`tabular-nums ${signedAmountTextClass(unmatched)}`}>
                       {formatCurrency(unmatched)}
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums">
+                    <TableCell
+                      
+                      className={`tabular-nums ${signedAmountTextClass(pnl)}`}
+                    >
                       {formatCurrency(pnl)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{ip}</TableCell>

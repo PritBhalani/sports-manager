@@ -6,7 +6,7 @@ import {
   PageHeader,
   ListPageFrame,
   ListTableSection,
-  DataGrid,
+  DataTable,
   Button,
 } from "@/components";
 import { getLoginHistory } from "@/services/token.service";
@@ -88,7 +88,7 @@ export default function ActivityPage() {
             {loading ? (
               <p className="px-4 py-6 text-sm text-muted">Loading…</p>
             ) : (
-              <DataGrid
+              <DataTable
                 columns={columns}
                 rows={rows}
                 initialSortColumnId="date"

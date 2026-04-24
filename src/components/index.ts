@@ -39,7 +39,7 @@ export {
   TablePagination,
 } from "./tables";
 export type { TablePaginationProps } from "./tables";
-export { DataGrid } from "./tables";
+export type { DataTableColumn, DataTableProps } from "./ui/DataTable";
 
 export { default as ListPageFrame } from "./layout/ListPageFrame";
 export { default as ListFilterPanel } from "./layout/ListFilterPanel";

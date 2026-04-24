@@ -1,10 +1,12 @@
-/** README §7 Position – all GET, path params only */
-import { apiGet } from "./apiClient";
+/** README §7 Position — mostly GET; some POST (e.g. exposure by market ids). */
+import { apiGet, apiPost } from "./apiClient";
 import type { PositionRecord } from "@/types/position.types";
 
 /** Row from GET /position/getmarketbyeventtypeid/{eventTypeId}/{allFlag} — `data[]` */
 export type MarketByEventRow = {
   id?: string;
+  /** Provider / exchange event id when different from `id` (e.g. score feed). */
+  sourceId?: string;
   name?: string;
   raceName?: string;
   openDate?: string;
@@ -174,4 +176,56 @@ export async function getMarketByEventTypeId(
   if (Array.isArray(raw)) return raw;
   const data = (raw as { data?: MarketByEventRow[] }).data;
   return Array.isArray(data) ? data : [];
+}
+
+/** Row from POST /position/getexposurebymarketids — `data[]` */
+export type RunnerExposureRow = {
+  runnerId?: string;
+  marketId?: string;
+  pl?: number;
+  up?: number;
+  liability?: number;
+  stake?: number;
+};
+
+/** POST /position/getexposurebymarketids — P/L per runner (bookmaker / market exposure). */
+export async function getExposureByMarketIds(
+  marketIds: string[],
+  isPT: boolean = false,
+): Promise<RunnerExposureRow[]> {
+  const ids = [
+    ...new Set(
+      marketIds.map((id) => String(id).trim()).filter(Boolean),
+    ),
+  ];
+  if (ids.length === 0) return [];
+  type Envelope = { success?: boolean; data?: RunnerExposureRow[] };
+  const res = await apiPost<Envelope>(
+    "/position/getexposurebymarketids",
+    { marketIds: ids, isPT },
+    { suppressSuccessToast: true },
+  );
+  const d = res?.data;
+  return Array.isArray(d) ? d : [];
+}
+
+/** POST /position/getfancyexposurebymarketids — fancy/session markets; body uses `MarketIds` (Pascal). */
+export async function getFancyExposureByMarketIds(
+  marketIds: string[],
+  isPT: boolean = false,
+): Promise<RunnerExposureRow[]> {
+  const ids = [
+    ...new Set(
+      marketIds.map((id) => String(id).trim()).filter(Boolean),
+    ),
+  ];
+  if (ids.length === 0) return [];
+  type Envelope = { success?: boolean; data?: RunnerExposureRow[] };
+  const res = await apiPost<Envelope>(
+    "/position/getfancyexposurebymarketids",
+    { MarketIds: ids, isPT },
+    { suppressSuccessToast: true },
+  );
+  const d = res?.data;
+  return Array.isArray(d) ? d : [];
 }

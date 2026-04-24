@@ -32,6 +32,14 @@ export function serializeSubscribeMarketsMessage(mids: string[]): string {
   });
 }
 
+/** Event-level subscribe: server expects exchange `sourceId` in `match`, not internal `eventId`. */
+export function serializeWsEventSubscribeMessage(matchSourceId: string): string {
+  return JSON.stringify({
+    type: "subscribe",
+    match: matchSourceId.trim(),
+  });
+}
+
 export type WsPriceLevel = {
   price?: number;
   size?: number;
@@ -128,11 +136,34 @@ export function mergeWsMarketBook(
     if (hasLp) next.lp = inc.lp;
     return next;
   });
+  const prevRec = prev as unknown as Record<string, unknown>;
+  const incRec = incoming as unknown as Record<string, unknown>;
+  const volumePatch = preserveWsVolumeScalarsFromPrev(prevRec, incRec);
   return {
     ...prev,
     ...incoming,
+    ...volumePatch,
     mr: nextMr,
   };
+}
+
+/** Deltas often omit traded/tm; keep prior scalars so list rows don’t flash to 0. */
+const WS_VOLUME_SCALAR_RE =
+  /^(traded|tm|totalmatched|volume|matched|turnover|turnoveramount|totaltraded)$/i;
+
+function preserveWsVolumeScalarsFromPrev(
+  prev: Record<string, unknown> | undefined,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  if (!prev) return {};
+  const incLower = new Set(Object.keys(incoming).map((k) => k.toLowerCase()));
+  const patch: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(prev)) {
+    if (!WS_VOLUME_SCALAR_RE.test(k)) continue;
+    if (incLower.has(k.toLowerCase())) continue;
+    patch[k] = v;
+  }
+  return patch;
 }
 
 export function mergePriceBooksPayload(
@@ -455,9 +486,15 @@ export function unwrapWsData(raw: unknown, depth = 0): unknown {
 export function useWebsitePriceBookWs(options: {
   marketIds: string[];
   onRefreshSignal?: () => void;
+  /** Exchange event id (`sourceId`) for `{"type":"subscribe","match"}` — used on single-event views. */
+  wsEventSubscribeId?: string;
 }) {
-  const { marketIds, onRefreshSignal } = options;
+  const { marketIds, onRefreshSignal, wsEventSubscribeId } = options;
   const marketIdsKey = useMemo(() => [...marketIds].sort().join("\0"), [marketIds]);
+  const subscribeMatchKey = useMemo(
+    () => String(wsEventSubscribeId ?? "").trim(),
+    [wsEventSubscribeId],
+  );
   const wsRef = useRef<WebSocket | null>(null);
   const onRefreshRef = useRef(onRefreshSignal);
   onRefreshRef.current = onRefreshSignal;
@@ -471,13 +508,18 @@ export function useWebsitePriceBookWs(options: {
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN || !wsAuthed) return;
     const mids = marketIds;
-    if (mids.length === 0) return;
+    if (mids.length === 0 && !subscribeMatchKey) return;
     try {
-      w.send(serializeSubscribeMarketsMessage(mids));
+      if (subscribeMatchKey) {
+        w.send(serializeWsEventSubscribeMessage(subscribeMatchKey));
+      }
+      if (mids.length > 0) {
+        w.send(serializeSubscribeMarketsMessage(mids));
+      }
     } catch {
       /* ignore */
     }
-  }, [marketIdsKey, wsConnected, wsAuthed]);
+  }, [marketIdsKey, subscribeMatchKey, wsConnected, wsAuthed]);
 
   useEffect(() => {
     let ws: WebSocket | null = null;

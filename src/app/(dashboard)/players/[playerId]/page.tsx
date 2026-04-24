@@ -32,6 +32,7 @@ import {
 } from "@/services/fdstudio.service";
 import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 const PLAYER_DETAIL_TABS = [
   { id: "activity", label: "Activity" },
@@ -74,6 +75,57 @@ function accountStatementDescription(row: Record<string, unknown>): string {
     .map((x) => (x != null ? String(x).trim() : ""))
     .filter(Boolean);
   return parts.length ? parts.join(" · ") : "—";
+}
+
+function parseTransferStatementDate(row: Record<string, unknown>): Date | null {
+  const raw = row.createdOn ?? row.date;
+  if (raw === undefined || raw === null) return null;
+  const d = new Date(raw as string | number);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function transferStatementDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatTransferStatementDateBar(d: Date): string {
+  const dD = String(d.getDate()).padStart(2, "0");
+  const dM = String(d.getMonth() + 1).padStart(2, "0");
+  const dY = String(d.getFullYear() % 100).padStart(2, "0");
+  return `${dD}/${dM}/${dY}`;
+}
+
+function groupTransferStatementRows(
+  rows: Record<string, unknown>[],
+): { dateKey: string; labelDate: Date | null; items: Record<string, unknown>[] }[] {
+  const sorted = [...rows].sort((a, b) => {
+    const da = parseTransferStatementDate(a)?.getTime() ?? 0;
+    const db = parseTransferStatementDate(b)?.getTime() ?? 0;
+    return db - da;
+  });
+  const groups: {
+    dateKey: string;
+    labelDate: Date | null;
+    items: Record<string, unknown>[];
+  }[] = [];
+  for (const r of sorted) {
+    const d = parseTransferStatementDate(r);
+    const key = d ? transferStatementDateKey(d) : "__nodate__";
+    const last = groups[groups.length - 1];
+    if (last && last.dateKey === key) {
+      last.items.push(r);
+    } else {
+      groups.push({
+        dateKey: key,
+        labelDate: d,
+        items: [r],
+      });
+    }
+  }
+  return groups;
 }
 
 function bonusCellString(row: Record<string, unknown>, ...keys: string[]): string {
@@ -1073,6 +1125,11 @@ export default function PlayerDetailPage() {
     };
   }, [playerId, activeTab]);
 
+  const transferStmtGrouped = useMemo(
+    () => groupTransferStatementRows(transferStmtRows),
+    [transferStmtRows],
+  );
+
   const tabs = useMemo(
     () =>
       PLAYER_DETAIL_TABS.map((tab) => {
@@ -1170,24 +1227,24 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[920px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Description</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">IP Address</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Type</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Odds</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Stake</th>
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Description</th>
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">IP Address</th>
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Type</th>
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Odds</th>
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Stake</th>
                           {betPeriod === "current" ? (
                             <>
-                              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Liability</th>
-                              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Potential Profit</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Liability</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Potential Profit</th>
                             </>
                           ) : (
                             <>
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Status</th>
-                              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Win/Loss</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Status</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Win/Loss</th>
                             </>
                           )}
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Placed</th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Placed</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             {betPeriod === "current" ? "Matched" : "Settled"}
                           </th>
                         </tr>
@@ -1195,13 +1252,13 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {betLoading ? (
                           <tr>
-                            <td colSpan={9} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={9} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : betRows.length === 0 ? (
                           <tr>
-                            <td colSpan={9} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={9} className="px-2 py-4 text-center text-sm text-muted">
                               No records found for selected filter and time period.
                             </td>
                           </tr>
@@ -1224,34 +1281,40 @@ export default function PlayerDetailPage() {
 
                             return (
                               <tr key={String(r.id ?? r.betId ?? idx)} className="border-b border-border">
-                                <td className="px-4 py-3 text-sm text-foreground">{betDescription(r)}</td>
-                                <td className="px-4 py-3 text-sm text-foreground">{ip}</td>
-                                <td className="px-4 py-3 text-sm text-foreground">{betTypeLabel(r)}</td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                <td className="px-2 py-1.5 text-sm text-foreground">{betDescription(r)}</td>
+                                <td className="px-2 py-1.5 text-sm text-foreground">{ip}</td>
+                                <td className="px-2 py-1.5 text-sm text-foreground">{betTypeLabel(r)}</td>
+                                <td className="px-2 py-1.5 text-right text-sm tabular-nums text-foreground">
                                   {odds ? String(odds) : "—"}
                                 </td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                <td className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(stake)}`}>
                                   {formatCurrency(stake)}
                                 </td>
                                 {betPeriod === "current" ? (
                                   <>
-                                    <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                    <td
+                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(liability)}`}
+                                    >
                                       {formatCurrency(liability)}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                    <td
+                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(profit)}`}
+                                    >
                                       {formatCurrency(profit)}
                                     </td>
                                   </>
                                 ) : (
                                   <>
-                                    <td className="px-4 py-3 text-sm text-foreground">{status}</td>
-                                    <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                    <td className="px-2 py-1.5 text-sm text-foreground">{status}</td>
+                                    <td
+                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(winLoss)}`}
+                                    >
                                       {formatCurrency(winLoss)}
                                     </td>
                                   </>
                                 )}
-                                <td className="px-4 py-3 text-center text-sm text-foreground whitespace-nowrap">{placed}</td>
-                                <td className="px-4 py-3 text-center text-sm text-foreground whitespace-nowrap">{matchedOrSettled}</td>
+                                <td className="px-2 py-1.5 text-center text-sm text-foreground whitespace-nowrap">{placed}</td>
+                                <td className="px-2 py-1.5 text-center text-sm text-foreground whitespace-nowrap">{matchedOrSettled}</td>
                               </tr>
                             );
                           })
@@ -1295,22 +1358,22 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[820px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Market Name
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Winner
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Start time
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Settled Time
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Comm.
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Net Win
                           </th>
                         </tr>
@@ -1318,13 +1381,13 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {bettingPlLoading ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : bettingPlRows.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
                               No records found for selected filter and time period.
                             </td>
                           </tr>
@@ -1343,28 +1406,28 @@ export default function PlayerDetailPage() {
                                   key={`${String(r.marketId ?? "")}-${String(r.roundId ?? "")}-${idx}`}
                                   className="border-b border-border bg-surface"
                                 >
-                                  <td className="px-4 py-3 text-sm text-foreground">
+                                  <td className="px-2 py-1.5 text-sm text-foreground">
                                     <span className="block">{marketLabel}</span>
                                     {r.groupEventTypeName ? (
                                       <span className="text-xs text-muted">{r.groupEventTypeName}</span>
                                     ) : null}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-foreground">
+                                  <td className="px-2 py-1.5 text-sm text-foreground">
                                     {r.winner ?? "—"}
                                   </td>
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
+                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
                                     {formatDateTime(r.marketTime)}
                                   </td>
-                                  <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
+                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
                                     {formatDateTime(r.settleTime)}
                                   </td>
-                                  <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                  <td
+                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(comm)}`}
+                                  >
                                     {formatCurrency(comm)}
                                   </td>
                                   <td
-                                    className={`px-4 py-3 text-right text-sm tabular-nums ${
-                                      netWin >= 0 ? "text-success" : "text-error"
-                                    }`}
+                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(netWin)}`}
                                   >
                                     {formatCurrency(netWin)}
                                   </td>
@@ -1411,19 +1474,19 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[760px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Round Id
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Game Name
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Provider
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             P&L
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Settle time
                           </th>
                         </tr>
@@ -1431,13 +1494,13 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {fdPlLoading ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={5} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : fdPlRows.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={5} className="px-2 py-4 text-center text-sm text-muted">
                               No records found for selected filter and time period.
                             </td>
                           </tr>
@@ -1454,23 +1517,21 @@ export default function PlayerDetailPage() {
                                 key={`${String(r.roundId ?? idx)}-${idx}`}
                                 className="border-b border-border bg-surface"
                               >
-                                <td className="px-4 py-3 text-sm text-foreground">
+                                <td className="px-2 py-1.5 text-sm text-foreground">
                                   {r.roundId != null ? String(r.roundId) : "—"}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-foreground">
+                                <td className="px-2 py-1.5 text-sm text-foreground">
                                   {r.tableName ?? "—"}
                                 </td>
-                                <td className="px-4 py-3 text-sm text-foreground">
+                                <td className="px-2 py-1.5 text-sm text-foreground">
                                   {r.provider != null ? String(r.provider) : "—"}
                                 </td>
                                 <td
-                                  className={`px-4 py-3 text-right text-sm tabular-nums ${
-                                    win >= 0 ? "text-success" : "text-error"
-                                  }`}
+                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(win)}`}
                                 >
                                   {formatCurrency(win)}
                                 </td>
-                                <td className="px-4 py-3 text-center text-sm text-foreground-secondary">
+                                <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">
                                   {useTo ? formatDateTime(settleRaw) : formatDateTime(r.createdOn)}
                                 </td>
                               </tr>
@@ -1540,19 +1601,19 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[760px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Date
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Description
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             P&L
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Credit Limit
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Balance
                           </th>
                         </tr>
@@ -1560,13 +1621,13 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {acctStmtLoading ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={5} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : acctStmtRows.length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={5} className="px-2 py-4 text-center text-sm text-muted">
                               No records found for selected filter and time period.
                             </td>
                           </tr>
@@ -1580,23 +1641,25 @@ export default function PlayerDetailPage() {
                                 key={String(r.id ?? idx)}
                                 className="border-b border-border bg-surface"
                               >
-                                <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
+                                <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground">
                                   {formatDateTime(r.createdOn)}
                                 </td>
-                                <td className="max-w-[280px] px-4 py-3 text-sm text-foreground">
+                                <td className="max-w-[280px] px-2 py-1.5 text-sm text-foreground">
                                   {accountStatementDescription(r)}
                                 </td>
                                 <td
-                                  className={`px-4 py-3 text-right text-sm tabular-nums ${
-                                    pl >= 0 ? "text-success" : "text-error"
-                                  }`}
+                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(pl)}`}
                                 >
                                   {formatCurrency(pl)}
                                 </td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                <td
+                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(creditLimit)}`}
+                                >
                                   {formatCurrency(creditLimit)}
                                 </td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                <td
+                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(balance)}`}
+                                >
                                   {formatCurrency(balance)}
                                 </td>
                               </tr>
@@ -1669,25 +1732,25 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[980px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Code
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Bonus Amount
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Required Turnover to Activate
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Required Turnover to Withdraw
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Bonus Date
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Bonus Expiry
                           </th>
-                          <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Is Expired
                           </th>
                         </tr>
@@ -1695,26 +1758,42 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {bonusStmtLoading ? (
                           <tr>
-                            <td colSpan={7} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={7} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : bonusStmtRows.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={7} className="px-2 py-4 text-center text-sm text-muted">
                               No records found for selected filter and time period.
                             </td>
                           </tr>
                         ) : (
-                          bonusStmtRows.map((r, idx) => (
+                          bonusStmtRows.map((r, idx) => {
+                            const bonusAmt = Number(
+                              r.bonusAmount ?? r.amount ?? r.bonus ?? 0,
+                            );
+                            const toAct = Number(
+                              (r.requiredTurnoverToActivate ??
+                                r.turnoverToActivate ??
+                                r.requiredTurnoverForActivation) as unknown as number,
+                            );
+                            const toWd = Number(
+                              (r.requiredTurnoverToWithdraw ??
+                                r.turnoverToWithdraw ??
+                                r.requiredTurnoverForWithdrawal) as unknown as number,
+                            );
+                            return (
                             <tr
                               key={String(r.id ?? r.bonusId ?? idx)}
                               className="border-b border-border bg-surface"
                             >
-                              <td className="px-4 py-3 text-sm text-foreground">
+                              <td className="px-2 py-1.5 text-sm text-foreground">
                                 {bonusCellString(r, "code", "bonusCode", "promoCode")}
                               </td>
-                              <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                              <td
+                                className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(bonusAmt)}`}
+                              >
                                 {bonusCellNumber(
                                   r,
                                   "bonusAmount",
@@ -1722,7 +1801,9 @@ export default function PlayerDetailPage() {
                                   "bonus",
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                              <td
+                                className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(toAct)}`}
+                              >
                                 {bonusCellNumber(
                                   r,
                                   "requiredTurnoverToActivate",
@@ -1730,7 +1811,9 @@ export default function PlayerDetailPage() {
                                   "requiredTurnoverForActivation",
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                              <td
+                                className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(toWd)}`}
+                              >
                                 {bonusCellNumber(
                                   r,
                                   "requiredTurnoverToWithdraw",
@@ -1738,21 +1821,22 @@ export default function PlayerDetailPage() {
                                   "requiredTurnoverForWithdrawal",
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-center text-sm whitespace-nowrap text-foreground-secondary">
+                              <td className="px-2 py-1.5 text-center text-sm whitespace-nowrap text-foreground-secondary">
                                 {formatDateTime(
                                   r.bonusDate ?? r.createdOn ?? r.issuedOn,
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-center text-sm whitespace-nowrap text-foreground-secondary">
+                              <td className="px-2 py-1.5 text-center text-sm whitespace-nowrap text-foreground-secondary">
                                 {formatDateTime(
                                   r.bonusExpiry ?? r.expiresOn ?? r.expiryDate,
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-center text-sm text-foreground">
+                              <td className="px-2 py-1.5 text-center text-sm text-foreground">
                                 {bonusIsExpired(r)}
                               </td>
                             </tr>
-                          ))
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -1845,7 +1929,7 @@ export default function PlayerDetailPage() {
                     </div>
                     <div className="text-right text-sm">
                       <span className="font-medium text-foreground-secondary">
-                        Referral balance:{" "}
+                        Referral balance:
                       </span>
                       {referralBalanceError ? (
                         <span className="text-error">{referralBalanceError}</span>
@@ -1868,16 +1952,16 @@ export default function PlayerDetailPage() {
                         <table className="min-w-[720px] w-full border-collapse">
                           <thead>
                             <tr className="border-b border-border bg-surface-muted/70">
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Username
                               </th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 User code
                               </th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Status
                               </th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 User ID
                               </th>
                             </tr>
@@ -1885,13 +1969,13 @@ export default function PlayerDetailPage() {
                           <tbody>
                             {referralMembersLoading ? (
                               <tr>
-                                <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                                <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                                   Loading…
                                 </td>
                               </tr>
                             ) : referralMembers.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                                <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                                   No referral users. Click Search to load.
                                 </td>
                               </tr>
@@ -1901,7 +1985,7 @@ export default function PlayerDetailPage() {
                                   key={String(r.id ?? r.userId ?? idx)}
                                   className="border-b border-border bg-surface"
                                 >
-                                  <td className="px-4 py-3 text-sm text-foreground">
+                                  <td className="px-2 py-1.5 text-sm text-foreground">
                                     {bonusCellString(
                                       r,
                                       "username",
@@ -1909,13 +1993,13 @@ export default function PlayerDetailPage() {
                                       "name",
                                     )}
                                   </td>
-                                  <td className="px-4 py-3 font-mono text-sm text-foreground-secondary">
+                                  <td className="px-2 py-1.5 font-mono text-sm text-foreground-secondary">
                                     {bonusCellString(r, "userCode", "code")}
                                   </td>
-                                  <td className="px-4 py-3 text-sm text-foreground">
+                                  <td className="px-2 py-1.5 text-sm text-foreground">
                                     {r.status != null ? String(r.status) : "—"}
                                   </td>
-                                  <td className="px-4 py-3 font-mono text-xs text-foreground-secondary">
+                                  <td className="px-2 py-1.5 font-mono text-xs text-foreground-secondary">
                                     {bonusCellString(r, "id", "userId")}
                                   </td>
                                 </tr>
@@ -1936,16 +2020,16 @@ export default function PlayerDetailPage() {
                         <table className="min-w-[760px] w-full border-collapse">
                           <thead>
                             <tr className="border-b border-border bg-surface-muted/70">
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Date
                               </th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Description
                               </th>
-                              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Amount
                               </th>
-                              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                                 Balance
                               </th>
                             </tr>
@@ -1953,13 +2037,13 @@ export default function PlayerDetailPage() {
                           <tbody>
                             {referralStmtLoading ? (
                               <tr>
-                                <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                                <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                                   Loading…
                                 </td>
                               </tr>
                             ) : referralStmtRows.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                                <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                                   No records for this date range.
                                 </td>
                               </tr>
@@ -1976,16 +2060,24 @@ export default function PlayerDetailPage() {
                                     key={String(r.id ?? idx)}
                                     className="border-b border-border bg-surface"
                                   >
-                                    <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
+                                    <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
                                       {formatDateTime(r.createdOn ?? r.date)}
                                     </td>
-                                    <td className="max-w-[320px] px-4 py-3 text-sm text-foreground">
+                                    <td className="max-w-[320px] px-2 py-1.5 text-sm text-foreground">
                                       {accountStatementDescription(r)}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                    <td
+                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${
+                                        Number.isFinite(amt) ? signedAmountTextClass(amt) : "text-foreground"
+                                      }`}
+                                    >
                                       {Number.isFinite(amt) ? formatCurrency(amt) : "—"}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
+                                    <td
+                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${
+                                        Number.isFinite(bal) ? signedAmountTextClass(bal) : "text-foreground"
+                                      }`}
+                                    >
                                       {Number.isFinite(bal) ? formatCurrency(bal) : "—"}
                                     </td>
                                   </tr>
@@ -2054,61 +2146,81 @@ export default function PlayerDetailPage() {
                     </p>
                   ) : null}
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="min-w-[800px] w-full border-collapse">
+                    <table className="min-w-[640px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Date
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Description
                           </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Amount
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
-                            Balance
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {transferStmtLoading ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                            <td
+                              colSpan={3}
+                              className="px-2 py-4 text-center text-sm text-muted"
+                            >
                               Loading…
                             </td>
                           </tr>
                         ) : transferStmtRows.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-6 text-center text-sm text-muted">
+                            <td
+                              colSpan={3}
+                              className="px-2 py-4 text-center text-sm text-muted"
+                            >
                               No transfers for this date range.
                             </td>
                           </tr>
                         ) : (
-                          transferStmtRows.map((r, idx) => {
-                            const amt = Number(
-                              r.amount ?? r.chips ?? r.balance ?? r.delta ?? 0,
-                            );
-                            const bal = Number(r.total ?? r.afterBalance ?? NaN);
-                            return (
+                          transferStmtGrouped.flatMap((group, gi) => {
+                            const headerRow = (
                               <tr
-                                key={String(r.id ?? idx)}
-                                className="border-b border-border bg-surface"
+                                key={`transfer-g-${group.dateKey}-${gi}`}
+                                className="bg-surface-muted"
                               >
-                                <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
-                                  {formatDateTime(r.createdOn ?? r.date)}
-                                </td>
-                                <td className="max-w-[360px] px-4 py-3 text-sm text-foreground">
-                                  {accountStatementDescription(r)}
-                                </td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
-                                  {Number.isFinite(amt) ? formatCurrency(amt) : "—"}
-                                </td>
-                                <td className="px-4 py-3 text-right text-sm tabular-nums text-foreground">
-                                  {Number.isFinite(bal) ? formatCurrency(bal) : "—"}
+                                <td
+                                  colSpan={3}
+                                  className="px-2 py-1.5 text-sm font-medium text-foreground"
+                                >
+                                  {group.labelDate
+                                    ? formatTransferStatementDateBar(group.labelDate)
+                                    : "—"}
                                 </td>
                               </tr>
                             );
+                            const dataRows = group.items.map((r, idx) => {
+                              const amt = Number(
+                                r.amount ?? r.chips ?? r.balance ?? r.delta ?? 0,
+                              );
+                              const amtClass = signedAmountTextClass(amt);
+                              return (
+                                <tr
+                                  key={String(r.id ?? `${group.dateKey}-${idx}`)}
+                                  className="border-b border-border bg-surface"
+                                >
+                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap tabular-nums text-foreground-secondary">
+                                    {formatDateTime(r.createdOn ?? r.date)}
+                                  </td>
+                                  <td className="max-w-[360px] px-2 py-1.5 text-sm text-foreground">
+                                    {accountStatementDescription(r)}
+                                  </td>
+                                  <td
+                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${amtClass}`}
+                                  >
+                                    {Number.isFinite(amt) ? formatCurrency(amt) : "—"}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                            return [headerRow, ...dataRows];
                           })
                         )}
                       </tbody>
@@ -2159,22 +2271,22 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[960px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Login date &amp; time
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Logout date &amp; time
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             IP address
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             ISP
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             City, state, country
                           </th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
                             Active for
                           </th>
                         </tr>
@@ -2182,13 +2294,13 @@ export default function PlayerDetailPage() {
                       <tbody>
                         {loginHistoryLoading ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : loginHistoryRows.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="px-4 py-6 text-center text-sm text-muted">
+                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
                               No records found.
                             </td>
                           </tr>
@@ -2198,22 +2310,22 @@ export default function PlayerDetailPage() {
                               key={`${String(r.remoteIp ?? "")}-${String(r.issuedOn ?? idx)}`}
                               className="border-b border-border bg-surface"
                             >
-                              <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground">
+                              <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground">
                                 {formatDateTime(r.issuedOn)}
                               </td>
-                              <td className="px-4 py-3 text-sm whitespace-nowrap text-foreground-secondary">
+                              <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
                                 {formatDateTime(r.expiresOn)}
                               </td>
-                              <td className="px-4 py-3 font-mono text-sm text-foreground">
+                              <td className="px-2 py-1.5 font-mono text-sm text-foreground">
                                 {String(r.remoteIp ?? "—")}
                               </td>
-                              <td className="px-4 py-3 text-sm text-foreground-secondary">
+                              <td className="px-2 py-1.5 text-sm text-foreground-secondary">
                                 {String(r.provider ?? "—")}
                               </td>
-                              <td className="px-4 py-3 text-sm text-foreground">
+                              <td className="px-2 py-1.5 text-sm text-foreground">
                                 {String(r.location ?? "—")}
                               </td>
-                              <td className="px-4 py-3 text-sm text-foreground-secondary">
+                              <td className="px-2 py-1.5 text-sm text-foreground-secondary">
                                 {String(r.loginSince ?? "—")}
                               </td>
                             </tr>
@@ -2247,84 +2359,84 @@ export default function PlayerDetailPage() {
                 <table className="min-w-[760px] w-full border-collapse">
                   <thead>
                     <tr className="border-b border-border bg-surface-muted/70">
-                      <th className="w-[160px] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary"> </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Today</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">3 days</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">7 days</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">30 days</th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Lifetime</th>
+                      <th className="w-[160px] px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary"> </th>
+                      <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Today</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">3 days</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">7 days</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">30 days</th>
+                      <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Lifetime</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Win</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Win</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.win, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Comm</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Comm</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.commission, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">P&L</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">P&L</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.pnl, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Turnover</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Turnover</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.turnover, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface-muted/35">
                       <td colSpan={6} className="h-3 px-0 py-0" />
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Deposit</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Deposit</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.deposit, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Withdrawal</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Withdrawal</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.withdrawal, "lifetime")}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">D-W</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{formatCurrency(activityRows.deposit.day1 - activityRows.withdrawal.day1)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{formatCurrency(activityRows.deposit.day3 - activityRows.withdrawal.day3)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{formatCurrency(activityRows.deposit.day7 - activityRows.withdrawal.day7)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{formatCurrency(activityRows.deposit.day30 - activityRows.withdrawal.day30)}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{formatCurrency(activityRows.deposit.lifetime - activityRows.withdrawal.lifetime)}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">D-W</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day1 - activityRows.withdrawal.day1)}`}>{formatCurrency(activityRows.deposit.day1 - activityRows.withdrawal.day1)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day3 - activityRows.withdrawal.day3)}`}>{formatCurrency(activityRows.deposit.day3 - activityRows.withdrawal.day3)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day7 - activityRows.withdrawal.day7)}`}>{formatCurrency(activityRows.deposit.day7 - activityRows.withdrawal.day7)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day30 - activityRows.withdrawal.day30)}`}>{formatCurrency(activityRows.deposit.day30 - activityRows.withdrawal.day30)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.lifetime - activityRows.withdrawal.lifetime)}`}>{formatCurrency(activityRows.deposit.lifetime - activityRows.withdrawal.lifetime)}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface-muted/35">
                       <td colSpan={6} className="h-3 px-0 py-0" />
                     </tr>
                     <tr className="bg-surface">
-                      <td className="px-4 py-3 text-sm font-semibold text-foreground">Casino</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day1")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day3")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day7")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day30")}</td>
-                      <td className="px-4 py-3 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "lifetime")}</td>
+                      <td className="px-2 py-1.5 text-sm font-semibold text-foreground">Casino</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day1")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day3")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day7")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "day30")}</td>
+                      <td className="px-2 py-1.5 text-center text-sm text-foreground-secondary">{renderMetricValue(activityRows.casino, "lifetime")}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -2352,7 +2464,7 @@ export default function PlayerDetailPage() {
       referralStmtPage,
       referralStmtLoading,
       referralStmtError,
-      transferStmtRows,
+      transferStmtGrouped,
       transferStmtTotal,
       transferStmtPage,
       transferStmtLoading,

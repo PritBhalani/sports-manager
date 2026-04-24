@@ -22,6 +22,7 @@ import {
 } from "@/components";
 import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import {
   getFdProfitLoss,
   type FdProfitLossRow,
@@ -201,7 +202,7 @@ export default function FdGameReportPage() {
                             href={`/players/${encodeURIComponent(playerId)}?tab=fd-betting-pl`}
                             className="font-medium text-primary hover:underline"
                           >
-                            <span>{r.user?.username ?? "—"}</span>{" "}
+                            <span>{r.user?.username ?? "—"}</span>
                             <span className="text-primary/80">
                               ({r.user?.userCode ?? "—"})
                             </span>
@@ -221,7 +222,7 @@ export default function FdGameReportPage() {
                     <TableCell>
                       <span className="text-primary">Table Wise PL</span>
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums text-foreground">
+                    <TableCell  className={`tabular-nums ${signedAmountTextClass(Number(r.win ?? 0))}`}>
                       {formatCurrency(r.win)}
                     </TableCell>
                   </TableRow>
@@ -230,7 +231,7 @@ export default function FdGameReportPage() {
                 <TableRow className="bg-surface-muted/50 font-medium">
                   <TableCell>Total</TableCell>
                   <TableCell> </TableCell>
-                  <TableCell align="right" className="tabular-nums text-foreground">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(totals)}`}>
                     {formatCurrency(totals)}
                   </TableCell>
                 </TableRow>

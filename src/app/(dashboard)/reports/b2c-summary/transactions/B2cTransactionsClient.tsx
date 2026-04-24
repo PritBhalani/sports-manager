@@ -25,6 +25,7 @@ import {
 } from "@/services/account.service";
 import type { B2cTransactionsQueryKind } from "@/utils/b2cTransactionRoutes";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 import {
   formatB2cReportTitleDate,
@@ -307,10 +308,10 @@ export default function B2cTransactionsClient(props: {
               <TableHeader className="bg-surface-2">
                 <TableHead className={`${reportTh} min-w-[10rem]`}>User</TableHead>
                 <TableHead className={`${reportTh} min-w-[12rem]`}>Description</TableHead>
-                <TableHead className={`${reportThRight} min-w-[6rem]`} align="right">
+                <TableHead className={`${reportThRight} min-w-[6rem]`} >
                   Amount
                 </TableHead>
-                <TableHead className={`${reportThRight}`} align="right">
+                <TableHead className={`${reportThRight}`} >
                   Date
                 </TableHead>
               </TableHeader>
@@ -349,12 +350,12 @@ export default function B2cTransactionsClient(props: {
                           {dwDescriptionLine(line)}
                         </TableCell>
                         <TableCell
-                          align="right"
-                          className={`tabular-nums ${bal < 0 ? "text-error" : "text-foreground"}`}
+                          
+                          className={`tabular-nums ${signedAmountTextClass(bal)}`}
                         >
                           {formatCurrency(line.balance ?? 0)}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground-secondary">
+                        <TableCell  className="tabular-nums text-foreground-secondary">
                           {formatDwDateTimeIST(line.createdOn)}
                         </TableCell>
                       </TableRow>
@@ -370,13 +371,13 @@ export default function B2cTransactionsClient(props: {
                 <TableHead className={reportTh}>Bonus code</TableHead>
                 <TableHead className={reportTh}>CTO/RTO</TableHead>
                 <TableHead className={reportTh}>CWTO/RWTO</TableHead>
-                <TableHead className={`${reportThRight}`} align="right">
+                <TableHead className={`${reportThRight}`} >
                   Amount
                 </TableHead>
-                <TableHead className={`${reportThRight}`} align="right">
+                <TableHead className={`${reportThRight}`} >
                   Created date
                 </TableHead>
-                <TableHead className={`${reportThRight}`} align="right">
+                <TableHead className={`${reportThRight}`} >
                   Expiring date
                 </TableHead>
               </TableHeader>
@@ -428,13 +429,13 @@ export default function B2cTransactionsClient(props: {
                             BONUS_RWTO_KEYS,
                           )}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground">
+                        <TableCell  className="tabular-nums text-foreground">
                           {bonusAmountCell(line)}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground-secondary">
+                        <TableCell  className="tabular-nums text-foreground-secondary">
                           {formatDwDateTimeIST(line.createdOn)}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground-secondary">
+                        <TableCell  className="tabular-nums text-foreground-secondary">
                           {exp ? formatDwDateTimeIST(exp) : "—"}
                         </TableCell>
                       </TableRow>

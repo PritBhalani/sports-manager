@@ -6,6 +6,8 @@ import { Banknote, HandCoins, LogOut, Menu, X } from "lucide-react";
 import { getAuthSession } from "@/store/authStore";
 import { useAuth } from "@/hooks/useAuth";
 import CommandPalette from "@/components/layout/CommandPalette";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
+import { formatUserTypeLabel } from "@/utils/userTypeLabel";
 
 export type NavbarBalances = {
   balance: string;
@@ -52,23 +54,30 @@ function BalanceStat({
   label: string;
   value: string;
 }) {
+  const n = parseMaybeNumber(value);
+  const valueClass =
+    n === null ? "text-foreground" : signedAmountTextClass(n);
   return (
     <div className="min-w-[4.25rem] shrink-0 text-right md:min-w-[5rem]">
       <p className="truncate text-[10px] font-medium uppercase tracking-wider text-muted">
         {label}
       </p>
-      <p className="text-sm font-semibold tabular-nums text-foreground">{value}</p>
+      <p className={`text-sm font-semibold tabular-nums ${valueClass}`}>{value}</p>
     </div>
   );
 }
 
 function roleLabel(session: ReturnType<typeof getAuthSession>): string {
-  const claims = session.claims ?? [];
-  if (claims.some((c) => String(c).toLowerCase().includes("admin"))) {
-    return "Admin";
+  const fromUser = session.user?.userType;
+  if (fromUser !== undefined && fromUser !== null) {
+    return formatUserTypeLabel(fromUser);
   }
-  const userType = session.user?.userType;
-  if (userType === 1 || userType === 0) return "Admin";
+  const loginData = session.loginData as Record<string, unknown> | undefined;
+  const nested = loginData?.user;
+  if (nested && typeof nested === "object") {
+    const t = (nested as Record<string, unknown>).userType;
+    if (t !== undefined && t !== null) return formatUserTypeLabel(t);
+  }
   return "User";
 }
 

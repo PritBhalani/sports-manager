@@ -8,7 +8,7 @@ import {
   Input,
   Button,
   StatsCard,
-  DataGrid,
+  DataTable,
 } from "@/components";
 
 type Row = Record<string, unknown>;
@@ -47,7 +47,7 @@ export default function TransferDetailPage() {
             <Button variant="primary">Filter</Button>
           </FilterBar>
           <ListTableSection>
-            <DataGrid
+            <DataTable
               enableSearch={false}
               columns={columns}
               rows={rows}

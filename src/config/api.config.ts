@@ -3,7 +3,7 @@ const isBrowser = typeof window !== "undefined";
 
 const upstreamBaseUrl =
   (env?.NEXT_PUBLIC_API_BASE as string) ||
-  "https://f768dafd155e.drpapaya.ai";
+  "https://f768dafd155e.drpapaya.in";
 
 const baseUrl = upstreamBaseUrl;
 export const apiConfig = {

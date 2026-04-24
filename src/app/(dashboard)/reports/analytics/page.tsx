@@ -13,6 +13,7 @@ import {
   DataTable,
 } from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatDateTime } from "@/utils/date";
 import { getDownlineSummary, getPlByMarket } from "@/services/betHistory.service";
 import { downloadCsv } from "@/utils/csvDownload";
@@ -55,14 +56,28 @@ export default function ReportsAnalyticsPage() {
       id: "stake",
       header: "Stake",
       sortable: true,
-      cell: (row: Record<string, unknown>) => `₹ ${formatCurrency(row.stake ?? row.amount)}`,
+      cell: (row: Record<string, unknown>) => {
+        const n = Number(row.stake ?? row.amount ?? 0);
+        return (
+          <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+            ₹ {formatCurrency(row.stake ?? row.amount)}
+          </span>
+        );
+      },
       sortValue: (row: Record<string, unknown>) => Number(row.stake ?? row.amount ?? 0),
     },
     {
       id: "profitLoss",
       header: "Net P&L",
       sortable: true,
-      cell: (row: Record<string, unknown>) => `₹ ${formatCurrency(row.profitLoss ?? row.pl)}`,
+      cell: (row: Record<string, unknown>) => {
+        const n = Number(row.profitLoss ?? row.pl ?? 0);
+        return (
+          <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+            ₹ {formatCurrency(row.profitLoss ?? row.pl)}
+          </span>
+        );
+      },
       sortValue: (row: Record<string, unknown>) => Number(row.profitLoss ?? row.pl ?? 0),
     },
     {

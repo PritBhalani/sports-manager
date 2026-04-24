@@ -31,6 +31,7 @@ import {
   type OffPayInRecord,
 } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 import { dateRangeToISO, formatDateTime } from "@/utils/date";
 
@@ -245,7 +246,7 @@ export default function TransactionsRequestDepositPage() {
       >
         <DialogSection>
           <p className="text-sm text-foreground">
-            Are you sure you want to rollback{" "}
+            Are you sure you want to rollback
             <span className="tabular-nums font-medium">
               {rollbackRow ? formatCurrency(rollbackRow.amount) : "—"}
             </span>
@@ -382,8 +383,8 @@ export default function TransactionsRequestDepositPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="!px-6 !py-3 text-center">{formatCurrency(row.amount)}</TableCell>
-                        <TableCell className="!px-6 !py-3 text-center">{formatCurrency(row.bonusAmount ?? 0)}</TableCell>
+                        <TableCell className={`!px-6 !py-3 text-center tabular-nums ${signedAmountTextClass(Number(row.amount ?? 0))}`}>{formatCurrency(row.amount)}</TableCell>
+                        <TableCell className={`!px-6 !py-3 text-center tabular-nums ${signedAmountTextClass(Number(row.bonusAmount ?? 0))}`}>{formatCurrency(row.bonusAmount ?? 0)}</TableCell>
                         <TableCell className="!px-6 !py-3">{row.utrNo ?? "—"}</TableCell>
                         <TableCell className="!px-6 !py-3">{row.acNo ?? "—"}</TableCell>
                         <TableCell className="!px-6 !py-3 text-center">

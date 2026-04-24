@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import {
@@ -117,7 +117,7 @@ export default function AccountsHistoryPage() {
             <TableHead className="font-bold text-foreground-secondary">Whatsapp</TableHead>
             <TableHead className="font-bold text-foreground-secondary">Telegram</TableHead>
             <TableHead className="font-bold text-foreground-secondary">Status</TableHead>
-            <TableHead align="center" className="font-bold text-foreground-secondary">
+            <TableHead  className="font-bold text-foreground-secondary">
               Action
             </TableHead>
           </TableHeader>
@@ -139,7 +139,7 @@ export default function AccountsHistoryPage() {
                       {row.status === "active" ? "Active" : "Inactive"}
                     </Badge>
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell >
                     <button
                       type="button"
                       className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-border text-foreground-tertiary hover:bg-surface-muted hover:text-foreground"

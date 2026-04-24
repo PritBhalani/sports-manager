@@ -28,7 +28,9 @@ import {
   type MarketByEventRow,
 } from "@/services/position.service";
 import { getLiveBets } from "@/services/bet.service";
+import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import {
   coerceAmount,
   collectMatchOddsMarketIds,
@@ -43,76 +45,41 @@ import {
   type WsMarketBookPayload,
   type WsRunnerBookRow,
 } from "./_lib/websitePriceBook";
+import {
+  liveBetEventId,
+  liveBetStakeForDisplay,
+} from "./_lib/liveBetDisplay";
 
-/** Sum best back + best lay size across runners (liquidity proxy when API matched is missing). */
-function sumTopBookLiquidity(book: WsMarketBookPayload | undefined): number {
-  if (!book?.mr?.length) return 0;
-  let s = 0;
-  for (const row of book.mr) {
-    const b0 = normalizePriceLevel(row.bp?.[0]);
-    const l0 = normalizePriceLevel(row.lp?.[0]);
-    const bs = b0.size;
-    const ls = l0.size;
-    if (bs != null && bs > 0) s += bs;
-    if (ls != null && ls > 0) s += ls;
+/** Sum matched bet stakes per event (same units as bet card “Size”). */
+function sumMatchedStakesByEventId(
+  rows: Record<string, unknown>[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const eid = liveBetEventId(row);
+    if (!eid) continue;
+    const n = coerceAmount(liveBetStakeForDisplay(row));
+    if (n == null || n <= 0) continue;
+    map.set(eid, (map.get(eid) ?? 0) + n);
   }
-  return s;
+  return map;
 }
 
-const WS_MATCHED_KEYS: string[] = [
-  "tm",
-  "totalMatched",
-  "traded",
-  "volume",
-  "matched",
-  "turnOver",
-  "TurnOver",
-  "turnover",
-];
-const EVENT_MATCHED_KEYS: string[] = [
-  "totalStake",
-  "totalMatched",
-  "traded",
-  "volume",
-  "totalVolume",
-  "matchedVolume",
-  "turnover",
-  "turnOver",
-];
-
-function pickFirstPositiveAmount(
-  obj: Record<string, unknown> | undefined,
-  keys: string[],
-): number | undefined {
-  if (!obj) return undefined;
-  for (const k of keys) {
-    const n = coerceAmount(obj[k]);
-    if (n != null && n > 0) return n;
-  }
-  return undefined;
-}
-
-/**
- * Matched/traded from REST or socket; falls back to visible book liquidity so the row
- * isn't stuck at 0 while prices show depth.
- */
-function readMatchedDisplay(
+function tradedStakeForEventRow(
+  sumByEventId: Map<string, number>,
   ev: MarketByEventRow,
-  wsBook: WsMarketBookPayload | undefined,
-): { amount: number; source: "socket" | "api" | "liquidity" } {
-  const wsObj = wsBook as Record<string, unknown> | undefined;
-  const fromSocket = pickFirstPositiveAmount(wsObj, WS_MATCHED_KEYS);
-  if (fromSocket != null) return { amount: fromSocket, source: "socket" };
-
-  const evObj = ev as Record<string, unknown>;
-  const fromApi = pickFirstPositiveAmount(evObj, EVENT_MATCHED_KEYS);
-  if (fromApi != null) return { amount: fromApi, source: "api" };
-
-  const liq = sumTopBookLiquidity(wsBook);
-  if (liq > 0) return { amount: liq, source: "liquidity" };
-
-  return { amount: 0, source: "api" };
+  eventIdStr: string,
+): number {
+  const sourceId = pickStr(ev as Record<string, unknown>, ["sourceId"]);
+  for (const k of [eventIdStr, sourceId ?? ""].filter((x) => x.trim())) {
+    const v = sumByEventId.get(k);
+    if (v != null && v > 0) return v;
+  }
+  if (eventIdStr.trim()) return sumByEventId.get(eventIdStr) ?? 0;
+  return 0;
 }
+
+type TradedStatSource = "bets" | "none";
 
 function readBetCount(ev: MarketByEventRow): number {
   const o = ev as Record<string, unknown>;
@@ -122,20 +89,6 @@ function readBetCount(ev: MarketByEventRow): number {
     if (n != null && n >= 0) return Math.floor(n);
   }
   return 0;
-}
-
-/** Compact schedule line: no weekday/seconds noise. */
-function formatEventWhen(value: unknown): string {
-  if (value === undefined || value === null) return "—";
-  const date = new Date(value as string | number);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
@@ -191,6 +144,48 @@ function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
     <div className="flex min-w-[7.5rem] items-stretch justify-center gap-1.5 text-xs tabular-nums">
       {cell("Back", backStr, bVol, true)}
       {cell("Lay", layStr, lVol, false)}
+    </div>
+  );
+}
+
+/** Match-odds style tiles: bet count + traded volume. */
+function BetsTradedStatTiles({
+  bets,
+  traded,
+}: {
+  bets: number;
+  traded: { amount: number; source: TradedStatSource };
+}) {
+  const tradedClass = signedAmountTextClass(Number(traded.amount ?? 0));
+
+  return (
+    <div className="flex flex-wrap items-stretch gap-1.5">
+      <div
+        className="flex min-w-[4.25rem] flex-col rounded-md border border-sky-200/80 bg-sky-100 px-2 py-1 text-center leading-tight dark:border-sky-800 dark:bg-sky-950/55"
+        title="Bet count"
+      >
+        <div className="text-[9px] font-bold uppercase tracking-wide text-sky-800/90 dark:text-sky-200/90">
+          Bets
+        </div>
+        <div className="tabular-nums text-[13px] font-bold text-foreground">
+          {bets}
+        </div>
+      </div>
+      <div
+        className="flex min-w-[5.5rem] flex-col rounded-md border border-emerald-200/80 bg-emerald-100 px-2 py-1 text-center leading-tight dark:border-emerald-800 dark:bg-emerald-950/55"
+        title={
+          traded.source === "bets"
+            ? "Total matched stake for this event (same as bet Size, e.g. ₹100)"
+            : "No matched stakes in loaded live bets for this event"
+        }
+      >
+        <div className="text-[9px] font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
+          Traded
+        </div>
+        <div className={`tabular-nums text-[13px] font-bold ${tradedClass}`}>
+          {formatCurrency(traded.amount)}
+        </div>
+      </div>
     </div>
   );
 }
@@ -338,12 +333,12 @@ export default function WebsiteAnalyticsPage() {
     getLiveBets(
       {
         page: 1,
-        pageSize: 10,
+        pageSize: 500,
         groupBy: "",
         orderBy: "",
         orderByDesc: false,
       },
-      { eventTypeId },
+      { eventTypeId, status: "matched" },
     )
       .then((res) => {
         setLiveBetRows(res.items);
@@ -370,6 +365,11 @@ export default function WebsiteAnalyticsPage() {
     marketRows.length > 0 &&
     filteredEvents.length === 0 &&
     !showAllEvents;
+
+  const matchedStakeByEventId = useMemo(
+    () => sumMatchedStakesByEventId(liveBetRows),
+    [liveBetRows],
+  );
 
   return (
     <div className="min-w-0 space-y-4">
@@ -500,11 +500,8 @@ export default function WebsiteAnalyticsPage() {
                         ? Boolean(wsBook.ip)
                         : Boolean(market?.inPlay);
                     const title = String(ev.name ?? ev.raceName ?? "—");
-                    const when = ev.openDate ? formatEventWhen(ev.openDate) : "—";
+                    const when = ev.openDate ? formatDateTime(ev.openDate) : "—";
                     const bets = readBetCount(ev);
-                    const matched = readMatchedDisplay(ev, wsBook);
-                    const matchedLabel =
-                      matched.source === "liquidity" ? "Book liquidity" : "Matched";
                     const eventIdStr =
                       ev.id != null && String(ev.id).trim()
                         ? String(ev.id).trim()
@@ -512,6 +509,15 @@ export default function WebsiteAnalyticsPage() {
                             "eventId",
                             "_id",
                           ]) ?? "";
+                    const tradedTotal = tradedStakeForEventRow(
+                      matchedStakeByEventId,
+                      ev,
+                      eventIdStr,
+                    );
+                    const traded = {
+                      amount: tradedTotal,
+                      source: (tradedTotal > 0 ? "bets" : "none") as TradedStatSource,
+                    };
                     const canOpenEvent = Boolean(eventIdStr);
                     const openEventDetail = () => {
                       if (!eventIdStr) return;
@@ -551,19 +557,7 @@ export default function WebsiteAnalyticsPage() {
                               <div className="text-xs text-foreground-secondary">
                                 {when}
                               </div>
-                              <div className="text-xs text-foreground-tertiary">
-                                <span className="tabular-nums">{bets}</span> bets ·{" "}
-                                <span className="tabular-nums">{matchedLabel}</span>:{" "}
-                                <span className="font-medium text-foreground-secondary tabular-nums">
-                                  {formatCurrency(matched.amount)}
-                                </span>
-                                {matched.source === "liquidity" ? (
-                                  <span className="text-foreground-tertiary">
-                                    {" "}
-                                    (visible depth)
-                                  </span>
-                                ) : null}
-                              </div>
+                              <BetsTradedStatTiles bets={bets} traded={traded} />
                             </div>
                             {inPlay ? (
                               <div className="flex shrink-0 items-center gap-1 self-start rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
@@ -600,7 +594,7 @@ export default function WebsiteAnalyticsPage() {
             </Table>
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground-tertiary">
               Live bets
             </h2>
@@ -614,8 +608,8 @@ export default function WebsiteAnalyticsPage() {
                 <TableHeader>
                   <TableHead>Event</TableHead>
                   <TableHead>Market</TableHead>
-                  <TableHead align="right">Stake</TableHead>
-                  <TableHead align="right">Odds</TableHead>
+                  <TableHead >Stake</TableHead>
+                  <TableHead >Odds</TableHead>
                 </TableHeader>
                 <TableBody>
                   {betsLoading ? (
@@ -636,6 +630,7 @@ export default function WebsiteAnalyticsPage() {
                         pickStr(r, ["eventName", "raceName", "name"]) ?? "—";
                       const mkt = pickStr(r, ["marketName", "market"]) ?? "—";
                       const stake = r.stake ?? r.betStake;
+                      const stakeN = Number(stake ?? 0);
                       const odds = r.odds ?? r.price ?? r.matchOdd;
                       return (
                         <TableRow key={pickStr(r, ["id", "betId"]) ?? i}>
@@ -645,10 +640,10 @@ export default function WebsiteAnalyticsPage() {
                           <TableCell className="max-w-[160px] truncate text-sm">
                             {mkt}
                           </TableCell>
-                          <TableCell align="right" className="tabular-nums text-sm">
+                          <TableCell  className={`tabular-nums text-sm ${signedAmountTextClass(stakeN)}`}>
                             {formatCurrency(stake ?? 0)}
                           </TableCell>
-                          <TableCell align="right" className="tabular-nums text-sm">
+                          <TableCell  className="tabular-nums text-sm">
                             {odds != null ? String(odds) : "—"}
                           </TableCell>
                         </TableRow>
@@ -660,14 +655,14 @@ export default function WebsiteAnalyticsPage() {
             </div>
             {!betsLoading && liveBetTotal > liveBetRows.length ? (
               <p className="text-xs text-foreground-secondary">
-                Showing {liveBetRows.length} of {liveBetTotal}. Open{" "}
+                Showing {liveBetRows.length} of {liveBetTotal}. Open
                 <Link href="/sports/betlist" className="text-primary underline">
                   Sports betlist
-                </Link>{" "}
+                </Link>
                 for full filters.
               </p>
             ) : null}
-          </div>
+          </div> */}
         </div>
       </ListPageFrame>
     </div>

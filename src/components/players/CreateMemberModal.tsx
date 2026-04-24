@@ -262,7 +262,7 @@ export default function CreateMemberModal({
                   </div>
                 )}
                 {/* <p className="text-xs text-muted">
-                  Full code:{" "}
+                  Full code:
                   <span className="font-mono text-foreground">{assembledUserCode || "—"}</span>
                 </p> */}
               </div>

@@ -37,7 +37,8 @@ import {
 import { getAccountStatement } from "@/services/account.service";
 import { changePassword } from "@/services/auth.service";
 import type { MyInfo } from "@/types/user.types";
-import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
+import { dateRangeToISO, formatDateTime, todayRangeUTC } from "@/utils/date";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { downloadCsv } from "@/utils/csvDownload";
 import NotificationSettingsForm from "@/components/settings/NotificationSettingsForm";
@@ -315,16 +316,9 @@ export default function ProfilePage() {
       const delta = Number(r.balance ?? 0);
       const debit = Number.isFinite(delta) && delta < 0 ? Math.abs(delta) : 0;
       const credit = Number.isFinite(delta) && delta > 0 ? delta : 0;
-      const created = r.createdOn ? new Date(String(r.createdOn)) : null;
       const dateText =
-        created && !Number.isNaN(created.getTime())
-          ? created.toLocaleString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
+        r.createdOn != null && r.createdOn !== ""
+          ? formatDateTime(r.createdOn)
           : "";
       return [
         String(r.narration ?? ""),
@@ -417,13 +411,13 @@ export default function ProfilePage() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span className="font-medium text-foreground-secondary">
-                  Total Debit:{" "}
+                  Total Debit:
                   <span className="font-semibold text-error">
                     {formatCurrency(debitTotal)}
                   </span>
                 </span>
                 <span className="font-medium text-foreground-secondary">
-                  Total Credit:{" "}
+                  Total Credit:
                   <span className="font-semibold text-success">
                     {formatCurrency(creditTotal)}
                   </span>
@@ -501,10 +495,8 @@ export default function ProfilePage() {
                     const delta = Number(r.balance ?? 0);
                     const debit = Number.isFinite(delta) && delta < 0 ? Math.abs(delta) : 0;
                     const credit = Number.isFinite(delta) && delta > 0 ? delta : 0;
-                    const created = r.createdOn ? new Date(String(r.createdOn)) : null;
-                    const dateText = created && !Number.isNaN(created.getTime())
-                      ? created.toLocaleString("en-GB", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
-                      : "—";
+                    const running = Number(r.total ?? r.creditTotal ?? 0);
+                    const dateText = formatDateTime(r.createdOn);
                     return (
                       <div
                         key={String(r.id ?? idx)}
@@ -521,20 +513,32 @@ export default function ProfilePage() {
                             ) : null}
                           </p>
                         </div>
-                        <div className="mt-2 text-xs text-error sm:mt-0">
+                        <div
+                          className={`mt-2 text-xs tabular-nums sm:mt-0 ${
+                            debit > 0 ? "text-error" : "text-foreground"
+                          }`}
+                        >
                           {debit ? formatCurrency(debit) : "0"}
                         </div>
                         <div className="mt-2 sm:mt-0">
                           {credit ? (
-                            <span className="inline-flex rounded-full bg-success-subtle px-2 py-0.5 text-xs font-semibold text-success-foreground">
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                                credit > 0
+                                  ? "bg-success-subtle text-success-foreground"
+                                  : "text-foreground"
+                              }`}
+                            >
                               {formatCurrency(credit)}
                             </span>
                           ) : (
-                            <span className="text-xs text-muted">0</span>
+                            <span className="text-xs tabular-nums text-foreground">0</span>
                           )}
                         </div>
-                        <div className="mt-2 text-xs tabular-nums text-foreground sm:mt-0">
-                          {formatCurrency(Number(r.total ?? r.creditTotal ?? 0))}
+                        <div
+                          className={`mt-2 text-xs tabular-nums sm:mt-0 ${signedAmountTextClass(running)}`}
+                        >
+                          {formatCurrency(running)}
                         </div>
                         <div className="mt-2 text-xs text-foreground-secondary sm:mt-0">
                           {dateText}

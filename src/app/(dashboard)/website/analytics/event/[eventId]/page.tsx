@@ -13,29 +13,41 @@ import {
   Wifi,
   WifiOff,
 } from "lucide-react";
-import {
-  PageHeader,
-  ListPageFrame,
-  Button,
-  Table,
-  TableHeader,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableEmpty,
-} from "@/components";
+import { PageHeader, ListPageFrame, Button } from "@/components";
 import { getLiveBetsByEventId } from "@/services/bet.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatDateTime } from "@/utils/date";
-import { getOtherMarketsByEventAndMatchOddsId } from "@/services/marketodds.service";
 import {
+  eventMarketTitle,
+  formatBetCardDateTime,
+  liveBetAvgDisplay,
+  liveBetEventAndMarketNames,
+  liveBetIdDisplay,
+  liveBetMemberName,
+  liveBetOddsDisplay,
+  liveBetStakeForDisplay,
+  liveBetTimestamp,
+} from "../../_lib/liveBetDisplay";
+import { CricfeedScorecardEmbed } from "../../_lib/CricfeedScorecardEmbed";
+import { resolveScoreboardSport } from "../../_lib/scoreboardSport";
+import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
+import {
+  getEventScoreMidForEmbed,
+  getEventSourceIdForWsSubscribe,
+} from "../../_lib/eventScoreMid";
+import { getOtherMarketsByEventAndMatchOddsId } from "@/services/marketodds.service";
+import { updateMarketLockStatus } from "@/services/market.service";
+import {
+  getExposureByMarketIds,
+  getFancyExposureByMarketIds,
   getMarketByEventTypeId,
   getMarketCatalogByMarketId,
   mergeMarketCatalogForEvent,
   mergeMarketsIntoEvent,
   type MarketByEventMarket,
   type MarketByEventRow,
+  type RunnerExposureRow,
 } from "@/services/position.service";
 import {
   bestBackLevels,
@@ -80,6 +92,35 @@ function sortMarketsByDisplayOrder(markets: MarketByEventMarket[]) {
     if (na !== nb) return na - nb;
     return String(a.name ?? "").localeCompare(String(b.name ?? ""));
   });
+}
+
+function readEventBetLocked(ev: MarketByEventRow): boolean {
+  const o = ev as Record<string, unknown>;
+  const v =
+    o.isBetLock ??
+    o.isBetLocked ??
+    o.betLocked ??
+    o.eventBetLocked ??
+    o.isLock;
+  if (typeof v === "boolean") return v;
+  if (v === 1 || v === "1") return true;
+  if (v === 0 || v === "0") return false;
+  if (typeof v === "string" && v.toLowerCase() === "true") return true;
+  return false;
+}
+
+function ingestRunnerExposureRows(
+  rows: RunnerExposureRow[],
+  into: Map<string, number>,
+): void {
+  for (const r of rows) {
+    const mid = r.marketId != null ? String(r.marketId).trim() : "";
+    const rid = r.runnerId != null ? String(r.runnerId).trim() : "";
+    if (!mid || !rid || r.pl === undefined || r.pl === null) continue;
+    const n = Number(r.pl);
+    if (!Number.isFinite(n)) continue;
+    into.set(`${mid}:${rid}`, n);
+  }
 }
 
 function tabKeyForMarket(
@@ -194,11 +235,25 @@ function ScorePriceButton({
   );
 }
 
-function ToggleRow({ label, value }: { label: string; value: "YES" | "NO" }) {
-  const on = value === "YES";
+function SettingToggleRow({
+  label,
+  on,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  on: boolean;
+  disabled?: boolean;
+  onToggle: () => void | Promise<void>;
+}) {
   return (
-    <div className="flex items-center gap-2 text-xs text-foreground-secondary">
-      <span className="max-w-[10rem] leading-tight">{label}</span>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => void onToggle()}
+      className="flex items-center gap-2 rounded-md text-left text-xs text-foreground-secondary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="max-w-[12rem] leading-tight">{label}</span>
       <span
         className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
           on
@@ -206,8 +261,42 @@ function ToggleRow({ label, value }: { label: string; value: "YES" | "NO" }) {
             : "bg-surface-muted text-foreground-tertiary"
         }`}
       >
-        {value}
+        {on ? "YES" : "NO"}
       </span>
+    </button>
+  );
+}
+
+function runnerExposurePlFromMap(
+  map: Map<string, number>,
+  marketId: string | undefined,
+  runnerId: string | undefined | null,
+): number | undefined {
+  if (!marketId?.trim() || runnerId == null || !String(runnerId).trim()) {
+    return undefined;
+  }
+  const k = `${marketId.trim()}:${String(runnerId).trim()}`;
+  if (!map.has(k)) return undefined;
+  return map.get(k);
+}
+
+function MatchTitleCell({
+  name,
+  exposurePl,
+}: {
+  name: string;
+  exposurePl?: number;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <p className="mb-0 min-w-0 flex-1">{name}</p>
+      {exposurePl !== undefined ? (
+        <span
+          className={`shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums ${signedAmountTextClass(exposurePl)}`}
+        >
+          {formatCurrency(exposurePl)}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -222,12 +311,15 @@ function LadderRow({
   stripe,
   variant,
   market,
+  exposurePl,
 }: {
   name: string;
   runnerBook?: WsRunnerBookRow;
   stripe?: "even" | "odd";
   variant: "exchange" | "bookmaker-full" | "bookmaker-center";
   market?: MarketByEventMarket;
+  /** From POST /position/getexposurebymarketids (`pl`), shown like the live site. */
+  exposurePl?: number;
 }) {
   const backs = bestBackLevels(runnerBook, 3);
   const lays = bestLayLevels(runnerBook, 3);
@@ -243,7 +335,7 @@ function LadderRow({
     return (
       <tr className={`tr-data ${zebra}`}>
         <th className="match-title" scope="row">
-          <p>{name}</p>
+          <MatchTitleCell name={name} exposurePl={exposurePl} />
         </th>
         <td colSpan={6} className="sb-ball-running">
           BALL RUNNING
@@ -260,7 +352,7 @@ function LadderRow({
       return (
         <tr className={`tr-data ${zebra}`}>
           <th className="match-title" scope="row">
-            <p>{name}</p>
+            <MatchTitleCell name={name} exposurePl={exposurePl} />
           </th>
           <td colSpan={6} className="sb-ball-running">
             BALL RUNNING
@@ -271,7 +363,7 @@ function LadderRow({
     return (
       <tr className={`tr-data ${zebra}`}>
         <th className="match-title" scope="row">
-          <p>{name}</p>
+          <MatchTitleCell name={name} exposurePl={exposurePl} />
         </th>
         <td className="sb-odds-neutral align-c">
           <ScorePriceButton level={EMPTY_LEVEL} />
@@ -298,7 +390,7 @@ function LadderRow({
   return (
     <tr className={`tr-data ${zebra}`}>
       <th className="match-title" scope="row">
-        <p>{name}</p>
+        <MatchTitleCell name={name} exposurePl={exposurePl} />
       </th>
       {backsDisplay.map((lvl, i) => (
         <td
@@ -354,6 +446,27 @@ export default function WebsiteEventMarketsPage() {
   /** `-1` = all sides (same convention as sports bet list); `1` / `2` = back / lay only. */
   const [betSideFilter, setBetSideFilter] = useState("-1");
   const [selectedMarketId, setSelectedMarketId] = useState("");
+  const [eventTypeRecords, setEventTypeRecords] = useState<EventTypeRecord[]>([]);
+  const [runnerExposureMap, setRunnerExposureMap] = useState<
+    Map<string, number>
+  >(() => new Map());
+  const [includePT, setIncludePT] = useState(false);
+  const [eventBetLocked, setEventBetLocked] = useState(false);
+  const [lockUpdating, setLockUpdating] = useState(false);
+
+  useEffect(() => {
+    getEventType()
+      .then((list) => setEventTypeRecords(Array.isArray(list) ? list : []))
+      .catch(() => setEventTypeRecords([]));
+  }, []);
+
+  useEffect(() => {
+    if (!eventRow) {
+      setEventBetLocked(false);
+      return;
+    }
+    setEventBetLocked(readEventBetLocked(eventRow));
+  }, [eventRow]);
 
   const loadEvent = useCallback(async () => {
     if (!eventId) {
@@ -413,8 +526,13 @@ export default function WebsiteEventMarketsPage() {
   }, [loadEvent]);
 
   const marketIds = useMemo(() => collectAllMarketIdsFromEvent(eventRow), [eventRow]);
+  const wsEventSubscribeId = useMemo(
+    () => getEventSourceIdForWsSubscribe(eventRow),
+    [eventRow],
+  );
   const { priceBooks, wsConnected, wsAuthed, wsNote } = useWebsitePriceBookWs({
     marketIds,
+    wsEventSubscribeId,
     onRefreshSignal: () => setRefreshKey((k) => k + 1),
   });
 
@@ -480,6 +598,16 @@ export default function WebsiteEventMarketsPage() {
     wsMatchBook?.ip !== undefined
       ? Boolean(wsMatchBook.ip)
       : Boolean(matchMarket?.inPlay);
+
+  const scoreMidForEmbed = useMemo(
+    () => getEventScoreMidForEmbed(eventRow, eventId),
+    [eventRow, eventId],
+  );
+
+  const scoreboardSport = useMemo(
+    () => resolveScoreboardSport(eventTypeId, eventTypeRecords, eventRow),
+    [eventTypeId, eventTypeRecords, eventRow],
+  );
 
   const bookmakerMarkets = useMemo(() => {
     const all = eventRow?.markets ?? [];
@@ -556,6 +684,48 @@ export default function WebsiteEventMarketsPage() {
     [otherMarkets, fancyTab],
   );
 
+  const fancyExposureMarketIds = useMemo(
+    () => [
+      ...new Set(
+        otherMarkets.map((m) => String(m.id ?? "").trim()).filter(Boolean),
+      ),
+    ],
+    [otherMarkets],
+  );
+
+  useEffect(() => {
+    if (!eventRow) {
+      setRunnerExposureMap(new Map());
+      return;
+    }
+    const allIds = collectAllMarketIdsFromEvent(eventRow);
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const [mainRows, fancyRows] = await Promise.all([
+          allIds.length > 0
+            ? getExposureByMarketIds(allIds, includePT)
+            : Promise.resolve([] as RunnerExposureRow[]),
+          fancyExposureMarketIds.length > 0
+            ? getFancyExposureByMarketIds(fancyExposureMarketIds, includePT)
+            : Promise.resolve([] as RunnerExposureRow[]),
+        ]);
+        if (cancelled) return;
+        const next = new Map<string, number>();
+        ingestRunnerExposureRows(mainRows, next);
+        ingestRunnerExposureRows(fancyRows, next);
+        setRunnerExposureMap(next);
+      } catch {
+        if (!cancelled) setRunnerExposureMap(new Map());
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventRow, refreshKey, includePT, fancyExposureMarketIds]);
+
   return (
     <div className="min-w-0 space-y-4">
       <PageHeader
@@ -631,11 +801,39 @@ export default function WebsiteEventMarketsPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-4">
-                  <ToggleRow label="Event Bet Locked?" value="NO" />
-                  <ToggleRow label="Include PT?" value="NO" />
+                  <SettingToggleRow
+                    label="Event Bet Locked?"
+                    on={eventBetLocked}
+                    disabled={!eventId.trim() || lockUpdating}
+                    onToggle={async () => {
+                      const eid = eventId.trim();
+                      if (!eid || lockUpdating) return;
+                      const next = !eventBetLocked;
+                      setLockUpdating(true);
+                      try {
+                        await updateMarketLockStatus({
+                          nodeId: eid,
+                          isLock: next,
+                          nodeType: 4,
+                        });
+                        setEventBetLocked(next);
+                      } finally {
+                        setLockUpdating(false);
+                      }
+                    }}
+                  />
+                  <SettingToggleRow
+                    label="Include PT?"
+                    on={includePT}
+                    onToggle={() => setIncludePT((v) => !v)}
+                  />
                 </div>
               </div>
             </div>
+
+            {eventId.trim() && inPlay && scoreboardSport === "cricket" ? (
+              <CricfeedScorecardEmbed matchId={scoreMidForEmbed} />
+            ) : null}
 
             {loading ? (
               <p className="text-sm text-foreground-secondary">Loading event…</p>
@@ -664,6 +862,11 @@ export default function WebsiteEventMarketsPage() {
                                 stripe={rowIdx % 2 === 0 ? "odd" : "even"}
                                 variant="exchange"
                                 market={matchMarket}
+                                exposurePl={runnerExposurePlFromMap(
+                                  runnerExposureMap,
+                                  matchMarketId,
+                                  rid != null ? String(rid) : undefined,
+                                )}
                               />
                             );
                           })}
@@ -701,6 +904,11 @@ export default function WebsiteEventMarketsPage() {
                                   stripe={rowIdx % 2 === 0 ? "odd" : "even"}
                                   variant="exchange"
                                   market={m}
+                                  exposurePl={runnerExposurePlFromMap(
+                                    runnerExposureMap,
+                                    mid,
+                                    rid != null ? String(rid) : undefined,
+                                  )}
                                 />
                               );
                             })}
@@ -741,6 +949,11 @@ export default function WebsiteEventMarketsPage() {
                                   stripe={rowIdx % 2 === 0 ? "odd" : "even"}
                                   variant="exchange"
                                   market={m}
+                                  exposurePl={runnerExposurePlFromMap(
+                                    runnerExposureMap,
+                                    mid,
+                                    rid != null ? String(rid) : undefined,
+                                  )}
                                 />
                               );
                             })}
@@ -795,6 +1008,11 @@ export default function WebsiteEventMarketsPage() {
                                       j === 0 ? "bookmaker-full" : "bookmaker-center"
                                     }
                                     market={m}
+                                    exposurePl={runnerExposurePlFromMap(
+                                      runnerExposureMap,
+                                      mid || undefined,
+                                      rid != null ? String(rid) : undefined,
+                                    )}
                                   />
                                 );
                               })
@@ -835,14 +1053,14 @@ export default function WebsiteEventMarketsPage() {
                   </ul>
                   {tabMarkets.length === 0 ? (
                     <p className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
-                      No{" "}
+                      No
                       {fancyTab === "fancy"
                         ? "fancy"
                         : fancyTab === "line"
                           ? "line"
                           : fancyTab === "winning"
                             ? "winning"
-                            : "khado"}{" "}
+                            : "khado"}
                       markets for this event.
                     </p>
                   ) : (
@@ -883,6 +1101,11 @@ export default function WebsiteEventMarketsPage() {
                               isBallRunningMarket(m) || !has;
                             const stripe =
                               rowIdx % 2 === 0 ? "odd" : "even";
+                            const fancyExposurePl = runnerExposurePlFromMap(
+                              runnerExposureMap,
+                              mid || undefined,
+                              rid != null ? String(rid) : undefined,
+                            );
                             const iconCell = (
                               <td className="sb-odds-neutral align-c">
                                 <div className="flex items-center justify-center gap-1.5 py-1 text-zinc-500 dark:text-zinc-400">
@@ -903,7 +1126,10 @@ export default function WebsiteEventMarketsPage() {
                                 className={`tr-data ${stripe}`}
                               >
                                 <th className="match-title" scope="row">
-                                  <p>{marketLabel(m)}</p>
+                                  <MatchTitleCell
+                                    name={marketLabel(m)}
+                                    exposurePl={fancyExposurePl}
+                                  />
                                 </th>
                                 <td className="sb-odds-neutral align-c">
                                   <ScorePriceButton level={EMPTY_LEVEL} />
@@ -1022,7 +1248,9 @@ export default function WebsiteEventMarketsPage() {
               </div>
               {betTotal > 0 ? (
                 <p className="mt-2 text-xs text-foreground-tertiary">
-                  Showing {betRows.length} of {betTotal} (first page).
+                  {betStatusFilter === "matched"
+                    ? `${betTotal} matched bet${betTotal === 1 ? "" : "s"} found`
+                    : `Showing ${betRows.length} of ${betTotal} (first page).`}
                 </p>
               ) : null}
             </div>
@@ -1031,51 +1259,81 @@ export default function WebsiteEventMarketsPage() {
                 {betsError}
               </p>
             ) : null}
-            <div className="overflow-x-auto rounded-md border border-border bg-surface">
-              <Table className="min-w-[22rem] text-xs">
-                <TableHeader className="bg-surface-muted/60">
-                  <TableHead className="font-semibold">Selection</TableHead>
-                  <TableHead className="text-right font-semibold">Stake</TableHead>
-                  <TableHead className="text-right font-semibold">Odds</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="font-semibold">Time</TableHead>
-                </TableHeader>
-                <TableBody>
-                  {betsLoading ? (
-                    <TableEmpty colSpan={5} message="Loading…" />
-                  ) : betRows.length === 0 ? (
-                    <TableEmpty
-                      colSpan={5}
-                      message={
-                        !eventId.trim()
-                          ? "Open this page from Website analytics with a valid event."
-                          : "No records for selected filters."
-                      }
-                    />
-                  ) : (
-                    betRows.map((row, i) => (
-                      <TableRow
-                        key={String(row.id ?? row.roundId ?? row.betId ?? i)}
-                      >
-                        <TableCell className="max-w-[9rem] truncate">
-                          {String(row.selection ?? row.runnerName ?? "—")}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCurrency(row.stake)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {String(row.odds ?? "—")}
-                        </TableCell>
-                        <TableCell>{String(row.status ?? "—")}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDateTime(row.createdAt ?? row.createdon ?? row.date)}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            {betsLoading ? (
+              <p className="text-xs text-muted">Loading…</p>
+            ) : betRows.length === 0 ? (
+              <p className="rounded-md border border-border bg-surface px-3 py-8 text-center text-xs text-muted">
+                {!eventId.trim()
+                  ? "Open this page from Website analytics with a valid event."
+                  : "No records for selected filters."}
+              </p>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {betRows.map((row, i) => {
+                  const r = row as Record<string, unknown>;
+                  const pageEventName = String(
+                    eventRow?.name ?? eventRow?.raceName ?? "",
+                  ).trim();
+                  const { eventName, marketName } = liveBetEventAndMarketNames(r);
+                  const runner = String(r.runnerName ?? "").trim();
+                  const cardTitle = eventMarketTitle(
+                    eventName || runner || pageEventName,
+                    marketName,
+                  );
+                  const member = liveBetMemberName(r);
+                  const cardDate = formatBetCardDateTime(
+                    r.createdOn ?? r.updatedOn ?? r.createdAt,
+                  );
+                  const betId = liveBetIdDisplay(r);
+                  const linePrice = Number(r.price);
+                  const priceStr =
+                    Number.isFinite(linePrice) && linePrice !== 0
+                      ? formatOddsPrice(linePrice)
+                      : "—";
+                  const stakeRaw = liveBetStakeForDisplay(r);
+                  const stakeN = Number(stakeRaw ?? 0);
+                  const sizeStr = formatCurrency(stakeRaw);
+                  const avgStr = liveBetAvgDisplay(r);
+                  const tableTime = formatDateTime(liveBetTimestamp(r));
+
+                  return (
+                    <div
+                      key={String(row.id ?? row.roundId ?? row.betId ?? i)}
+                      className="overflow-hidden rounded-sm border border-black text-xs"
+                    >
+                      <div className="bg-[#89BBE3] px-3 py-2 text-black">
+                        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                          <span className="min-w-0 flex-1 font-medium">{cardTitle}</span>
+                          <span className="shrink-0 whitespace-nowrap">
+                            <span className="font-semibold">Date :</span> {cardDate}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+                          <span className="whitespace-nowrap">
+                            <span className="font-semibold">User :</span> {member}
+                          </span>
+                          <span className="min-w-0 max-w-[55%] break-all text-right">
+                            <span className="font-semibold">BetId :</span> {betId}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                          <span className="whitespace-nowrap">
+                            <span className="font-semibold">Price :</span> {priceStr}
+                          </span>
+                          <span className="whitespace-nowrap text-center">
+                            <span className="font-semibold">Size :</span>
+                            <span className={signedAmountTextClass(stakeN)}>{sizeStr}</span>
+                          </span>
+                          <span className="whitespace-nowrap text-right">
+                            <span className="font-semibold">Avg :</span> {avgStr}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </aside>
         </div>
       </ListPageFrame>

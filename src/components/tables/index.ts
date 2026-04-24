@@ -9,4 +9,3 @@ export {
 } from "./DataTable";
 export { default as TablePagination } from "./Pagination";
 export type { TablePaginationProps } from "./Pagination";
-export { default as DataGrid } from "./DataGrid";

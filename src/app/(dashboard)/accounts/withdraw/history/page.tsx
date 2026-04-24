@@ -14,6 +14,7 @@ import {
 import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { dateRangeToISO, formatDateTime, todayRangeUTC } from "@/utils/date";
 import { downloadCsv } from "@/utils/csvDownload";
 
@@ -52,7 +53,14 @@ const columns = [
     id: "amount",
     header: "Amount",
     sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(getAmount(row))}`,
+    cell: (row: Row) => {
+      const n = getAmount(row);
+      return (
+        <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+          ₹ {formatCurrency(getAmount(row))}
+        </span>
+      );
+    },
     sortValue: (row: Row) => getAmount(row),
   },
   {

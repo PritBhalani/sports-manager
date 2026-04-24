@@ -19,6 +19,7 @@ import {
 import { getPlByMarketDetails } from "@/services/betHistory.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 /** README §5: GET /bethistory/getplbymarketdetails/{marketId}/ or /{marketId}/{parentId} */
@@ -103,8 +104,8 @@ export default function PlByMarketDetailsPage() {
           <TableHeader>
             <TableHead>Date</TableHead>
             <TableHead>Market / Selection</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">P&L</TableHead>
+            <TableHead >Stake</TableHead>
+            <TableHead >P&L</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -112,14 +113,18 @@ export default function PlByMarketDetailsPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={4} message="Enter Market ID and click Load." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const stakeN = Number(row.stake ?? 0);
+                const plN = Number(row.pl ?? row.profitLoss ?? 0);
+                return (
                 <TableRow key={String(row.id ?? i)}>
                   <TableCell>{formatDateTime(row.date ?? row.createdAt)}</TableCell>
                   <TableCell>{String(row.marketName ?? row.selection ?? "—")}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.stake)}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeN)}`}>{formatCurrency(row.stake)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(plN)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

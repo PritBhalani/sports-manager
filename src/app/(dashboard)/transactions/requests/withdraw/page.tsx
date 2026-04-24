@@ -27,6 +27,7 @@ import WithdrawRequestUpdateModal from "@/components/transactions/WithdrawReques
 import { ArrowUpFromLine, Copy, HandCoins, ImageIcon } from "lucide-react";
 import { getOffPayOut, getPayInOutSlip, type OffPayInRecord } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 import { dateRangeToISO, formatDateTime } from "@/utils/date";
 
@@ -418,7 +419,7 @@ export default function TransactionsRequestWithdrawPage() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell className="!px-6 !py-3 text-center tabular-nums">
+                        <TableCell className={`!px-6 !py-3 text-center tabular-nums ${signedAmountTextClass(Number(row.amount ?? 0))}`}>
                           {formatCurrency(row.amount)}
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center text-muted">—</TableCell>

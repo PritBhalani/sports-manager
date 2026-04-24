@@ -25,6 +25,7 @@ import {
   transferOut,
 } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatDateTime } from "@/utils/date";
 import { timestampMs } from "@/utils/date";
 import type { TransferRecord } from "@/types/account.types";
@@ -195,7 +196,7 @@ export default function TransferPage() {
           <TableHeader>
             <TableHead>User / ID</TableHead>
             <TableHead>Type</TableHead>
-            <TableHead align="right">Chips</TableHead>
+            <TableHead >Chips</TableHead>
             <TableHead>Comment</TableHead>
             <TableHead>Date</TableHead>
           </TableHeader>
@@ -208,7 +209,10 @@ export default function TransferPage() {
             ) : list.length === 0 ? (
               <TableEmpty colSpan={5} message="No transfers yet." />
             ) : (
-              list.map((row, i) => (
+              list.map((row, i) => {
+                const chipsN = Number(row.chips ?? 0);
+                const signedChips = row.dwType === "D" ? chipsN : -chipsN;
+                return (
                 <TableRow key={row.id ?? i}>
                   <TableCell>
                     {row.username ?? row.userCode ?? row.userId ?? "—"}
@@ -218,13 +222,14 @@ export default function TransferPage() {
                       {row.dwType === "D" ? "In" : "Out"}
                     </Badge>
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(signedChips)}`}>
                     {formatCurrency(row.chips)}
                   </TableCell>
                   <TableCell>{row.comment ?? "—"}</TableCell>
                   <TableCell>{formatDateTime(row.createdAt ?? row.timestamp)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

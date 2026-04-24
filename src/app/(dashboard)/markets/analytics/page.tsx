@@ -14,6 +14,7 @@ import {
   Badge,
 } from "@/components";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatDateTime } from "@/utils/date";
 import { getPlByMarket } from "@/services/betHistory.service";
 import { downloadCsv } from "@/utils/csvDownload";
@@ -58,7 +59,14 @@ export default function MarketsAnalyticsPage() {
       id: "totalMatched",
       header: "Matched",
       sortable: true,
-      cell: (row: Row) => `₹ ${formatCurrency(row.totalMatched ?? row.stake ?? row.amount)}`,
+      cell: (row: Row) => {
+        const n = Number(row.totalMatched ?? row.stake ?? row.amount ?? 0);
+        return (
+          <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+            ₹ {formatCurrency(row.totalMatched ?? row.stake ?? row.amount)}
+          </span>
+        );
+      },
       sortValue: (row: Row) => Number(row.totalMatched ?? row.stake ?? row.amount ?? 0),
     },
     {

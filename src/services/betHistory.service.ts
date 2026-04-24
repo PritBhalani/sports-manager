@@ -162,10 +162,11 @@ export async function getPlByMarketDetails(
   return Array.isArray(res) ? res : res?.data ?? [];
 }
 
-/** POST /bethistory/getbethistorybymarketid — bet history for a market. Body: searchQuery (marketId, status), params */
+/** POST /bethistory/getbethistorybymarketid — bet history for a market. Body: searchQuery (marketId, status), params, optional `id` (member/agent scope). */
 export async function getBetHistoryByMarketId(
   params: ListParams,
-  searchQuery: { marketId: string; status?: string }
+  searchQuery: { marketId: string; status?: string },
+  scopedUserId?: string,
 ): Promise<{
   items: Record<string, unknown>[];
   total: number;
@@ -180,6 +181,7 @@ export async function getBetHistoryByMarketId(
       pageSize?: number;
     };
   };
+  const id = String(scopedUserId ?? "").trim();
   const res = await apiPost<Envelope>(`${BETHISTORY}/getbethistorybymarketid`, {
     params: {
       pageSize: params.pageSize ?? 50,
@@ -193,6 +195,7 @@ export async function getBetHistoryByMarketId(
       marketId: searchQuery.marketId,
       status: searchQuery.status ?? "",
     },
+    ...(id ? { id } : {}),
   });
 
   const inner = res?.data;
@@ -210,6 +213,7 @@ export type PlByAgentUserPl = {
     id: string;
     userCode: string;
     username: string;
+    userType?: number;
   };
   netWin: number;
   win: number;
@@ -238,7 +242,7 @@ export type GetPlByAgentResponse = {
 
 /** POST /bethistory/getplbyagent — P&L by agent. Body: searchQuery (fromDate, toDate), params, optional id (parentId) */
 export async function getPlByAgent(
-  params: ListParams,
+  params: ListParams & { userType?: number },
   searchQuery: { fromDate?: string; toDate?: string },
   parentId?: string
 ): Promise<GetPlByAgentResponse> {

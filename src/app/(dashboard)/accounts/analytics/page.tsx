@@ -17,6 +17,7 @@ import { getAccountStatement } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { dateRangeToISO, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
@@ -72,14 +73,28 @@ export default function AccountsAnalyticsPage() {
       id: "amount",
       header: "Amount",
       sortable: true,
-      cell: (row: Row) => `₹ ${formatCurrency(getAmount(row))}`,
+      cell: (row: Row) => {
+        const n = getAmount(row);
+        return (
+          <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+            ₹ {formatCurrency(getAmount(row))}
+          </span>
+        );
+      },
       sortValue: (row: Row) => getAmount(row),
     },
     {
       id: "balanceAfter",
       header: "Balance After",
       sortable: true,
-      cell: (row: Row) => `₹ ${formatCurrency(row.balance ?? row.balanceAfter)}`,
+      cell: (row: Row) => {
+        const n = Number(row.balance ?? row.balanceAfter ?? 0);
+        return (
+          <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+            ₹ {formatCurrency(row.balance ?? row.balanceAfter)}
+          </span>
+        );
+      },
       sortValue: (row: Row) => Number(row.balance ?? row.balanceAfter ?? 0),
     },
     {

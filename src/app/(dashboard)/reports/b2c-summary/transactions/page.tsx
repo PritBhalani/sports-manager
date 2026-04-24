@@ -47,7 +47,7 @@ function LegacyTransactionsRedirect() {
       <ListPageFrame>
         <p className="p-4 text-sm text-error" role="alert">
           Invalid or incomplete link. Open this report from the B2C Summary table (deposit,
-          withdrawal, or bonus amounts). New URLs look like{" "}
+          withdrawal, or bonus amounts). New URLs look like
           <code className="rounded bg-surface-muted px-1 py-0.5 text-xs">
             /reports/b2c-summary/transactions/deposit?…
           </code>

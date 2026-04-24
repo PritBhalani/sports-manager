@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -22,6 +22,7 @@ import {
 import { getB2cSummary, type B2cSummaryRow } from "@/services/account.service";
 import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { formatB2cSummaryGridDate } from "@/utils/b2cTransactionReportFormat";
 import { buildB2cTransactionsHref } from "@/utils/b2cTransactionRoutes";
 
@@ -338,9 +339,9 @@ function DepositTierExpandPanel({
               className="border-t border-border"
             >
               <td className="px-3 py-2 text-foreground">{line.tier}</td>
-              <td className="px-3 py-2 text-foreground">{line.mobile ?? "â€”"}</td>
-              <td className="px-3 py-2 text-foreground">{line.username ?? "â€”"}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-foreground">
+              <td className="px-3 py-2 text-foreground">{line.mobile ?? "—"}</td>
+              <td className="px-3 py-2 text-foreground">{line.username ?? "—"}</td>
+              <td className={`px-3 py-2 text-right tabular-nums ${signedAmountTextClass(Number(line.amount ?? 0))}`}>
                 {formatCurrency(line.amount ?? 0)}
               </td>
             </tr>
@@ -380,9 +381,9 @@ function NewClientsExpandPanel({ row }: { row: B2cSummaryRow }) {
               key={`${line.userId ?? line.username ?? line.mobile ?? idx}`}
               className="border-t border-border"
             >
-              <td className="px-3 py-2 text-foreground">{line.mobile ?? "â€”"}</td>
-              <td className="px-3 py-2 text-foreground">{line.username ?? "â€”"}</td>
-              <td className="px-3 py-2 text-foreground">{line.bonusCode ?? "â€”"}</td>
+              <td className="px-3 py-2 text-foreground">{line.mobile ?? "—"}</td>
+              <td className="px-3 py-2 text-foreground">{line.username ?? "—"}</td>
+              <td className="px-3 py-2 text-foreground">{line.bonusCode ?? "—"}</td>
             </tr>
           ))}
         </tbody>
@@ -420,12 +421,18 @@ function BonusCodeExpandPanel({ row }: { row: B2cSummaryRow }) {
               key={`${line.code ?? "row"}-${idx}`}
               className="border-t border-border"
             >
-              <td className="px-3 py-2 text-foreground">{line.code ?? "â€”"}</td>
+              <td className="px-3 py-2 text-foreground">{line.code ?? "—"}</td>
               <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                {line.count != null ? line.count : "â€”"}
+                {line.count != null ? line.count : "—"}
               </td>
               <td className="px-3 py-2 text-right tabular-nums text-foreground">
-                {line.amount != null ? formatCurrency(line.amount) : "â€”"}
+                {line.amount != null ? (
+                  <span className={signedAmountTextClass(Number(line.amount))}>
+                    {formatCurrency(line.amount)}
+                  </span>
+                ) : (
+                  "—"
+                )}
               </td>
             </tr>
           ))}
@@ -438,6 +445,10 @@ function BonusCodeExpandPanel({ row }: { row: B2cSummaryRow }) {
 /** Drill-down to transaction report: reads as a link (not plain grid text). */
 const b2cSummaryTxLinkClass =
   "cursor-pointer rounded-sm font-medium text-primary underline decoration-2 underline-offset-2 decoration-primary/75 transition-colors hover:bg-primary/10 hover:decoration-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1";
+
+function b2cTxAmountLinkClass(amount: number): string {
+  return b2cSummaryTxLinkClass.replace(/\btext-primary\b/g, signedAmountTextClass(amount));
+}
 
 function CountSlashAmount({
   count,
@@ -454,13 +465,13 @@ function CountSlashAmount({
       <Link
         href={amountHref}
         onClick={(e) => e.stopPropagation()}
-        className={b2cSummaryTxLinkClass}
+        className={b2cTxAmountLinkClass(amount)}
         title="View transactions"
       >
         {formatCurrency(amount)}
       </Link>
     ) : (
-      <span className="tabular-nums text-foreground">{formatCurrency(amount)}</span>
+      <span className={`tabular-nums ${signedAmountTextClass(amount)}`}>{formatCurrency(amount)}</span>
     );
   return (
     <span className="tabular-nums">
@@ -483,14 +494,16 @@ function BonusAmount({
       <Link
         href={href}
         onClick={(e) => e.stopPropagation()}
-        className={b2cSummaryTxLinkClass}
+        className={b2cTxAmountLinkClass(value)}
         title="View transactions"
       >
         {formatCurrency(value)}
       </Link>
     );
   }
-  return <span className="tabular-nums text-foreground">{formatCurrency(value)}</span>;
+  return (
+    <span className={`tabular-nums ${signedAmountTextClass(value)}`}>{formatCurrency(value)}</span>
+  );
 }
 
 export default function B2cSummaryPage() {
@@ -666,38 +679,38 @@ export default function B2cSummaryPage() {
               <TableHeader className="w-full bg-white uppercase">
               <TableHead className={th}>Date</TableHead>
               <TableHead className={th}>Agent</TableHead>
-              <TableHead className={`${th} text-right`} align="right">
+              <TableHead className={`${th} text-right`} >
                 New Clients
               </TableHead>
-              <TableHead className={`${th} text-right`} align="right">
+              <TableHead className={`${th} text-right`} >
                 Code Used
               </TableHead>
               <TableHead className={th}>1st/2nd/3rd</TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Count/Deposit
               </TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Count/Withdrawal
               </TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Count/Bonus
               </TableHead>
-              <TableHead className={`${th} text-right`} align="right">
+              <TableHead className={`${th} text-right`} >
                 Net Deposit
               </TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Bonus Activated
               </TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Bonus Redeem
               </TableHead>
-              <TableHead className={`${th} text-right whitespace-nowrap`} align="right">
+              <TableHead className={`${th} text-right whitespace-nowrap`} >
                 Bonus Expired
               </TableHead>
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableEmpty colSpan={12} message="Loadingâ€¦" />
+                <TableEmpty colSpan={12} message="Loading…" />
               ) : items.length === 0 ? (
                 <TableEmpty colSpan={12} message="No data for this range." />
               ) : (
@@ -720,8 +733,8 @@ export default function B2cSummaryPage() {
                         <TableCell className="whitespace-nowrap text-sm">
                           {formatB2cSummaryGridDate(r.date)}
                         </TableCell>
-                        <TableCell className="text-sm">{r.agentName ?? "â€”"}</TableCell>
-                        <TableCell align="right" className="text-sm tabular-nums">
+                        <TableCell className="text-sm">{r.agentName ?? "—"}</TableCell>
+                        <TableCell  className="text-sm tabular-nums">
                           <button
                             type="button"
                             onClick={() => {
@@ -747,7 +760,7 @@ export default function B2cSummaryPage() {
                             ) : null}
                           </button>
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-sm">
+                        <TableCell  className="tabular-nums text-sm">
                           <button
                             type="button"
                             onClick={() => {
@@ -812,42 +825,42 @@ export default function B2cSummaryPage() {
                             </button>
                           </div>
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <CountSlashAmount
                             count={Number(r.depositCount) || 0}
                             amount={Number(r.deposit) || 0}
                             amountHref={b2cRowTxHref(r, "dw", "D")}
                           />
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <CountSlashAmount
                             count={Number(r.withdrawalCount) || 0}
                             amount={Number(r.withdrawal) || 0}
                             amountHref={b2cRowTxHref(r, "dw", "W")}
                           />
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <CountSlashAmount
                             count={Number(r.bonusCount) || 0}
                             amount={Number(r.bonus) || 0}
                           />
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-sm text-foreground">
+                        <TableCell  className={`tabular-nums text-sm ${signedAmountTextClass(Number(r.netDeposit ?? 0))}`}>
                           {formatCurrency(r.netDeposit)}
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <BonusAmount
                             value={Number(r.bonusActivated) || 0}
                             href={b2cRowTxHref(r, "bonus", "A")}
                           />
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <BonusAmount
                             value={Number(r.bonusRedeem) || 0}
                             href={b2cRowTxHref(r, "bonus", "R")}
                           />
                         </TableCell>
-                        <TableCell align="right" className="text-sm">
+                        <TableCell  className="text-sm">
                           <BonusAmount
                             value={Number(r.bonusExpired) || 0}
                             href={b2cRowTxHref(r, "bonus", "E")}
@@ -881,7 +894,7 @@ export default function B2cSummaryPage() {
                     <td colSpan={2} className="px-4 py-3 text-left text-sm text-foreground">
                       Total
                     </td>
-                    <TableCell align="right" className="tabular-nums text-sm">
+                    <TableCell  className="tabular-nums text-sm">
                       <span className="inline-flex items-center justify-end gap-1">
                         {totals.newClients}
                         {totals.newClients > 0 ? (
@@ -889,7 +902,7 @@ export default function B2cSummaryPage() {
                         ) : null}
                       </span>
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums text-sm">
+                    <TableCell  className="tabular-nums text-sm">
                       <span className="inline-flex items-center justify-end gap-1">
                         {totals.codeUsed}
                         {totals.codeUsed > 0 ? (
@@ -904,31 +917,31 @@ export default function B2cSummaryPage() {
                         third={totals.third}
                       />
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <CountSlashAmount
                         count={totals.depositCount}
                         amount={totals.deposit}
                       />
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <CountSlashAmount
                         count={totals.withdrawalCount}
                         amount={totals.withdrawal}
                       />
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <CountSlashAmount count={totals.bonusCount} amount={totals.bonus} />
                     </TableCell>
-                    <TableCell align="right" className="tabular-nums text-sm">
+                    <TableCell  className={`tabular-nums text-sm ${signedAmountTextClass(Number(totals.netDeposit ?? 0))}`}>
                       {formatCurrency(totals.netDeposit)}
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <BonusAmount value={totals.bonusActivated} />
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <BonusAmount value={totals.bonusRedeem} />
                     </TableCell>
-                    <TableCell align="right" className="text-sm">
+                    <TableCell  className="text-sm">
                       <BonusAmount value={totals.bonusExpired} />
                     </TableCell>
                   </TableRow>

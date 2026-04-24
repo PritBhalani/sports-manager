@@ -134,7 +134,7 @@ export default function WithdrawRequestUpdateModal({
     >
       <DialogSection>
         <p className="text-sm text-foreground-secondary">
-          FairX Withdrawal Request Of :{" "}
+          FairX Withdrawal Request Of :
           <span className="font-semibold text-foreground">{username}</span>
         </p>
 

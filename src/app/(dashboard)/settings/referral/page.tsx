@@ -50,15 +50,18 @@ export default function ReferralSettingsPage() {
         setMessage({ type: "error", text: "Not logged in." });
         return;
       }
-      await updateReferralSetting({
-        userId,
-        applyAll: form.applyAll,
-        bonus: form.bonus ? Number(form.bonus) : undefined,
-        lockingDays: form.lockingDays ? Number(form.lockingDays) : undefined,
-        minDeposit: form.minDeposit ? Number(form.minDeposit) : undefined,
-        minWithdrawalAmount: form.minWithdrawalAmount ? Number(form.minWithdrawalAmount) : undefined,
-        minimumBalanceRequired: form.minimumBalanceRequired ? Number(form.minimumBalanceRequired) : undefined,
-      });
+      await updateReferralSetting(
+        {
+          userId,
+          applyAll: form.applyAll,
+          bonus: form.bonus ? Number(form.bonus) : undefined,
+          lockingDays: form.lockingDays ? Number(form.lockingDays) : undefined,
+          minDeposit: form.minDeposit ? Number(form.minDeposit) : undefined,
+          minWithdrawalAmount: form.minWithdrawalAmount ? Number(form.minWithdrawalAmount) : undefined,
+          minimumBalanceRequired: form.minimumBalanceRequired ? Number(form.minimumBalanceRequired) : undefined,
+        },
+        { showSuccessToast: false },
+      );
       setMessage({ type: "success", text: "Referral settings updated." });
     } catch {
       // Global mutation toast handles API errors.

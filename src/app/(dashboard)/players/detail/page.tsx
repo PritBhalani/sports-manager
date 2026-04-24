@@ -21,12 +21,12 @@ import {
   getReferralSetting,
   changeBettingLock,
   setCommission,
-  updateReferralSetting,
 } from "@/services/user.service";
 import { getDownlineSummaryDetails } from "@/services/betHistory.service";
 import { getUserActivity } from "@/services/betHistory.service";
 import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 function DetailContent() {
   const searchParams = useSearchParams();
@@ -273,20 +273,24 @@ function DetailContent() {
                 <Table>
                   <TableHeader>
                     <TableHead>Date</TableHead>
-                    <TableHead align="right">Stake</TableHead>
-                    <TableHead align="right">P&L</TableHead>
+                    <TableHead >Stake</TableHead>
+                    <TableHead >P&L</TableHead>
                   </TableHeader>
                   <TableBody>
                     {summaryDetails.length === 0 ? (
                       <TableEmpty colSpan={3} message="No data for date range." />
                     ) : (
-                      summaryDetails.map((row, i) => (
+                      summaryDetails.map((row, i) => {
+                        const stakeN = Number(row.stake ?? 0);
+                        const plN = Number(row.pl ?? row.profitLoss ?? 0);
+                        return (
                         <TableRow key={String(row.id ?? row.date ?? i)}>
                           <TableCell>{String(row.date ?? row.createdAt ?? "—")}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.stake)}</TableCell>
-                          <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                          <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeN)}`}>{formatCurrency(row.stake)}</TableCell>
+                          <TableCell  className={`tabular-nums ${signedAmountTextClass(plN)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>

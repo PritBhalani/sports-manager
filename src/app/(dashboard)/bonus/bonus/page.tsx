@@ -418,13 +418,13 @@ export default function BonusManageOffersPage() {
             <TableHead>Name</TableHead>
             <TableHead>Offer On</TableHead>
             <TableHead>Offer Type</TableHead>
-            <TableHead align="right">Value</TableHead>
-            <TableHead align="center">Offer Used/Budget</TableHead>
-            <TableHead align="center">User Count/Max</TableHead>
-            <TableHead align="right">Order</TableHead>
+            <TableHead >Value</TableHead>
+            <TableHead >Offer Used/Budget</TableHead>
+            <TableHead >User Count/Max</TableHead>
+            <TableHead >Order</TableHead>
             <TableHead>Start</TableHead>
             <TableHead>End</TableHead>
-            <TableHead align="center">Action</TableHead>
+            <TableHead >Action</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -437,17 +437,17 @@ export default function BonusManageOffersPage() {
                   <TableCell>{row.title || "-"}</TableCell>
                   <TableCell>{mapOfferOn(row.offerOn)}</TableCell>
                   <TableCell>{mapOfferType(row.offerType)}</TableCell>
-                  <TableCell align="right">{row.value}</TableCell>
-                  <TableCell align="center">
+                  <TableCell >{row.value}</TableCell>
+                  <TableCell >
                     {row.offerUserUsed}/{row.offerUsedBudget}
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell >
                     {row.offerUserUsed}/{row.splitBonus}
                   </TableCell>
-                  <TableCell align="right">{row.displayOrder}</TableCell>
+                  <TableCell >{row.displayOrder}</TableCell>
                   <TableCell>{formatOfferDate(row.startDate)}</TableCell>
                   <TableCell>{formatOfferDate(row.endDate)}</TableCell>
-                  <TableCell align="center">
+                  <TableCell >
                     <div className="inline-flex items-center gap-1">
                       <button
                         type="button"

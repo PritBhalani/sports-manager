@@ -15,6 +15,7 @@ import {
 } from "@/components";
 import { getEventTypePosition } from "@/services/position.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 export default function PositionEventPage() {
   const [data, setData] = useState<Record<string, unknown>[]>([]);
@@ -40,8 +41,8 @@ export default function PositionEventPage() {
             <Table>
           <TableHeader>
             <TableHead>Event Type / Sport</TableHead>
-            <TableHead align="right">Exposure</TableHead>
-            <TableHead align="right">P&amp;L</TableHead>
+            <TableHead >Exposure</TableHead>
+            <TableHead >P&amp;L</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -49,17 +50,21 @@ export default function PositionEventPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={3} message="No position data yet." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const exp = Number(row.exposure ?? row.netExposure ?? 0);
+                const pl = Number(row.pl ?? row.profitLoss ?? 0);
+                return (
                 <TableRow key={i}>
                   <TableCell>
                     {String(row.eventTypeName ?? row.sportName ?? row.name ?? "—")}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(exp)}`}>
                     {formatCurrency(row.exposure ?? row.netExposure)}
                   </TableCell>
-                  <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(pl)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

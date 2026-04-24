@@ -410,7 +410,7 @@ export default function WebsiteBankingPage() {
               Status
             </TableHead>
             <TableHead
-              align="center"
+              
               className="text-xs font-bold uppercase tracking-wide text-foreground-secondary"
             >
               Action
@@ -438,7 +438,7 @@ export default function WebsiteBankingPage() {
                       onSetActive={(next) => void handleSetActive(row.id, next, row.status === "active")}
                     />
                   </TableCell>
-                  <TableCell align="center">
+                  <TableCell >
                     <div className="inline-flex items-center justify-center gap-1">
                       <button
                         type="button"
@@ -598,7 +598,7 @@ export default function WebsiteBankingPage() {
       >
         <DialogSection>
           <p className="text-sm text-foreground">
-            Are you sure you want to delete{" "}
+            Are you sure you want to delete
             <span className="font-semibold">{confirmDelete?.label ?? ""}</span>?
           </p>
         </DialogSection>

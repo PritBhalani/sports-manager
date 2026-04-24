@@ -21,6 +21,7 @@ import { getBetHistoryByMarketId } from "@/services/betHistory.service";
 import { usePagination } from "@/hooks/usePagination";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 function statusLabel(status: unknown, pl: unknown): string {
@@ -141,8 +142,8 @@ export default function BetHistoryByMarketPage() {
           <TableHeader>
             <TableHead>Event / Market</TableHead>
             <TableHead>Selection</TableHead>
-            <TableHead align="right">Stake</TableHead>
-            <TableHead align="right">Odds</TableHead>
+            <TableHead >Stake</TableHead>
+            <TableHead >Odds</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Date</TableHead>
           </TableHeader>
@@ -154,16 +155,19 @@ export default function BetHistoryByMarketPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={6} message="No bet history for this market." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const stakeN = Number(row.size ?? row.stake ?? 0);
+                return (
                 <TableRow key={String(row.id ?? row.betId ?? i)}>
                   <TableCell>{String(row.eventName ?? row.marketName ?? "—")}</TableCell>
                   <TableCell>{String(row.selection ?? row.runnerName ?? "—")}</TableCell>
-                  <TableCell align="right">{formatCurrency(row.size ?? row.stake)}</TableCell>
-                  <TableCell align="right">{String(row.price ?? row.odds ?? "—")}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(stakeN)}`}>{formatCurrency(row.size ?? row.stake)}</TableCell>
+                  <TableCell >{String(row.price ?? row.odds ?? "—")}</TableCell>
                   <TableCell>{statusLabel(row.status, row.pl)}</TableCell>
                   <TableCell>{formatDateTime(row.createdOn ?? row.createdAt ?? row.date)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
             </Table>

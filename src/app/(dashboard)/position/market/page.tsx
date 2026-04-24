@@ -20,6 +20,7 @@ import {
   getFancyUserPosition,
 } from "@/services/position.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 export default function PositionMarketPage() {
   const [data, setData] = useState<Record<string, unknown>[]>([]);
@@ -66,8 +67,8 @@ export default function PositionMarketPage() {
         <Table>
           <TableHeader>
             <TableHead>Market / Selection</TableHead>
-            <TableHead align="right">Exposure</TableHead>
-            <TableHead align="right">P&amp;L</TableHead>
+            <TableHead >Exposure</TableHead>
+            <TableHead >P&amp;L</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -75,17 +76,21 @@ export default function PositionMarketPage() {
             ) : data.length === 0 ? (
               <TableEmpty colSpan={3} message="Enter Market ID and click Load." />
             ) : (
-              data.map((row, i) => (
+              data.map((row, i) => {
+                const exp = Number(row.exposure ?? row.netExposure ?? 0);
+                const pl = Number(row.pl ?? row.profitLoss ?? 0);
+                return (
                 <TableRow key={i}>
                   <TableCell>
                     {String(row.marketName ?? row.selection ?? row.name ?? "—")}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(exp)}`}>
                     {formatCurrency(row.exposure ?? row.netExposure)}
                   </TableCell>
-                  <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(pl)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -94,8 +99,8 @@ export default function PositionMarketPage() {
         <Table>
           <TableHeader>
             <TableHead>Selection / User</TableHead>
-            <TableHead align="right">Exposure</TableHead>
-            <TableHead align="right">P&amp;L</TableHead>
+            <TableHead >Exposure</TableHead>
+            <TableHead >P&amp;L</TableHead>
           </TableHeader>
           <TableBody>
             {loading ? (
@@ -103,17 +108,21 @@ export default function PositionMarketPage() {
             ) : fancyData.length === 0 ? (
               <TableEmpty colSpan={3} message="No fancy position for this market." />
             ) : (
-              fancyData.map((row, i) => (
+              fancyData.map((row, i) => {
+                const exp = Number(row.exposure ?? row.netExposure ?? 0);
+                const pl = Number(row.pl ?? row.profitLoss ?? 0);
+                return (
                 <TableRow key={i}>
                   <TableCell>
                     {String(row.selection ?? row.userName ?? row.name ?? "—")}
                   </TableCell>
-                  <TableCell align="right">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(exp)}`}>
                     {formatCurrency(row.exposure ?? row.netExposure)}
                   </TableCell>
-                  <TableCell align="right">{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(pl)}`}>{formatCurrency(row.pl ?? row.profitLoss)}</TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

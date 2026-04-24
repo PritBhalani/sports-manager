@@ -37,7 +37,7 @@ function InvalidReportSegment({ segment }: { segment: string }) {
         <p className="p-4 text-sm text-error" role="alert">
           Unknown report type
           {segment ? ` “${segment}”` : ""}. Open this report from the B2C Summary table, or use a
-          path such as{" "}
+          path such as
           <code className="rounded bg-surface-muted px-1 py-0.5 text-xs">…/transactions/deposit</code>
           .
         </p>

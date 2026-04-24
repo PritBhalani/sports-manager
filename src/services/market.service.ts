@@ -1,5 +1,5 @@
 /** README §9 Manage Market + Market metadata */
-import { apiGet, apiPost } from "./apiClient";
+import { apiGet, apiPost, type ApiMutationOptions } from "./apiClient";
 import type { MarketLockRecord } from "@/types/market.types";
 
 export type MarketTypeMapping = {
@@ -25,11 +25,18 @@ export async function getMarketLockStatus(
   );
 }
 
-/** POST /managemarket/updatemarketlockstatus */
-export async function updateMarketLockStatus(body: {
-  nodeId: string;
-  isLock: boolean;
-  nodeType: number;
-}): Promise<unknown> {
-  return apiPost("/managemarket/updatemarketlockstatus", body);
+/** POST /managemarket/updatemarketlockstatus — `nodeType` e.g. 4 = event. */
+export async function updateMarketLockStatus(
+  body: {
+    nodeId: string;
+    isLock: boolean;
+    nodeType: number;
+  },
+  options?: ApiMutationOptions,
+): Promise<unknown> {
+  return apiPost("/managemarket/updatemarketlockstatus", body, {
+    showSuccessToast: true,
+    successMessage: "Updated successfully.",
+    ...options,
+  });
 }

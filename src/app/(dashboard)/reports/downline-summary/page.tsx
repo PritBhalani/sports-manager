@@ -27,6 +27,7 @@ import {
 } from "@/services/betHistory.service";
 import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 const PAGE_SIZE = 50;
 
@@ -52,6 +53,14 @@ function csvNumber(n: number): string {
   return String(r);
 }
 
+/**
+ * PL amount for the row. Use `win` first — the API maps P&L here.
+ * Do not use `pnl ?? win`: many payloads include `pnl: 0`, which would hide the real PL in `win`.
+ */
+function summaryRowPl(r: DownlineSummaryRow): unknown {
+  return r.win ?? r.pnl;
+}
+
 function buildCsv(rows: DownlineSummaryRow[]): string {
   const header = ["Name", "Stake", "PL", "Commission"].join(",");
   const lines = [header];
@@ -61,7 +70,7 @@ function buildCsv(rows: DownlineSummaryRow[]): string {
       [
         csvEscape(name),
         csvNumber(Number(r.to) || 0),
-        csvNumber(Number(r.win) || 0),
+        csvNumber(Number(summaryRowPl(r)) || 0),
         csvNumber(Number(r.comm) || 0),
       ].join(","),
     );
@@ -166,7 +175,7 @@ export default function AgentPlSummaryPage() {
     return items.reduce(
       (acc, r) => ({
         stake: acc.stake + (Number(r.to) || 0),
-        pl: acc.pl + (Number(r.win) || 0),
+        pl: acc.pl + (Number(summaryRowPl(r)) || 0),
         comm: acc.comm + (Number(r.comm) || 0),
       }),
       { stake: 0, pl: 0, comm: 0 },
@@ -302,13 +311,13 @@ export default function AgentPlSummaryPage() {
                             ) : null}
                           </div>
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground">
+                        <TableCell  className="tabular-nums text-foreground">
                           {formatCurrency(row.to)}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground">
-                          {formatCurrency(row.win)}
+                        <TableCell  className={`tabular-nums ${signedAmountTextClass(summaryRowPl(row))}`}>
+                          {formatCurrency(summaryRowPl(row))}
                         </TableCell>
-                        <TableCell align="right" className="tabular-nums text-foreground">
+                        <TableCell  className={`tabular-nums ${signedAmountTextClass(row.comm)}`}>
                           {formatCurrency(row.comm)}
                         </TableCell>
                       </TableRow>
@@ -356,10 +365,10 @@ export default function AgentPlSummaryPage() {
                                           <td className="px-3 py-2 text-right tabular-nums text-foreground">
                                             {formatCurrency(d.stake)}
                                           </td>
-                                          <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                          <td className={`px-3 py-2 text-right tabular-nums ${signedAmountTextClass(d.netPl)}`}>
                                             {formatCurrency(d.netPl)}
                                           </td>
-                                          <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                          <td className={`px-3 py-2 text-right tabular-nums ${signedAmountTextClass(d.commission)}`}>
                                             {formatCurrency(d.commission)}
                                           </td>
                                         </tr>
@@ -369,10 +378,10 @@ export default function AgentPlSummaryPage() {
                                         <td className="px-3 py-2 text-right tabular-nums text-foreground">
                                           {formatCurrency(detailTotals.stake)}
                                         </td>
-                                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                        <td className={`px-3 py-2 text-right tabular-nums ${signedAmountTextClass(detailTotals.pl)}`}>
                                           {formatCurrency(detailTotals.pl)}
                                         </td>
-                                        <td className="px-3 py-2 text-right tabular-nums text-foreground">
+                                        <td className={`px-3 py-2 text-right tabular-nums ${signedAmountTextClass(detailTotals.comm)}`}>
                                           {formatCurrency(detailTotals.comm)}
                                         </td>
                                       </tr>
@@ -389,13 +398,13 @@ export default function AgentPlSummaryPage() {
                 })}
                 <TableRow className="bg-surface-muted/50 font-medium">
                   <TableCell>Total</TableCell>
-                  <TableCell align="right" className="tabular-nums text-foreground">
+                  <TableCell  className="tabular-nums text-foreground">
                     {formatCurrency(totals.stake)}
                   </TableCell>
-                  <TableCell align="right" className="tabular-nums text-foreground">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(totals.pl)}`}>
                     {formatCurrency(totals.pl)}
                   </TableCell>
-                  <TableCell align="right" className="tabular-nums text-foreground">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(totals.comm)}`}>
                     {formatCurrency(totals.comm)}
                   </TableCell>
                 </TableRow>

@@ -21,6 +21,7 @@ import {
 } from "@/components";
 import { dateRangeToISO, formatDateTime, formatUpdateMinusCreateGap, todayRangeUTC } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { getOffPayIn, getOffPayOut, type OffPayInRecord } from "@/services/account.service";
 
 const PAGE_SIZE = 50;
@@ -257,14 +258,17 @@ export default function B2cActivityPage() {
                     message="No records found for selected filter and time period."
                   />
                 ) : (
-                  rows.map((row) => (
+                  rows.map((row) => {
+                    const amt = Number(row.amount ?? 0);
+                    const bonus = Number(row.bonusAmount ?? 0);
+                    return (
                     <TableRow key={row.id}>
                       <TableCell className="!px-6 !py-4">{readName(row)}</TableCell>
-                      <TableCell align="right" className="!px-6 !py-4 tabular-nums">
+                      <TableCell  className={`!px-6 !py-4 tabular-nums ${signedAmountTextClass(amt)}`}>
                         {formatCurrency(row.amount)}
                       </TableCell>
                       {isDeposit ? (
-                        <TableCell align="right" className="!px-6 !py-4 tabular-nums">
+                        <TableCell  className={`!px-6 !py-4 tabular-nums ${signedAmountTextClass(bonus)}`}>
                           {formatCurrency(row.bonusAmount ?? 0)}
                         </TableCell>
                       ) : null}
@@ -285,7 +289,8 @@ export default function B2cActivityPage() {
                         </TableCell>
                       ) : null}
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

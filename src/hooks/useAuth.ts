@@ -39,8 +39,12 @@ export function useAuth() {
   const logout = useCallback(() => {
     clearAuth();
     clearSessionCookie();
-    router.replace("/login");
-    router.refresh();
+    if (typeof window !== "undefined") {
+      window.location.replace("/login");
+    } else {
+      router.replace("/login");
+      router.refresh();
+    }
   }, [router]);
 
   return { isAuthenticated, tokens, logout };

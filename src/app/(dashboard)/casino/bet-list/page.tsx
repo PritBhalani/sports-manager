@@ -19,6 +19,7 @@ import { usePagination } from "@/hooks/usePagination";
 import { RefreshCw } from "lucide-react";
 import { formatDateTime } from "@/utils/date";
 import { formatAmountNoRate } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import {
   getFdRunningExposure,
   formatFdProvider,
@@ -89,8 +90,8 @@ export default function CasinoBetListPage() {
             <TableHead>Table Name</TableHead>
             <TableHead>Round Id</TableHead>
             <TableHead>Provider</TableHead>
-            <TableHead align="right">Credit</TableHead>
-            <TableHead align="right">Debit</TableHead>
+            <TableHead >Credit</TableHead>
+            <TableHead >Debit</TableHead>
             <TableHead>Is PL?</TableHead>
             <TableHead>Created</TableHead>
           </TableHeader>
@@ -102,16 +103,18 @@ export default function CasinoBetListPage() {
             ) : (
               data.map((row, i) => {
                 const isPl = Boolean(row.isPlRequest ?? row.isPl);
+                const creditN = Number(row.credit ?? 0);
+                const debitN = Number(row.debit ?? 0);
                 return (
                 <TableRow key={String(row.id ?? row.roundId ?? i)}>
                   <TableCell>{String(row.username ?? row.name ?? "—")}</TableCell>
                   <TableCell>{String(row.tableName ?? row.table ?? "—")}</TableCell>
                   <TableCell>{String(row.roundId ?? "—")}</TableCell>
                   <TableCell>{formatFdProvider(row.provider ?? row.vendor)}</TableCell>
-                  <TableCell align="right" className="tabular-nums">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(creditN)}`}>
                     {formatAmountNoRate(row.credit ?? 0)}
                   </TableCell>
-                  <TableCell align="right" className="tabular-nums">
+                  <TableCell  className={`tabular-nums ${signedAmountTextClass(-debitN)}`}>
                     {formatAmountNoRate(row.debit ?? 0)}
                   </TableCell>
                   <TableCell>{isPl ? "Yes" : "No"}</TableCell>

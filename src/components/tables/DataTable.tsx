@@ -60,7 +60,7 @@ export function TableHead({
     <th
       colSpan={colSpan}
       rowSpan={rowSpan}
-      className={`px-5 py-3 text-[12px] font-semibold uppercase tracking-wide text-foreground-tertiary ${alignClass} ${className}`}
+      className={`px-2 py-3 text-[12px] font-semibold uppercase tracking-wide text-foreground-tertiary ${alignClass} ${className}`}
     >
       {children}
     </th>
@@ -112,7 +112,7 @@ export function TableCell({
     <td
       colSpan={colSpan}
       rowSpan={rowSpan}
-      className={`px-5 py-4 text-sm text-foreground ${alignClass} ${className}`}
+      className={`px-2 py-3 text-sm ${alignClass} ${className}`}
     >
       {children}
     </td>

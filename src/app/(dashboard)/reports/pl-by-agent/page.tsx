@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useMemo, useState, useEffect, useCallback } from "react";
+import { Fragment, useMemo, useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   PageHeader,
   ListPageFrame,
@@ -17,10 +18,13 @@ import {
   type PlByAgentRound,
   type PlByAgentUserPl,
 } from "@/services/betHistory.service";
-import { todayRangeUTC, dateRangeToISO } from "@/utils/date";
+import { todayRangeUTC, dateRangeToISO, formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 
 const PAGE_SIZE = 50;
+/** User type with no further P&L-by-agent downline (e.g. end player). */
+const NO_DRILLDOWN_USER_TYPE = 5;
 
 function sumUserPls(userPls: PlByAgentUserPl[]) {
   return userPls.reduce(
@@ -34,13 +38,7 @@ function sumUserPls(userPls: PlByAgentUserPl[]) {
 }
 
 function formatSettleDateDisplay(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDateTime(iso);
 }
 
 function dateKeyFromSettle(iso: string): string {
@@ -49,14 +47,37 @@ function dateKeyFromSettle(iso: string): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Section header like legacy report: `23/04/2026` */
+function formatDateSectionHeader(iso: string, fallbackKey: string): string {
+  const d = new Date(iso);
+  if (!Number.isNaN(d.getTime())) {
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(d.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  const d2 = new Date(`${fallbackKey}T12:00:00`);
+  if (!Number.isNaN(d2.getTime())) {
+    const dd = String(d2.getDate()).padStart(2, "0");
+    const mm = String(d2.getMonth() + 1).padStart(2, "0");
+    const yyyy = String(d2.getFullYear());
+    return `${dd}/${mm}/${yyyy}`;
+  }
+  return fallbackKey;
+}
+
 function MemberAmount({ value }: { value: number }) {
   const formatted = formatCurrency(value);
-  return <span className="tabular-nums text-foreground">{formatted}</span>;
+  return (
+    <span className={`tabular-nums ${signedAmountTextClass(value)}`}>{formatted}</span>
+  );
 }
 
 function UplineAmount({ value }: { value: number }) {
   const formatted = formatCurrency(value);
-  return <span className="tabular-nums text-foreground">{formatted}</span>;
+  return (
+    <span className={`tabular-nums ${signedAmountTextClass(value)}`}>{formatted}</span>
+  );
 }
 
 /** Match exported Excel: `P&L Report By Agent.xls` (HTML) — 12 columns, two header rows */
@@ -132,7 +153,12 @@ function csvEscape(s: string): string {
   return s;
 }
 
-export default function PlByAgentPage() {
+function PlByAgentPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromQ = searchParams.get("from")?.trim() ?? "";
+  const toQ = searchParams.get("to")?.trim() ?? "";
+
   const [items, setItems] = useState<PlByAgentRound[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -145,10 +171,15 @@ export default function PlByAgentPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const range = todayRangeUTC();
-    setFromDate(range.fromDate.slice(0, 10));
-    setToDate(range.toDate.slice(0, 10));
-  }, []);
+    if (fromQ && toQ) {
+      setFromDate(fromQ);
+      setToDate(toQ);
+    } else {
+      const range = todayRangeUTC();
+      setFromDate(range.fromDate.slice(0, 10));
+      setToDate(range.toDate.slice(0, 10));
+    }
+  }, [fromQ, toQ]);
 
   const load = useCallback(() => {
     if (!fromDate || !toDate) return;
@@ -282,6 +313,11 @@ export default function PlByAgentPage() {
           onClick={() => {
             setPage(1);
             setRefreshKey((k) => k + 1);
+            const q = new URLSearchParams();
+            if (fromDate.trim()) q.set("from", fromDate.trim());
+            if (toDate.trim()) q.set("to", toDate.trim());
+            const qs = q.toString();
+            router.replace(`/reports/pl-by-agent${qs ? `?${qs}` : ""}`, { scroll: false });
           }}
         >
           Apply
@@ -332,7 +368,7 @@ export default function PlByAgentPage() {
                 </tr>
               ) : (
                 <>
-                  <tr className="font-medium">
+                  <tr className="border-b-2 border-border font-medium bg-surface-muted/40">
                     <td className={`${tdDetail} text-right text-foreground`}>
                       Gross Total
                     </td>
@@ -350,60 +386,68 @@ export default function PlByAgentPage() {
                     </td>
                   </tr>
                   {groupedByDate.map(({ key, rounds }) => {
-                    const daySum = rounds.reduce(
-                      (acc, r) => {
-                        const s = sumUserPls(r.userPls);
-                        return {
-                          win: acc.win + s.win,
-                          comm: acc.comm + s.comm,
-                          netWin: acc.netWin + s.netWin,
-                        };
-                      },
-                      { win: 0, comm: 0, netWin: 0 },
+                    const dateBanner = formatDateSectionHeader(
+                      rounds[0]?.settleTime ?? "",
+                      key,
                     );
                     return (
                       <Fragment key={key}>
+                        <tr className="border-t border-border bg-surface-2">
+                          <td
+                            colSpan={5}
+                            className="px-4 py-2.5 text-sm font-semibold text-foreground"
+                          >
+                            {dateBanner}
+                          </td>
+                        </tr>
                         {rounds.map((r) => {
                           const agg = sumUserPls(r.userPls);
                           const eventTitle = `${r.eventName} - ${r.marketName} ${r.roundId}`;
-                          const dateLine = formatSettleDateDisplay(r.settleTime);
                           return (
                             <Fragment key={`${r.roundId}-${r.marketId}`}>
-                              <tr>
+                              <tr className="bg-surface-muted/30">
                                 <td className={tdDetail}>
                                   <div className="rounded-sm border border-primary/30 bg-primary/5 py-2 pl-3 pr-2 ring-1 ring-inset ring-primary/15 dark:bg-primary/10">
-                                    <div className="text-xs font-semibold text-primary">
-                                      {dateLine}
-                                    </div>
-                                    <div className="mt-1 text-sm font-medium text-foreground">
+                                    <div className="text-sm font-medium text-foreground">
                                       {eventTitle}
                                     </div>
                                   </div>
                                 </td>
-                                <td className={tdMember}>
-                                  <MemberAmount value={agg.win} />
-                                </td>
-                                <td className={tdMember}>
-                                  <MemberAmount value={agg.comm} />
-                                </td>
-                                <td className={`${tdMember} ${vMemberEnd}`}>
-                                  <MemberAmount value={agg.netWin} />
-                                </td>
-                                <td className={tdUpline}>
-                                  <UplineAmount value={-agg.netWin} />
-                                </td>
+                                <td className={`${tdMember} text-muted`}>—</td>
+                                <td className={`${tdMember} text-muted`}>—</td>
+                                <td className={`${tdMember} ${vMemberEnd} text-muted`}>—</td>
+                                <td className={`${tdUpline} text-muted`}>—</td>
                               </tr>
-                              {r.userPls.map((u) => (
-                                <tr key={u.user.id}>
+                              {r.userPls.map((u) => {
+                                const ut = u.user.userType ?? 0;
+                                const drillQs = new URLSearchParams();
+                                if (fromDate.trim()) drillQs.set("from", fromDate.trim());
+                                if (toDate.trim()) drillQs.set("to", toDate.trim());
+                                const drillQ = drillQs.toString();
+                                const drillHref = `/reports/pl-by-agent/${encodeURIComponent(u.user.id)}/${ut}${drillQ ? `?${drillQ}` : ""}`;
+                                return (
+                                <tr key={u.user.id} className="bg-surface">
                                   <td className={`${tdDetail} pl-4 text-sm text-foreground`}>
-                                    <span>{u.user.username}</span>
-                                    <span className="text-muted">
-                                      {" "}
-                                      ({u.user.userCode})
-                                    </span>
+                                    {ut === NO_DRILLDOWN_USER_TYPE ? (
+                                      <span className="font-medium text-foreground">
+                                        {u.user.username}
+                                        <span className="text-foreground-secondary">
+                                          {" "}
+                                          ({u.user.userCode})
+                                        </span>
+                                      </span>
+                                    ) : (
+                                      <Link
+                                        href={drillHref}
+                                        className="text-primary hover:underline"
+                                      >
+                                        <span className="font-medium">{u.user.username}</span>
+                                        <span className="text-primary/80"> ({u.user.userCode})</span>
+                                      </Link>
+                                    )}
                                     <span className="text-muted"> | </span>
                                     <Link
-                                      href={`/reports/bet-history?roundId=${r.roundId}`}
+                                      href={`/reports/pl-by-agent/market-bets/${encodeURIComponent(r.marketId)}?memberId=${encodeURIComponent(u.user.id)}`}
                                       className="text-primary hover:underline"
                                     >
                                       View Bets
@@ -422,27 +466,28 @@ export default function PlByAgentPage() {
                                     <UplineAmount value={-u.netWin} />
                                   </td>
                                 </tr>
-                              ))}
+                                );
+                              })}
+                              <tr className="border-t border-border bg-surface-muted/60 font-medium">
+                                <td className={`${tdDetail} text-right text-foreground`}>
+                                  Total
+                                </td>
+                                <td className={tdMember}>
+                                  <MemberAmount value={agg.win} />
+                                </td>
+                                <td className={tdMember}>
+                                  <MemberAmount value={agg.comm} />
+                                </td>
+                                <td className={`${tdMember} ${vMemberEnd}`}>
+                                  <MemberAmount value={agg.netWin} />
+                                </td>
+                                <td className={tdUpline}>
+                                  <UplineAmount value={-agg.netWin} />
+                                </td>
+                              </tr>
                             </Fragment>
                           );
                         })}
-                        <tr className="font-medium">
-                          <td className={`${tdDetail} text-right text-foreground`}>
-                            Total
-                          </td>
-                          <td className={tdMember}>
-                            <MemberAmount value={daySum.win} />
-                          </td>
-                          <td className={tdMember}>
-                            <MemberAmount value={daySum.comm} />
-                          </td>
-                          <td className={`${tdMember} ${vMemberEnd}`}>
-                            <MemberAmount value={daySum.netWin} />
-                          </td>
-                          <td className={tdUpline}>
-                            <UplineAmount value={-daySum.netWin} />
-                          </td>
-                        </tr>
                       </Fragment>
                     );
                   })}
@@ -468,5 +513,13 @@ export default function PlByAgentPage() {
         </div>
       </ListPageFrame>
     </div>
+  );
+}
+
+export default function PlByAgentPage() {
+  return (
+    <Suspense fallback={<div className="px-4 py-8 text-sm text-muted">Loading…</div>}>
+      <PlByAgentPageInner />
+    </Suspense>
   );
 }

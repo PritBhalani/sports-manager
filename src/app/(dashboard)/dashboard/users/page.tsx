@@ -15,6 +15,7 @@ import {
 import { getDownline } from "@/services/account.service";
 import { getSessionMemberId } from "@/services/user.service";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
 import { downloadCsv } from "@/utils/csvDownload";
 
 type Row = Record<string, unknown>;
@@ -38,7 +39,14 @@ const columns = [
     id: "balance",
     header: "Balance",
     sortable: true,
-    cell: (row: Row) => `₹ ${formatCurrency(row.balance ?? row.chips ?? row.cash)}`,
+    cell: (row: Row) => {
+      const n = Number(row.balance ?? row.chips ?? row.cash ?? 0);
+      return (
+        <span className={`tabular-nums ${signedAmountTextClass(n)}`}>
+          ₹ {formatCurrency(row.balance ?? row.chips ?? row.cash)}
+        </span>
+      );
+    },
     sortValue: (row: Row) => Number(row.balance ?? row.chips ?? row.cash ?? 0),
   },
 ];

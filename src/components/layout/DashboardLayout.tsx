@@ -172,6 +172,15 @@ function DashboardLayoutInner({ children }: LayoutProps) {
 
 export default function DashboardLayout({ children }: LayoutProps) {
   const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (isAuthenticated) return;
+    const path = `${window.location.pathname}${window.location.search}`;
+    const login = `/login?next=${encodeURIComponent(path)}`;
+    window.location.replace(login);
+  }, [isAuthenticated]);
+
   return (
     <NotificationBannerProvider enabled={isAuthenticated}>
       <DashboardLayoutInner>{children}</DashboardLayoutInner>
