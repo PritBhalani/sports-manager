@@ -15,6 +15,78 @@ import type {
   MarketByEventRow,
 } from "@/services/position.service";
 
+export type FootballScoreSide = {
+  name?: string;
+  score?: string | number; // Total goals
+  halfTimeScore?: string | number;
+  fullTimeScore?: string | number;
+  numberOfYellowCards?: number;
+  numberOfRedCards?: number;
+  numberOfCorners?: number;
+  isServing?: boolean;
+};
+
+export type FootballUpdateDetail = {
+  updateTime: string;
+  updateId: number;
+  team: "home" | "away" | "none";
+  teamName: string;
+  matchTime: number;
+  elapsedRegularTime: number;
+  type: "KickOff" | "Goal" | "YellowCard" | "RedCard" | "SecondHalfKickOff" | string;
+  updateType: string;
+};
+
+export type FootballScore = {
+  home: FootballScoreSide;
+  away: FootballScoreSide;
+  status?: string;
+  inPlayMatchStatus?: string;
+  timeElapsed?: number;
+  elapsedRegularTime?: number;
+  updateDetails?: FootballUpdateDetail[];
+};
+
+export type TennisScoreSide = {
+  name?: string;
+  score?: string; // Points (0, 15, 30, 40, AD)
+  games?: string | number; // Current set games
+  sets?: string | number; // Total sets won
+  gameSequence?: string[]; // Array of games per set (e.g. ["6", "2"])
+  isServing?: boolean;
+};
+
+export type TennisScore = {
+  home: TennisScoreSide;
+  away: TennisScoreSide;
+  currentSet?: number;
+  currentGame?: number;
+  fullTimeElapsed?: {
+    hour: number;
+    min: number;
+    sec: number;
+  };
+};
+
+export type ScorePayload = {
+  eventId: string;
+  eventTypeId: number;
+  score: FootballScore | TennisScore;
+  currentSet?: number;
+  currentGame?: number;
+  fullTimeElapsed?: {
+    hour: number;
+    min: number;
+    sec: number;
+  };
+  // Football specific top-level
+  status?: string;
+  inPlayMatchStatus?: string;
+  timeElapsed?: number;
+  elapsedRegularTime?: number;
+  updateDetails?: FootballUpdateDetail[];
+};
+
 export const WS_SINGLETON_KEY = "__sportsManagerWebsiteAnalyticsWs";
 
 export const DEFAULT_WS =
@@ -24,6 +96,14 @@ export const DEFAULT_WS =
     : undefined) || "wss://ws1bde3a1550.one247.io/ws";
 
 const WS_SUBSCRIBE_MARKETS_MESSAGE_TYPE = 7;
+const WS_SUBSCRIBE_SCORES_MESSAGE_TYPE = 3;
+
+export function serializeSubscribeScoresMessage(scids: string[]): string {
+  return JSON.stringify({
+    MessageType: WS_SUBSCRIBE_SCORES_MESSAGE_TYPE,
+    Scid: scids,
+  });
+}
 
 export function serializeSubscribeMarketsMessage(mids: string[]): string {
   return JSON.stringify({
@@ -503,15 +583,18 @@ export function useWebsitePriceBookWs(options: {
   const [wsConnected, setWsConnected] = useState(false);
   const [wsAuthed, setWsAuthed] = useState(false);
   const [wsNote, setWsNote] = useState<string | null>(null);
+  const [scores, setScores] = useState<Record<string, TennisScore>>({});
 
   useEffect(() => {
     const w = wsRef.current;
     if (!w || w.readyState !== WebSocket.OPEN || !wsAuthed) return;
     const mids = marketIds;
-    if (mids.length === 0 && !subscribeMatchKey) return;
+    const scid = subscribeMatchKey;
+    if (mids.length === 0 && !scid) return;
     try {
-      if (subscribeMatchKey) {
-        w.send(serializeWsEventSubscribeMessage(subscribeMatchKey));
+      if (scid) {
+        w.send(serializeWsEventSubscribeMessage(scid));
+        w.send(serializeSubscribeScoresMessage([scid]));
       }
       if (mids.length > 0) {
         w.send(serializeSubscribeMarketsMessage(mids));
@@ -680,6 +763,31 @@ export function useWebsitePriceBookWs(options: {
           ) {
             mergePriceBooksPayload(arr, setPriceBooks);
           }
+
+          if (t === 3 && arr) {
+            setScores((prev) => {
+              const next = { ...prev };
+              for (const item of arr as ScorePayload[]) {
+                if (item.eventId && item.score) {
+                  // Merge top-level fields into the score object for easier consumption
+                  const finalScore: any = {
+                    ...item.score,
+                    currentSet: item.currentSet ?? (item.score as any).currentSet,
+                    currentGame: item.currentGame ?? (item.score as any).currentGame,
+                    fullTimeElapsed: item.fullTimeElapsed ?? (item.score as any).fullTimeElapsed,
+                    // Football specific
+                    status: item.status ?? (item.score as any).status,
+                    inPlayMatchStatus: item.inPlayMatchStatus ?? (item.score as any).inPlayMatchStatus,
+                    timeElapsed: item.timeElapsed ?? (item.score as any).timeElapsed,
+                    elapsedRegularTime: item.elapsedRegularTime ?? (item.score as any).elapsedRegularTime,
+                    updateDetails: item.updateDetails ?? (item.score as any).updateDetails,
+                  };
+                  next[String(item.eventId)] = finalScore;
+                }
+              }
+              return next;
+            });
+          }
         })();
       };
 
@@ -726,5 +834,5 @@ export function useWebsitePriceBookWs(options: {
     };
   }, []);
 
-  return { priceBooks, wsConnected, wsAuthed, wsNote };
+  return { priceBooks, scores, wsConnected, wsAuthed, wsNote };
 }

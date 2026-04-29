@@ -30,6 +30,8 @@ import {
   liveBetTimestamp,
 } from "../../_lib/liveBetDisplay";
 import { CricfeedScorecardEmbed } from "../../_lib/CricfeedScorecardEmbed";
+import { TennisScoreCard } from "../../_lib/TennisScoreCard";
+import { FootballScoreCard } from "../../_lib/FootballScoreCard";
 import { resolveScoreboardSport } from "../../_lib/scoreboardSport";
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import {
@@ -530,7 +532,7 @@ export default function WebsiteEventMarketsPage() {
     () => getEventSourceIdForWsSubscribe(eventRow),
     [eventRow],
   );
-  const { priceBooks, wsConnected, wsAuthed, wsNote } = useWebsitePriceBookWs({
+  const { priceBooks, scores, wsConnected, wsAuthed, wsNote } = useWebsitePriceBookWs({
     marketIds,
     wsEventSubscribeId,
     onRefreshSignal: () => setRefreshKey((k) => k + 1),
@@ -833,6 +835,14 @@ export default function WebsiteEventMarketsPage() {
 
             {eventId.trim() && inPlay && scoreboardSport === "cricket" ? (
               <CricfeedScorecardEmbed matchId={scoreMidForEmbed} />
+            ) : null}
+
+            {eventId.trim() && inPlay && scoreboardSport === "tennis" && scores[wsEventSubscribeId] ? (
+              <TennisScoreCard score={scores[wsEventSubscribeId] as any} />
+            ) : null}
+
+            {eventId.trim() && inPlay && scoreboardSport === "football" && scores[wsEventSubscribeId] ? (
+              <FootballScoreCard score={scores[wsEventSubscribeId] as any} />
             ) : null}
 
             {loading ? (

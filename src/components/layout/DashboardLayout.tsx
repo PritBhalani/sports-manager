@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { LayoutProps } from "@/types/layout.types";
@@ -55,6 +56,7 @@ function DashboardLayoutInner({ children }: LayoutProps) {
   const { isAuthenticated } = useAuth();
   const banner = useNotificationBanner();
   const mainScrollRef = useRef<HTMLElement>(null);
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
@@ -63,9 +65,13 @@ function DashboardLayoutInner({ children }: LayoutProps) {
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth >= LAYOUT_BREAKPOINT_MD) {
-      setSidebarOpen(true);
+      if (pathname.startsWith("/website/analytics")) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
     }
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isAuthenticated) return;

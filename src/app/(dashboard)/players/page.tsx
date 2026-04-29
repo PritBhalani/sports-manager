@@ -221,21 +221,11 @@ function DownlineTableRows({
                     )}
                   </div>
                   <div className="text-xs text-muted">
-                    {cMobile || (cUserCode !== "—" ? cUserCode : "") ? (
-                      cId ? (
-                        <button
-                          type="button"
-                          onClick={() => void openQuickEditModal(cId, cUname, cUserCode)}
-                          className="text-primary hover:underline"
-                        >
-                          ({cMobile || cUserCode})
-                        </button>
-                      ) : (
-                        `(${cMobile || cUserCode})`
-                      )
-                    ) : (
-                      "—"
-                    )}
+                    {cMobile ? (
+                      `(${cMobile})`
+                    ) : cUserCode !== "—" && cUserCode !== cUname ? (
+                      `(${cUserCode})`
+                    ) : null}
                   </div>
                 </div>
               </TableCell>
@@ -2059,21 +2049,11 @@ export default function PlayersPage() {
                             )}
                           </div>
                           <div className="text-xs text-muted">
-                            {mobile || userCode ? (
-                              id ? (
-                                <button
-                                  type="button"
-                                  onClick={() => void openQuickEditModal(id, uname, userCode)}
-                                  className="text-primary hover:underline"
-                                >
-                                  ({mobile || userCode})
-                                </button>
-                              ) : (
-                                `(${mobile || userCode})`
-                              )
-                            ) : (
-                              "—"
-                            )}
+                            {mobile ? (
+                              `(${mobile})`
+                            ) : userCode !== "—" && userCode !== uname ? (
+                              `(${userCode})`
+                            ) : null}
                           </div>
                         </TableCell>
                         <TableCell className="!px-4 !py-4 text-foreground">
