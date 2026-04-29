@@ -63,8 +63,8 @@ import CreateMemberModal from "@/components/players/CreateMemberModal";
 
 /** Map UI filter to API `searchQuery.status` (empty = no filter / all). */
 function statusForPlayerType(playerType: string): string {
-  if (playerType === "inactive") return "-1";
-  if (playerType === "active") return "2";
+  if (playerType === "inactive") return "-1,3";
+  if (playerType === "active") return "1,2";
   return "";
 }
 
@@ -107,7 +107,7 @@ function DownlineExpansionRows({
   if (downlineLoading[parentId]) {
     return (
       <TableRow>
-        <td colSpan={11} className="px-4 py-3 text-sm text-muted">
+        <td colSpan={12} className="px-4 py-3 text-sm text-muted">
           Loading downline...
         </td>
       </TableRow>
@@ -117,7 +117,7 @@ function DownlineExpansionRows({
   if (err) {
     return (
       <TableRow>
-        <td colSpan={11} className="px-4 py-3 text-sm text-error">
+        <td colSpan={12} className="px-4 py-3 text-sm text-error">
           {err}
         </td>
       </TableRow>
@@ -127,7 +127,7 @@ function DownlineExpansionRows({
   if (list.length === 0) {
     return (
       <TableRow>
-        <td colSpan={11} className="px-4 py-3 text-sm text-muted">
+        <td colSpan={12} className="px-4 py-3 text-sm text-muted">
           No downline users.
         </td>
       </TableRow>
@@ -280,9 +280,9 @@ function DownlineTableRows({
                   }
                 >
                   {cBettingLocked ? (
-                    <Lock className="h-4 w-4 text-error" aria-hidden />
+                    <Lock className="h-4 w-4 text-red-600" aria-hidden />
                   ) : (
-                    <LockOpen className="h-4 w-4 text-success" aria-hidden />
+                    <LockOpen className="h-4 w-4 text-[#2f9e44]" aria-hidden />
                   )}
                   <span className="sr-only">{cBettingLocked ? "Locked" : "Open"}</span>
                 </button>
@@ -320,6 +320,9 @@ function DownlineTableRows({
               </TableCell>
               <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cBalance ?? 0))}`}>
                 {formatCurrency(cBalance)}
+              </TableCell>
+              <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cBalance + cExposure))}`}>
+                {formatCurrency(cBalance + cExposure)}
               </TableCell>
               <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(cCreditLimit ?? 0))}`}>
                 {formatCurrency(cCreditLimit)}
@@ -1937,19 +1940,6 @@ export default function PlayersPage() {
                       }}
                       className="min-w-[8rem] rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm sm:min-w-[12rem]"
                     />
-                    <select
-                      value={playerType}
-                      onChange={(e) => {
-                        setPage(1);
-                        setPlayerType(e.target.value);
-                      }}
-                      className="min-w-[8rem] rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm"
-                      aria-label="Player type"
-                    >
-                      <option value="all">All Players</option>
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                    </select>
                   </>
                 ) : (
                   <>
@@ -2020,6 +2010,7 @@ export default function PlayersPage() {
                 <TableHead className="!px-4 !py-3 !text-right">Take</TableHead>
                 <TableHead className="!px-4 !py-3 !text-right">Give</TableHead>
                 <TableHead className="!px-4 !py-3 !text-right">Balance</TableHead>
+                <TableHead className="!px-4 !py-3 !text-right">ATB</TableHead>
                 <TableHead className="!px-4 !py-3 !text-right">Credit Limit</TableHead>
                 <TableHead className="!px-4 !py-3 !text-center">Actions</TableHead>
               </TableHeader>
@@ -2128,9 +2119,9 @@ export default function PlayersPage() {
                             }
                           >
                             {bettingLocked ? (
-                              <Lock className="h-4 w-4 text-error" aria-hidden />
+                              <Lock className="h-4 w-4 text-red-600" aria-hidden />
                             ) : (
-                              <LockOpen className="h-4 w-4 text-success" aria-hidden />
+                              <LockOpen className="h-4 w-4 text-[#2f9e44]" aria-hidden />
                             )}
                             <span className="sr-only">{bettingLocked ? "Locked" : "Open"}</span>
                           </button>
@@ -2168,6 +2159,9 @@ export default function PlayersPage() {
                         </TableCell>
                         <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(balance ?? 0))}`}>
                           {formatCurrency(balance)}
+                        </TableCell>
+                        <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(balance + exposure))}`}>
+                          {formatCurrency(balance + exposure)}
                         </TableCell>
                         <TableCell className={`!px-4 !py-4 text-right tabular-nums ${signedAmountTextClass(Number(creditLimit ?? 0))}`}>
                           {formatCurrency(creditLimit)}
