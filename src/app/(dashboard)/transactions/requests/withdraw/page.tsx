@@ -24,7 +24,7 @@ import {
   DIALOG_BODY_COMPACT,
 } from "@/components";
 import WithdrawRequestUpdateModal from "@/components/transactions/WithdrawRequestUpdateModal";
-import { ArrowUpFromLine, Copy, HandCoins, ImageIcon } from "lucide-react";
+import { ArrowUpFromLine, Copy, HandCoins, ImageIcon, Info } from "lucide-react";
 import { getOffPayOut, getPayInOutSlip, type OffPayInRecord } from "@/services/account.service";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
@@ -71,21 +71,34 @@ function withdrawStatusBadgeVariant(
 }
 
 /** Elapsed since `createdOn` — compact (e.g. `48s`) to match withdrawal queue UIs. */
-function formatElapsedShort(createdOn?: string): string {
+function formatElapsedShort(createdOn?: string, updatedOn?: string, currentNow?: number): string {
   if (!createdOn) return "—";
-  const created = new Date(createdOn);
-  if (Number.isNaN(created.getTime())) return "—";
-  const sec = Math.floor(Math.max(0, Date.now() - created.getTime()) / 1000);
+  const start = new Date(createdOn).getTime();
+  if (Number.isNaN(start)) return "—";
+
+  let end = currentNow || Date.now();
+  if (updatedOn) {
+    const u = new Date(updatedOn).getTime();
+    if (!Number.isNaN(u)) end = u;
+  }
+
+  const sec = Math.floor(Math.max(0, end - start) / 1000);
   if (sec < 60) return `${sec}s`;
   if (sec < 3600) {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
     return `${m}m ${s}s`;
   }
-  const h = Math.floor(sec / 3600);
+  if (sec < 86400) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = sec % 60;
+    return `${h}h ${m}m ${s}s`;
+  }
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  return `${h}h ${m}m ${s}s`;
+  return `${d}d ${h}h ${m}m`;
 }
 
 function CopyLine({ label, value }: { label: string; value: string }) {
@@ -132,6 +145,12 @@ export default function TransactionsRequestWithdrawPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updateRow, setUpdateRow] = useState<OffPayInRecord | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const [slipViewerOpen, setSlipViewerOpen] = useState(false);
   const [slipViewerSrc, setSlipViewerSrc] = useState<string | null>(null);
@@ -241,7 +260,7 @@ export default function TransactionsRequestWithdrawPage() {
         st,
         formatDateTime(row.createdOn),
         formatDateTime(row.updatedOn),
-        formatElapsedShort(row.createdOn),
+        formatElapsedShort(row.createdOn, row.updatedOn),
       ];
     });
     downloadCsv(`withdraw-requests-${fromDate}-${toDate}.csv`, header, out);
@@ -315,9 +334,8 @@ export default function TransactionsRequestWithdrawPage() {
         >
           <Link
             href={TAB_DEPOSIT}
-            className={`flex flex-1 items-center justify-center gap-2 ${
-              !isWithdrawTab ? "border-primary text-primary" : "border-transparent text-muted"
-            } border-b-2 px-6 py-3`}
+            className={`flex flex-1 items-center justify-center gap-2 ${!isWithdrawTab ? "border-primary text-primary" : "border-transparent text-muted"
+              } border-b-2 px-6 py-3`}
             aria-selected={!isWithdrawTab}
           >
             <HandCoins className="h-4 w-4" aria-hidden />
@@ -325,9 +343,8 @@ export default function TransactionsRequestWithdrawPage() {
           </Link>
           <Link
             href={TAB_WITHDRAW}
-            className={`flex flex-1 items-center justify-center gap-2 ${
-              isWithdrawTab ? "border-primary text-primary" : "border-transparent text-muted"
-            } border-b-2 px-6 py-3`}
+            className={`flex flex-1 items-center justify-center gap-2 ${isWithdrawTab ? "border-primary text-primary" : "border-transparent text-muted"
+              } border-b-2 px-6 py-3`}
             aria-selected={isWithdrawTab}
           >
             <ArrowUpFromLine className="h-4 w-4" aria-hidden />
@@ -401,22 +418,24 @@ export default function TransactionsRequestWithdrawPage() {
                     return (
                       <TableRow key={row.id} className="hover:!bg-gray-50">
                         <TableCell className="!px-6 !py-3">
-                          <div className="flex flex-wrap items-baseline gap-x-1">
-                            {row.user?.id ? (
-                              <Link
-                                href={`/players/${encodeURIComponent(String(row.user.id))}`}
-                                className="text-primary hover:underline"
-                              >
-                                {row.user?.username ?? "—"}
-                              </Link>
-                            ) : (
-                              <span className="text-foreground">{row.user?.username ?? "—"}</span>
-                            )}
-                            {row.user?.parent?.username ? (
-                              <span className="text-muted">
-                                ({String(row.user.parent.username)})
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex flex-wrap items-baseline gap-x-1">
+                              {row.user?.id ? (
+                                <Link
+                                  href={`/players/${encodeURIComponent(String(row.user.id))}`}
+                                  className="text-primary hover:underline"
+                                >
+                                  {row.user?.username ?? "—"}
+                                </Link>
+                              ) : (
+                                <span className="text-foreground">{row.user?.username ?? "—"}</span>
+                              )}
+                            </div>
+                            {row.user?.mobile && (
+                              <span className="text-[11px] text-muted-foreground">
+                                ({row.user.mobile})
                               </span>
-                            ) : null}
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className={`!px-6 !py-3 text-center tabular-nums ${signedAmountTextClass(Number(row.amount ?? 0))}`}>
@@ -432,12 +451,23 @@ export default function TransactionsRequestWithdrawPage() {
                           </div>
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center">
-                          <Badge
-                            variant={withdrawStatusBadgeVariant(row.status)}
-                            className="max-w-max"
-                          >
-                            {statusLabel}
-                          </Badge>
+                          <div className="group relative flex items-center justify-center gap-1.5">
+                            <Badge
+                              variant={withdrawStatusBadgeVariant(row.status)}
+                              className="max-w-max"
+                            >
+                              {statusLabel}
+                            </Badge>
+                            {row.comment && (
+                              <div className="relative inline-flex items-center">
+                                <Info className="h-3.5 w-3.5 cursor-pointer text-info/70 transition-colors hover:text-info" />
+                                <div className="absolute right-full top-1/2 z-50 mr-2 w-max max-w-[200px] -translate-y-1/2 rounded-lg bg-[#2DD4BF] px-3 py-2 text-[12px] font-semibold text-white shadow-xl opacity-0 transition-all group-hover:opacity-100 pointer-events-none">
+                                  {row.comment}
+                                  <div className="absolute left-full top-1/2 -mt-1.5 border-[6px] border-transparent border-l-[#2DD4BF]" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center text-sm">
                           {formatDateTime(row.createdOn)}
@@ -446,7 +476,7 @@ export default function TransactionsRequestWithdrawPage() {
                           {row.updatedOn ? formatDateTime(row.updatedOn) : "—"}
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center tabular-nums text-sm">
-                          {formatElapsedShort(row.createdOn)}
+                          {formatElapsedShort(row.createdOn, row.updatedOn, now)}
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center">
                           {showUpdate ? (

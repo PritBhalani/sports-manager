@@ -23,7 +23,7 @@ import {
   DialogSection,
   DIALOG_BODY_COMPACT,
 } from "@/components";
-import { ArrowUpFromLine, HandCoins } from "lucide-react";
+import { ArrowUpFromLine, HandCoins, Info } from "lucide-react";
 import DepositRequestUpdateModal from "@/components/transactions/DepositRequestUpdateModal";
 import {
   getOffPayIn,
@@ -79,6 +79,12 @@ export default function TransactionsRequestDepositPage() {
   const [rowActionKey, setRowActionKey] = useState<string | null>(null);
   const [updateRow, setUpdateRow] = useState<OffPayInRecord | null>(null);
   const [rollbackRow, setRollbackRow] = useState<OffPayInRecord | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   type DepositUiStatus = "Init" | "Confirm" | "Cancel" | "Expired";
 
@@ -87,6 +93,12 @@ export default function TransactionsRequestDepositPage() {
    * "Payment Received" vs "Payment Not Received"). `user.status` is the member account, not this flow.
    */
   const depositRowStatus = (row: OffPayInRecord): DepositUiStatus | string => {
+    const n = row.status;
+    if (n === 1) return "Init";
+    if (n === 2) return "Confirm";
+    if (n === 3) return "Cancel";
+    if (n === 4) return "Expired";
+
     const comment = String(row.comment ?? "").trim();
     const lo = comment.toLowerCase();
 
@@ -94,12 +106,6 @@ export default function TransactionsRequestDepositPage() {
     if (lo.includes("payment not received")) return "Cancel";
     if (lo.includes("rollback")) return "Cancel";
     if (lo.includes("expired") || lo.includes("expire")) return "Expired";
-
-    const n = row.status;
-    if (n === 1) return "Init";
-    if (n === 4) return "Expired";
-    if (n === 3) return "Cancel";
-    if (n === 2) return "Confirm";
 
     if (comment) {
       if (lo === "init" || lo === "pending") return "Init";
@@ -127,10 +133,7 @@ export default function TransactionsRequestDepositPage() {
 
     const showUpdate = resolved === "Init";
     const showRollback =
-      !isRollbackOutcome &&
-      (resolved === "Confirm" ||
-        resolved === "Cancel" ||
-        resolved === "Expired");
+      !isRollbackOutcome && resolved === "Confirm";
 
     return { showUpdate, showRollback };
   };
@@ -148,16 +151,34 @@ export default function TransactionsRequestDepositPage() {
     }
   };
 
-  const formatTimer = (createdOn?: string) => {
+  const formatTimer = (createdOn?: string, updatedOn?: string) => {
     if (!createdOn) return "—";
-    const created = new Date(createdOn);
-    if (Number.isNaN(created.getTime())) return "—";
-    const diffMs = Math.max(0, Date.now() - created.getTime());
-    const totalSeconds = Math.floor(diffMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    const start = new Date(createdOn).getTime();
+    if (Number.isNaN(start)) return "—";
+
+    let end = now;
+    if (updatedOn) {
+      const u = new Date(updatedOn).getTime();
+      if (!Number.isNaN(u)) end = u;
+    }
+
+    const sec = Math.floor(Math.max(0, end - start) / 1000);
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}m ${s}s`;
+    }
+    if (sec < 86400) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      return `${h}h ${m}m ${s}s`;
+    }
+    const d = Math.floor(sec / 86400);
+    const h = Math.floor((sec % 86400) / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${d}d ${h}h ${m}m`;
   };
 
   const load = useCallback(
@@ -370,7 +391,7 @@ export default function TransactionsRequestDepositPage() {
                     return (
                       <TableRow key={row.id} className="hover:!bg-gray-50">
                         <TableCell className="!px-6 !py-3">
-                          <div className="flex items-baseline gap-1.5">
+                          <div className="flex flex-col gap-0.5">
                             {row.user?.id ? (
                               <Link
                                 href={`/players/${encodeURIComponent(String(row.user.id))}`}
@@ -381,6 +402,11 @@ export default function TransactionsRequestDepositPage() {
                             ) : (
                               <span className="text-foreground">{row.user?.username ?? "—"}</span>
                             )}
+                            {row.user?.mobile && (
+                              <span className="text-[11px] text-muted-foreground">
+                                ({row.user.mobile})
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className={`!px-6 !py-3 text-center tabular-nums ${signedAmountTextClass(Number(row.amount ?? 0))}`}>{formatCurrency(row.amount)}</TableCell>
@@ -388,16 +414,27 @@ export default function TransactionsRequestDepositPage() {
                         <TableCell className="!px-6 !py-3">{row.utrNo ?? "—"}</TableCell>
                         <TableCell className="!px-6 !py-3">{row.acNo ?? "—"}</TableCell>
                         <TableCell className="!px-6 !py-3 text-center">
-                          <Badge
-                            variant={statusBadgeVariantForDeposit(statusLabel)}
-                            className="max-w-max"
-                          >
-                            {statusLabel}
-                          </Badge>
+                          <div className="group relative flex items-center justify-center gap-1.5">
+                            <Badge
+                              variant={statusBadgeVariantForDeposit(statusLabel)}
+                              className="max-w-max"
+                            >
+                              {statusLabel}
+                            </Badge>
+                            {row.comment && (
+                              <div className="relative inline-flex items-center">
+                                <Info className="h-3.5 w-3.5 cursor-pointer text-info/70 transition-colors hover:text-info" />
+                                <div className="absolute right-full top-1/2 z-50 mr-2 w-max max-w-[200px] -translate-y-1/2 rounded-lg bg-[#2DD4BF] px-3 py-2 text-[12px] font-semibold text-white shadow-xl opacity-0 transition-all group-hover:opacity-100 pointer-events-none">
+                                  {row.comment}
+                                  <div className="absolute left-full top-1/2 -mt-1.5 border-[6px] border-transparent border-l-[#2DD4BF]" />
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className="!px-6 !py-3 text-center">{formatDateTime(row.createdOn)}</TableCell>
                         <TableCell className="!px-6 !py-3 text-center">{formatDateTime(row.updatedOn)}</TableCell>
-                        <TableCell className="!px-6 !py-3 text-center tabular-nums">{formatTimer(row.createdOn)}</TableCell>
+                        <TableCell className="!px-6 !py-3 text-center tabular-nums">{formatTimer(row.createdOn, row.updatedOn)}</TableCell>
                         <TableCell className="!px-6 !py-3">
                           <div className="flex min-w-[5.5rem] flex-col items-stretch gap-1.5">
                             {showUpdate ? (
