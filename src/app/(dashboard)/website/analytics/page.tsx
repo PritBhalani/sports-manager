@@ -8,7 +8,22 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { PlayCircle, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import {
+  PlayCircle,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Trophy,
+  CircleDot,
+  Landmark,
+  Dice5,
+  Gamepad2,
+  Users,
+  Dog,
+  HandMetal,
+  Target,
+  Timer
+} from "lucide-react";
 import {
   PageHeader,
   ListPageFrame,
@@ -25,12 +40,15 @@ import {
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import {
   getMarketByEventTypeId,
-  type MarketByEventRow,
+  getEventTypePosition,
+  type MarketByEventRow
 } from "@/services/position.service";
 import { getLiveBets } from "@/services/bet.service";
 import { formatDateTime } from "@/utils/date";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { signedAmountTextClass } from "@/utils/signedAmountTextClass";
+import { apiConfig } from "@/config/api.config";
+import { BetCard } from "@/app/(dashboard)/website/analytics/_lib/BetCard";
 import {
   coerceAmount,
   collectMatchOddsMarketIds,
@@ -48,6 +66,12 @@ import {
 import {
   liveBetEventId,
   liveBetStakeForDisplay,
+  liveBetEventAndMarketNames,
+  eventMarketTitle,
+  liveBetMemberName,
+  formatBetCardDateTime,
+  liveBetIdDisplay,
+  liveBetAvgDisplay,
 } from "./_lib/liveBetDisplay";
 
 /** Sum matched bet stakes per event (same units as bet card “Size”). */
@@ -91,7 +115,7 @@ function readBetCount(ev: MarketByEventRow): number {
   return 0;
 }
 
-function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
+function OddsStack({ runnerBook, inPlay }: { runnerBook?: WsRunnerBookRow; inPlay?: boolean }) {
   const rate = getDisplayCurrencyRate();
   const back = normalizePriceLevel(runnerBook?.bp?.[0]);
   const lay = normalizePriceLevel(runnerBook?.lp?.[0]);
@@ -102,38 +126,25 @@ function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
   );
   const lVol = formatLiquidity(lay.size != null ? lay.size * rate : undefined);
   const cell = (
-    label: string,
     priceStr: string,
     vol: string,
     sky: boolean,
+    label: string
   ) => (
     <div
-      className={`flex min-w-0 flex-1 flex-col rounded-md border px-1.5 py-1 text-center leading-tight ${
-        sky
-          ? "border-sky-200/80 bg-sky-100 dark:border-sky-800 dark:bg-sky-950/55"
-          : "border-rose-200/80 bg-rose-100 dark:border-rose-800 dark:bg-rose-950/55"
-      }`}
-    >
-      <div
-        className={`text-[9px] font-bold uppercase tracking-wide ${
-          sky
-            ? "text-sky-800/90 dark:text-sky-200/90"
-            : "text-rose-800/90 dark:text-rose-200/90"
+      className={`flex min-w-[3rem] flex-1 flex-col items-center justify-center rounded-[4px] py-1 text-center leading-none transition-all hover:brightness-95 ${sky
+          ? "bg-sky-50 dark:bg-sky-950/30"
+          : "bg-rose-50 dark:bg-rose-950/30"
         }`}
-      >
+    >
+      <span className={`mb-0.5 text-[8px] font-bold uppercase tracking-tighter ${sky ? "text-sky-500" : "text-rose-500"}`}>
         {label}
-      </div>
-      <div className="tabular-nums text-[13px] font-bold text-foreground">
+      </span>
+      <div className="tabular-nums text-[13px] font-bold text-zinc-900 dark:text-zinc-50">
         {priceStr}
       </div>
       {vol ? (
-        <div
-          className={`mt-0.5 text-[11px] font-semibold tabular-nums ${
-            sky
-              ? "text-sky-900/90 dark:text-sky-100/90"
-              : "text-rose-900/90 dark:text-rose-100/90"
-          }`}
-        >
+        <div className="mt-0.5 text-[9px] font-medium tabular-nums text-zinc-400 dark:text-zinc-500">
           {vol}
         </div>
       ) : null}
@@ -141,9 +152,12 @@ function OddsStack({ runnerBook }: { runnerBook?: WsRunnerBookRow }) {
   );
 
   return (
-    <div className="flex min-w-[7.5rem] items-stretch justify-center gap-1.5 text-xs tabular-nums">
-      {cell("Back", backStr, bVol, true)}
-      {cell("Lay", layStr, lVol, false)}
+    <div className="flex flex-col items-center gap-1.5 py-3">
+      <div className="flex w-full items-stretch gap-1.5 px-3">
+        {cell(backStr, bVol, true, "BACK")}
+        {cell(layStr, lVol, false, "LAY")}
+      </div>
+      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">RUNS</span>
     </div>
   );
 }
@@ -156,35 +170,21 @@ function BetsTradedStatTiles({
   bets: number;
   traded: { amount: number; source: TradedStatSource };
 }) {
-  const tradedClass = signedAmountTextClass(Number(traded.amount ?? 0));
+  const rate = getDisplayCurrencyRate();
+  const displayTraded = Math.round(traded.amount * rate);
+  const tradedClass = signedAmountTextClass(displayTraded);
 
   return (
-    <div className="flex flex-wrap items-stretch gap-1.5">
-      <div
-        className="flex min-w-[4.25rem] flex-col rounded-md border border-sky-200/80 bg-sky-100 px-2 py-1 text-center leading-tight dark:border-sky-800 dark:bg-sky-950/55"
-        title="Bet count"
-      >
-        <div className="text-[9px] font-bold uppercase tracking-wide text-sky-800/90 dark:text-sky-200/90">
-          Bets
-        </div>
-        <div className="tabular-nums text-[13px] font-bold text-foreground">
-          {bets}
-        </div>
+    <div className="mt-1 flex items-center gap-2">
+      <div className="flex items-center gap-1.5 rounded-md bg-sky-100 px-2.5 py-1 dark:bg-sky-950/40">
+        <span className="text-[10px] font-bold text-sky-800 dark:text-sky-300">BETS</span>
+        <span className="text-sm font-bold text-sky-900 dark:text-sky-100">{bets}</span>
       </div>
-      <div
-        className="flex min-w-[5.5rem] flex-col rounded-md border border-emerald-200/80 bg-emerald-100 px-2 py-1 text-center leading-tight dark:border-emerald-800 dark:bg-emerald-950/55"
-        title={
-          traded.source === "bets"
-            ? "Total matched stake for this event (same as bet Size, e.g. ₹100)"
-            : "No matched stakes in loaded live bets for this event"
-        }
-      >
-        <div className="text-[9px] font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
-          Traded
-        </div>
-        <div className={`tabular-nums text-[13px] font-bold ${tradedClass}`}>
-          {formatCurrency(traded.amount)}
-        </div>
+      <div className="flex items-center gap-1.5 rounded-md bg-emerald-100 px-2.5 py-1 dark:bg-emerald-950/40">
+        <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300">TRADED</span>
+        <span className={`text-sm font-bold ${tradedClass}`}>
+          {displayTraded.toLocaleString()}
+        </span>
       </div>
     </div>
   );
@@ -192,32 +192,14 @@ function BetsTradedStatTiles({
 
 function RunnerOddsCell({
   runnerBook,
-  runnerLabel,
-  isUnavailable,
+  inPlay,
 }: {
   runnerBook?: WsRunnerBookRow;
-  runnerLabel: string;
-  isUnavailable?: boolean;
+  inPlay?: boolean;
 }) {
-  if (isUnavailable) {
-    return (
-      <div className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 px-2 py-2 text-center">
-        <span className="text-sm text-muted-foreground">—</span>
-        <span className="max-w-[9rem] truncate text-[11px] text-foreground-tertiary">
-          {runnerLabel}
-        </span>
-      </div>
-    );
-  }
   return (
-    <div className="flex flex-col items-center gap-1.5 px-2 py-2">
-      <OddsStack runnerBook={runnerBook} />
-      <span
-        className="max-w-[9rem] truncate text-center text-[11px] font-medium leading-snug text-foreground-secondary"
-        title={runnerLabel}
-      >
-        {runnerLabel}
-      </span>
+    <div className="flex h-full w-full items-center justify-center">
+      <OddsStack runnerBook={runnerBook} inPlay={inPlay} />
     </div>
   );
 }
@@ -230,54 +212,98 @@ function pickStr(r: Record<string, unknown>, keys: string[]): string | undefined
   return undefined;
 }
 
-function eventTypeMeta(et: EventTypeRecord): { id: string; label: string } | null {
+function BetCardPlaceholder() {
+  return (
+    <BetCard
+      title="RUNS || NDA ALLIANCE TOTAL SEATS IN ASSAM"
+      user="tapan14"
+      date="26 Apr, 10:38:32"
+      price="101"
+      size={100}
+      avg="101"
+      betId="69ed9dd1dd59e7bbdbb6030f"
+    />
+  );
+}
+
+function eventTypeMeta(et: EventTypeRecord): (SportTab & { isActive?: boolean; displayOrder?: number }) | null {
   if (!et || typeof et !== "object") return null;
   const o = et as Record<string, unknown>;
   const id = pickStr(o, ["id", "_id"]);
-  const name = pickStr(o, ["name", "eventTypeName", "sportName"]);
+  const name = pickStr(o, ["name", "label", "eventTypeName", "sportName"]);
   if (!id || !name) return null;
-  return { id, label: name };
+  return {
+    id,
+    label: name,
+    isActive: o.isActive === true,
+    displayOrder: typeof o.displayOrder === "number" ? o.displayOrder : undefined
+  };
 }
 
-type SportTab = { id: string; label: string };
+type SportTab = {
+  id: string;
+  label: string;
+  pl?: number;
+  hasBet?: boolean;
+  marketCount?: number;
+  icon?: string;
+};
 
-function buildSportTabs(list: EventTypeRecord[]): SportTab[] {
-  const metas = list.map(eventTypeMeta).filter(Boolean) as SportTab[];
-  const score = (label: string) => {
-    const l = label.toLowerCase();
-    if (l.includes("cricket")) return 0;
-    if (l.includes("football") || l.includes("soccer")) return 1;
-    if (l.includes("tennis")) return 2;
-    return 99;
-  };
-  const preferred = metas
-    .filter((m) => score(m.label) < 99)
-    .sort((a, b) => score(a.label) - score(b.label));
-  const tabs: SportTab[] = [{ id: "-1", label: "All sports" }];
-  const seen = new Set(tabs.map((t) => t.id));
-  for (const p of preferred) {
-    if (!seen.has(p.id)) {
-      tabs.push(p);
-      seen.add(p.id);
-    }
+function getSportIcon(name: string) {
+  const n = name.toLowerCase();
+  if (n.includes("cricket")) return Trophy;
+  if (n.includes("football") || n.includes("soccer")) return CircleDot;
+  if (n.includes("tennis")) return CircleDot;
+  if (n.includes("politics")) return Landmark;
+  if (n.includes("casino")) return Dice5;
+  if (n.includes("session")) return Gamepad2;
+  if (n.includes("horse")) return Timer;
+  if (n.includes("greyhound") || n.includes("dog")) return Dog;
+  if (n.includes("kabaddi")) return HandMetal;
+  return Target;
+}
+
+function buildSportTabs(list: any[]): SportTab[] {
+  const tabs: SportTab[] = [];
+  const seen = new Set<string>();
+
+  // Sort by displayOrder
+  const sorted = [...list].sort((a, b) => {
+    const orderA = a.displayOrder ?? 999;
+    const orderB = b.displayOrder ?? 999;
+    const valA = orderA === -1 ? 998 : orderA;
+    const valB = orderB === -1 ? 998 : orderB;
+    return valA - valB;
+  });
+
+  for (const s of sorted) {
+    if (!s.isActive || !s.id || seen.has(s.id)) continue;
+    if (String(s.name ?? "").toLowerCase().includes("all sport")) continue;
+
+    // Requirement: only show if markets have data
+    if (!s.markets || s.markets.length === 0) continue;
+
+    // Check if any market has a bet
+    const hasBet = s.markets?.some((m: any) => m.hasBet) || (s.pl !== 0);
+
+    tabs.push({
+      id: s.id,
+      label: s.name || "Unknown",
+      pl: s.pl,
+      hasBet,
+      marketCount: s.markets.length
+    });
+    seen.add(s.id);
   }
-  if (tabs.length <= 1) {
-    for (const m of metas) {
-      if (!seen.has(m.id)) {
-        tabs.push(m);
-        seen.add(m.id);
-      }
-      if (tabs.length >= 4) break;
-    }
-  }
+
   return tabs;
 }
 
 export default function WebsiteAnalyticsPage() {
   const router = useRouter();
   const [eventTypes, setEventTypes] = useState<SportTab[]>([]);
-  const [activeSportId, setActiveSportId] = useState<string>("-1");
-  const [showAllEvents, setShowAllEvents] = useState(true);
+  const [activeSportId, setActiveSportId] = useState<string>("");
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const [marketsLoading, setMarketsLoading] = useState(true);
   const [marketsError, setMarketsError] = useState<string | null>(null);
   const [marketRows, setMarketRows] = useState<MarketByEventRow[]>([]);
@@ -298,47 +324,79 @@ export default function WebsiteAnalyticsPage() {
     onRefreshSignal: () => setRefreshKey((k) => k + 1),
   });
 
-  useEffect(() => {
-    getEventType()
-      .then((list) =>
-        setEventTypes(buildSportTabs(Array.isArray(list) ? list : [])),
-      )
-      .catch(() => setEventTypes([{ id: "-1", label: "All sports" }]));
-  }, []);
+  const loadEventTypes = useCallback(async () => {
+    try {
+      const [posResponse, masterResponse] = await Promise.all([
+        getEventTypePosition(),
+        getEventType()
+      ]);
 
-  const filteredEvents = useMemo(() => {
-    if (showAllEvents) return marketRows;
-    return marketRows.filter((ev) => {
-      const m = findMatchOddsMarket(ev);
-      return Boolean(m?.inPlay);
-    });
-  }, [marketRows, showAllEvents]);
+      const posData = posResponse || [];
+      const masterData = masterResponse || [];
+
+      // Create a map of icons from masterData
+      const iconMap: Record<string, string> = {};
+      masterData.forEach((item: any) => {
+        if (item.id && item.iconImg) {
+          iconMap[item.id] = item.iconImg;
+        }
+      });
+
+      const tabs = buildSportTabs(posData);
+
+      // Attach icons from master data
+      tabs.forEach(t => {
+        const masterItem = masterData.find((m: any) => m.id === t.id);
+        if (masterItem?.iconImg) {
+          t.icon = String(masterItem.iconImg);
+        }
+      });
+
+      console.log("Analytics: Loaded sport tabs with icons", tabs.filter(t => t.icon));
+      setEventTypes(tabs);
+      // We no longer auto-select the first tab to ensure the initial fetch is global (eventTypeId: "")
+      // if (tabs.length > 0 && !activeSportId) {
+      //   setActiveSportId(tabs[0].id);
+      // }
+    } catch (e) {
+      console.error("Failed to load sport tabs:", e);
+      setEventTypes([]);
+    }
+  }, [activeSportId, refreshKey]);
+
+  useEffect(() => {
+    loadEventTypes();
+  }, [loadEventTypes]);
 
   const loadMarkets = useCallback(() => {
     setMarketsLoading(true);
     setMarketsError(null);
-    getMarketByEventTypeId(activeSportId, true)
+    // If showAllEvents is false, we fetch all sports live (-1/false)
+    // If showAllEvents is true, we fetch active sport all (activeSportId/true)
+    const targetId = showAllEvents ? activeSportId : "-1";
+    const allFlag = showAllEvents;
+
+    getMarketByEventTypeId(targetId, allFlag)
       .then((rows) => setMarketRows(rows))
       .catch((e) => {
         setMarketRows([]);
         setMarketsError(e instanceof Error ? e.message : "Failed to load markets.");
       })
       .finally(() => setMarketsLoading(false));
-  }, [activeSportId, refreshKey]);
+  }, [activeSportId, showAllEvents, refreshKey]);
 
   const loadLiveBets = useCallback(() => {
     setBetsLoading(true);
     setBetsError(null);
-    const eventTypeId = activeSportId === "-1" ? "" : activeSportId;
     getLiveBets(
       {
         page: 1,
-        pageSize: 500,
+        pageSize: 10,
         groupBy: "",
         orderBy: "",
         orderByDesc: false,
       },
-      { eventTypeId, status: "matched" },
+      { eventTypeId: "" },
     )
       .then((res) => {
         setLiveBetRows(res.items);
@@ -350,7 +408,7 @@ export default function WebsiteAnalyticsPage() {
         setBetsError(e instanceof Error ? e.message : "Failed to load live bets.");
       })
       .finally(() => setBetsLoading(false));
-  }, [activeSportId, refreshKey]);
+  }, [refreshKey]);
 
   useEffect(() => {
     loadMarkets();
@@ -360,16 +418,76 @@ export default function WebsiteAnalyticsPage() {
     loadLiveBets();
   }, [loadLiveBets]);
 
+  const matchedStakeByEventId = useMemo(
+    () => sumMatchedStakesByEventId(liveBetRows),
+    [liveBetRows],
+  );
+
+  const filteredEvents = useMemo(() => {
+    let rows = marketRows;
+
+    // If we fetched -1/false, we need to filter the rows by the current activeSportId in the UI
+    if (!showAllEvents && activeSportId) {
+      rows = marketRows.filter((ev) => {
+        const anyEv = ev as any;
+        const eid =
+          anyEv.eventType?.id ??
+          anyEv.eventTypeId ??
+          ev.markets?.[0]?.eventType?.id;
+        return String(eid) === activeSportId;
+      });
+    }
+
+    // If showAllEvents is false, ONLY show events that have betting activity
+    if (!showAllEvents) {
+      return rows.filter((ev) => {
+        // 1. Check nested markets for the hasBet flag
+        if (ev.markets?.some((m: any) => m.hasBet)) return true;
+
+        // 2. Check API-provided bet count/stake on the event row
+        const bets = readBetCount(ev);
+        const stake = coerceAmount((ev as any).totalStake || (ev as any).totalMatched || 0);
+        if (bets > 0 || (stake ?? 0) > 0) return true;
+
+        // 3. Check matched bets from our local live bets fetch
+        const eid =
+          ev.id != null && String(ev.id).trim()
+            ? String(ev.id).trim()
+            : pickStr(ev as Record<string, unknown>, ["eventId", "_id"]) ?? "";
+        const tradedTotal = tradedStakeForEventRow(
+          matchedStakeByEventId,
+          ev,
+          eid,
+        );
+        if (tradedTotal > 0) return true;
+
+        return false;
+      });
+    }
+
+    return rows;
+  }, [marketRows, showAllEvents, activeSportId, matchedStakeByEventId]);
+
+  const dynamicTabs = useMemo(() => {
+    if (showAllEvents) return eventTypes;
+    return eventTypes.filter((t) => t.hasBet);
+  }, [eventTypes, showAllEvents]);
+
+  // If activeSportId is not in dynamicTabs, pick the first one
+  useEffect(() => {
+    if (dynamicTabs.length > 0) {
+      const currentExists = dynamicTabs.some((t) => t.id === activeSportId);
+      if (!currentExists && !showAllEvents) {
+        setActiveSportId(dynamicTabs[0].id);
+      }
+    }
+  }, [dynamicTabs, activeSportId, showAllEvents]);
+
   const emptyFilterMsg =
     !marketsLoading &&
     marketRows.length > 0 &&
     filteredEvents.length === 0 &&
     !showAllEvents;
-
-  const matchedStakeByEventId = useMemo(
-    () => sumMatchedStakesByEventId(liveBetRows),
-    [liveBetRows],
-  );
 
   return (
     <div className="min-w-0 space-y-4">
@@ -390,11 +508,10 @@ export default function WebsiteAnalyticsPage() {
       />
 
       <div
-        className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm ${
-          wsConnected && wsAuthed
-            ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200"
-            : "border-border bg-surface-muted/40 text-foreground-secondary"
-        }`}
+        className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm ${wsConnected && wsAuthed
+          ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200"
+          : "border-border bg-surface-muted/40 text-foreground-secondary"
+          }`}
         role="status"
       >
         {wsConnected && wsAuthed ? (
@@ -413,185 +530,239 @@ export default function WebsiteAnalyticsPage() {
       </div>
 
       <ListPageFrame>
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <div className="flex flex-wrap gap-1 rounded-lg bg-surface-muted/60 p-1">
-              {eventTypes.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setActiveSportId(t.id)}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                    activeSportId === t.id
-                      ? "bg-surface text-foreground shadow-sm"
-                      : "text-foreground-secondary hover:text-foreground"
-                  }`}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Input
-                type="checkbox"
-                checked={showAllEvents}
-                onChange={(e) => setShowAllEvents(e.target.checked)}
-                className="h-4 w-4 rounded border-border"
-              />
-              Show all events
-            </label>
-          </div>
-
-          {marketsError && (
-            <p className="text-sm text-error" role="alert">
-              {marketsError}
-            </p>
-          )}
-          {emptyFilterMsg && (
-            <p className="text-sm text-foreground-secondary">
-              No in-play events for this sport. Turn on &quot;Show all events&quot; or pick
-              another tab.
-            </p>
-          )}
-
-          <div className="rounded-lg">
-            <Table className="min-w-[720px] table-fixed">
-              <colgroup>
-                <col className="w-[min(36%,28rem)]" />
-                <col className="w-[21%]" />
-                <col className="w-[21%]" />
-                <col className="w-[21%]" />
-              </colgroup>
-              <TableHeader>
-                <TableHead className="align-bottom">Markets</TableHead>
-                <TableHead className="border-l text-center">1</TableHead>
-                <TableHead className="border-l text-center">X</TableHead>
-                <TableHead className="border-l text-center">2</TableHead>
-              </TableHeader>
-              <TableBody>
-                {marketsLoading ? (
-                  <TableEmpty colSpan={4} message="Loading markets…" />
-                ) : filteredEvents.length === 0 ? (
-                  <TableEmpty
-                    colSpan={4}
-                    message={
-                      marketRows.length === 0
-                        ? "No markets for this sport. Try another tab or refresh."
-                        : "No events match the current filter. Turn on “Show all events” or pick another tab."
-                    }
+        <div className="flex flex-col gap-4 px-2 py-4 sm:px-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2 rounded-xl bg-zinc-100/80 p-1.5 dark:bg-zinc-800/50">
+                  {dynamicTabs.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setActiveSportId(t.id)}
+                      className={`flex items-center gap-2.5 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-200 ${activeSportId === t.id
+                          ? "bg-white text-[#0066cc] shadow-sm ring-1 ring-zinc-200/50 dark:bg-zinc-900 dark:text-sky-400 dark:ring-zinc-700/50"
+                          : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
+                        }`}
+                    >
+                      {t.icon ? (
+                        <img
+                          src={t.icon.startsWith('http') ? t.icon : `${apiConfig.baseUrl}/${t.icon.replace(/^\//, '')}`}
+                          alt=""
+                          className={`h-4 w-4 object-contain transition-opacity ${activeSportId === t.id ? "opacity-100" : "opacity-60"}`}
+                          style={{
+                            filter: activeSportId === t.id
+                              ? "invert(27%) sepia(91%) saturate(583%) hue-rotate(81deg) brightness(93%) contrast(93%)"
+                              : "invert(40%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(90%) contrast(90%)"
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        (() => {
+                          const Icon = getSportIcon(t.label);
+                          return <Icon className={`h-4 w-4 ${activeSportId === t.id ? "text-primary" : "text-zinc-400"}`} />;
+                        })()
+                      )}
+                      <span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Input
+                    type="checkbox"
+                    checked={showAllEvents}
+                    onChange={(e) => setShowAllEvents(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
                   />
-                ) : (
-                  filteredEvents.map((ev) => {
-                    const market = findMatchOddsMarket(ev);
-                    const marketId =
-                      market?.id != null ? String(market.id) : undefined;
-                    const wsBook = marketId ? priceBooks[marketId] : undefined;
-                    const { col1, colX, col2 } = partitionMatchOddsRunners(
-                      market?.marketRunner,
-                    );
-                    const rid1 = col1?.entry?.runner?.id;
-                    const ridX = colX?.entry?.runner?.id;
-                    const rid2 = col2?.entry?.runner?.id;
-                    const book1 = lookupRunnerBook(priceBooks, marketId, rid1);
-                    const bookX = lookupRunnerBook(priceBooks, marketId, ridX);
-                    const book2 = lookupRunnerBook(priceBooks, marketId, rid2);
-                    const inPlay =
-                      wsBook?.ip !== undefined
-                        ? Boolean(wsBook.ip)
-                        : Boolean(market?.inPlay);
-                    const title = String(ev.name ?? ev.raceName ?? "—");
-                    const when = ev.openDate ? formatDateTime(ev.openDate) : "—";
-                    const bets = readBetCount(ev);
-                    const eventIdStr =
-                      ev.id != null && String(ev.id).trim()
-                        ? String(ev.id).trim()
-                        : pickStr(ev as Record<string, unknown>, [
-                            "eventId",
-                            "_id",
-                          ]) ?? "";
-                    const tradedTotal = tradedStakeForEventRow(
-                      matchedStakeByEventId,
-                      ev,
-                      eventIdStr,
-                    );
-                    const traded = {
-                      amount: tradedTotal,
-                      source: (tradedTotal > 0 ? "bets" : "none") as TradedStatSource,
-                    };
-                    const canOpenEvent = Boolean(eventIdStr);
-                    const openEventDetail = () => {
-                      if (!eventIdStr) return;
-                      router.push(
-                        `/website/analytics/event/${encodeURIComponent(eventIdStr)}?eventTypeId=${encodeURIComponent(activeSportId)}`,
-                      );
-                    };
+                  Show all events
+                </label>
+              </div>
 
-                    return (
-                      <TableRow
-                        key={String(ev.id ?? title)}
-                        className={canOpenEvent ? "cursor-pointer" : undefined}
-                        onClick={canOpenEvent ? openEventDetail : undefined}
-                        onKeyDown={
-                          canOpenEvent
-                            ? (e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  openEventDetail();
-                                }
-                              }
-                            : undefined
+              {marketsError && (
+                <p className="text-sm text-error" role="alert">
+                  {marketsError}
+                </p>
+              )}
+              {emptyFilterMsg && (
+                <p className="text-sm text-foreground-secondary">
+                  No events with active bets for this sport. Turn on &quot;Show all events&quot; to see all
+                  available markets.
+                </p>
+              )}
+
+              <div className="overflow-x-hidden rounded-lg">
+                <Table className="w-full table-fixed border-collapse">
+                  <colgroup>
+                    <col className="w-auto" />
+                    <col className="w-[120px]" />
+                    <col className="w-[120px]" />
+                    <col className="w-[120px]" />
+                  </colgroup>
+                  <TableHeader className="bg-[#bcbcbc] text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+                    <TableHead className="py-2.5 pl-4 font-bold uppercase tracking-wider">MARKETS</TableHead>
+                    <TableHead className="w-[120px] border-l border-zinc-300/50 text-center font-bold">1</TableHead>
+                    <TableHead className="w-[120px] border-l border-zinc-300/50 text-center font-bold">X</TableHead>
+                    <TableHead className="w-[120px] border-l border-zinc-300/50 text-center font-bold">2</TableHead>
+                  </TableHeader>
+                  <TableBody>
+                    {marketsLoading ? (
+                      <TableEmpty colSpan={4} message="Loading markets…" />
+                    ) : filteredEvents.length === 0 ? (
+                      <TableEmpty
+                        colSpan={4}
+                        message={
+                          marketRows.length === 0
+                            ? "No markets for this sport. Try another tab or refresh."
+                            : "No events match the current filter. Turn on “Show all events” or pick another tab."
                         }
-                        tabIndex={canOpenEvent ? 0 : undefined}
-                        aria-label={
-                          canOpenEvent
-                            ? `Open market view for ${title}`
-                            : undefined
-                        }
-                      >
-                        <TableCell className="align-top">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="font-medium leading-snug text-foreground">
-                                {title}
+                      />
+                    ) : (
+                      filteredEvents.map((ev) => {
+                        const market = findMatchOddsMarket(ev);
+                        const marketId =
+                          market?.id != null ? String(market.id) : undefined;
+                        const wsBook = marketId ? priceBooks[marketId] : undefined;
+                        const { col1, colX, col2 } = partitionMatchOddsRunners(
+                          market?.marketRunner,
+                        );
+                        const rid1 = col1?.entry?.runner?.id;
+                        const ridX = colX?.entry?.runner?.id;
+                        const rid2 = col2?.entry?.runner?.id;
+                        const book1 = lookupRunnerBook(priceBooks, marketId, rid1);
+                        const bookX = lookupRunnerBook(priceBooks, marketId, ridX);
+                        const book2 = lookupRunnerBook(priceBooks, marketId, rid2);
+                        const inPlay =
+                          wsBook?.ip !== undefined
+                            ? Boolean(wsBook.ip)
+                            : Boolean(market?.inPlay);
+                        const title = String(ev.name ?? ev.raceName ?? "—");
+                        const when = ev.openDate ? formatDateTime(ev.openDate) : "—";
+                        const bets = readBetCount(ev);
+                        const eventIdStr =
+                          ev.id != null && String(ev.id).trim()
+                            ? String(ev.id).trim()
+                            : pickStr(ev as Record<string, unknown>, [
+                              "eventId",
+                              "_id",
+                            ]) ?? "";
+                        const tradedTotal = tradedStakeForEventRow(
+                          matchedStakeByEventId,
+                          ev,
+                          eventIdStr,
+                        );
+                        const traded = {
+                          amount: tradedTotal,
+                          source: (tradedTotal > 0 ? "bets" : "none") as TradedStatSource,
+                        };
+                        const canOpenEvent = Boolean(eventIdStr);
+                        const openEventDetail = () => {
+                          if (!eventIdStr) return;
+                          router.push(
+                            `/website/analytics/event/${encodeURIComponent(eventIdStr)}?eventTypeId=${encodeURIComponent(activeSportId)}`,
+                          );
+                        };
+
+                        return (
+                          <TableRow
+                            key={String(ev.id ?? title)}
+                            className={`group relative transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40 ${canOpenEvent ? "cursor-pointer" : ""}`}
+                            onClick={canOpenEvent ? openEventDetail : undefined}
+                          >
+                            <TableCell className="py-4 pl-4">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="truncate text-sm font-bold text-zinc-900 transition-colors group-hover:text-sky-700 dark:text-zinc-100">
+                                      {title}
+                                    </span>
+                                    {inPlay ? (
+                                      <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-50/30 px-3 py-1 text-[11px] font-bold uppercase tracking-tight text-emerald-700 dark:bg-emerald-950/10 dark:text-emerald-400">
+                                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                        In Play
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                  <div className="text-[12px] font-medium text-zinc-500 dark:text-zinc-400">
+                                    {when}
+                                  </div>
+                                  <BetsTradedStatTiles bets={bets} traded={traded} />
+                                </div>
                               </div>
-                              <div className="text-xs text-foreground-secondary">
-                                {when}
-                              </div>
-                              <BetsTradedStatTiles bets={bets} traded={traded} />
-                            </div>
-                            {inPlay ? (
-                              <div className="flex shrink-0 items-center gap-1 self-start rounded-full border border-emerald-500/35 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                                <PlayCircle className="h-3.5 w-3.5" aria-hidden />
-                                In play
-                              </div>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell className="border-l p-0 align-top">
-                          <RunnerOddsCell
-                            runnerBook={book1}
-                            runnerLabel={col1?.name ?? "—"}
-                          />
-                        </TableCell>
-                        <TableCell className="border-l p-0 align-top">
-                          <RunnerOddsCell
-                            runnerBook={colX ? bookX : undefined}
-                            runnerLabel={colX?.name ?? "—"}
-                            isUnavailable={!colX}
-                          />
-                        </TableCell>
-                        <TableCell className="border-l p-0 align-top">
-                          <RunnerOddsCell
-                            runnerBook={book2}
-                            runnerLabel={col2?.name ?? "—"}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                            </TableCell>
+                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                              <RunnerOddsCell
+                                runnerBook={book1}
+                                inPlay={inPlay}
+                              />
+                            </TableCell>
+                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                              <RunnerOddsCell
+                                runnerBook={bookX}
+                                inPlay={inPlay}
+                              />
+                            </TableCell>
+                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                              <RunnerOddsCell
+                                runnerBook={book2}
+                                inPlay={inPlay}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Right Side: Bet Card / Summary */}
+            <div className="w-full shrink-0 space-y-4 lg:w-[320px]">
+              {liveBetRows.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-zinc-300 p-8 text-center text-xs text-zinc-500 dark:border-zinc-800">
+                  No matched bets for the current filter.
+                </div>
+              ) : (
+                liveBetRows.map((row, i) => {
+                  const r = row as Record<string, unknown>;
+                  const { eventName, marketName } = liveBetEventAndMarketNames(r);
+                  const runner = String(r.runnerName ?? "").trim();
+                  const cardTitle = eventMarketTitle(
+                    runner || eventName || "Event",
+                    marketName,
+                  );
+                  const member = liveBetMemberName(r);
+                  const cardDate = formatBetCardDateTime(
+                    r.createdOn ?? r.updatedOn ?? r.createdAt,
+                  );
+                  const betId = liveBetIdDisplay(r);
+                  const linePrice = Number(r.price);
+                  const priceStr =
+                    Number.isFinite(linePrice) && linePrice !== 0
+                      ? formatOddsPrice(linePrice)
+                      : "—";
+                  const stakeRaw = liveBetStakeForDisplay(r);
+                  const stakeN = Number(stakeRaw ?? 0);
+                  const avgStr = liveBetAvgDisplay(r);
+                  const side = Number(r.side ?? 1);
+                  return (
+                    <BetCard
+                      key={String(row.id ?? row.roundId ?? row.betId ?? i)}
+                      title={cardTitle}
+                      user={member}
+                      date={cardDate}
+                      betId={betId}
+                      price={priceStr}
+                      size={stakeN}
+                      avg={avgStr}
+                      side={side}
+                    />
+                  );
+                })
+              )}
+            </div>
           </div>
 
           {/* <div className="space-y-2">

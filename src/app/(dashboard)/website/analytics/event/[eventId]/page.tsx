@@ -2,7 +2,7 @@
 
 import "./scoreboard-table.css";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -27,17 +27,17 @@ import {
   liveBetMemberName,
   liveBetOddsDisplay,
   liveBetStakeForDisplay,
-  liveBetTimestamp,
-} from "../../_lib/liveBetDisplay";
-import { CricfeedScorecardEmbed } from "../../_lib/CricfeedScorecardEmbed";
-import { TennisScoreCard } from "../../_lib/TennisScoreCard";
-import { FootballScoreCard } from "../../_lib/FootballScoreCard";
-import { resolveScoreboardSport } from "../../_lib/scoreboardSport";
+} from "@/app/(dashboard)/website/analytics/_lib/liveBetDisplay";
+import { BetCard } from "@/app/(dashboard)/website/analytics/_lib/BetCard";
+import { CricfeedScorecardEmbed } from "@/app/(dashboard)/website/analytics/_lib/CricfeedScorecardEmbed";
+import { TennisScoreCard } from "@/app/(dashboard)/website/analytics/_lib/TennisScoreCard";
+import { FootballScoreCard } from "@/app/(dashboard)/website/analytics/_lib/FootballScoreCard";
+import { resolveScoreboardSport } from "@/app/(dashboard)/website/analytics/_lib/scoreboardSport";
 import { getEventType, type EventTypeRecord } from "@/services/eventtype.service";
 import {
   getEventScoreMidForEmbed,
   getEventSourceIdForWsSubscribe,
-} from "../../_lib/eventScoreMid";
+} from "@/app/(dashboard)/website/analytics/_lib/eventScoreMid";
 import { getOtherMarketsByEventAndMatchOddsId } from "@/services/marketodds.service";
 import { updateMarketLockStatus } from "@/services/market.service";
 import {
@@ -66,7 +66,7 @@ import {
   sortGoalsOverUnderMarkets,
   useWebsitePriceBookWs,
   type WsRunnerBookRow,
-} from "../../_lib/websitePriceBook";
+} from "@/app/(dashboard)/website/analytics/_lib/websitePriceBook";
 
 function isBookmakerMarket(m: MarketByEventMarket) {
   const t = normalizeMarketTypeKey(m);
@@ -130,6 +130,10 @@ function tabKeyForMarket(
 ): "fancy" | "line" | "winning" | "khado" {
   const t = normalizeMarketTypeKey(m);
   const n = String(m.name ?? "").toLowerCase();
+  const bt = Number(m.bettingType);
+  if (bt === 6) return "winning";
+  if (bt === 11) return "khado";
+  if (bt === 2) return "line";
   if (t.includes("LINE") || /\bline\b/.test(n)) return "line";
   if (t.includes("WINNING") || /\bwinning\b/.test(n)) return "winning";
   if (t.includes("KHADO") || /\bkhado\b/.test(n)) return "khado";
@@ -163,21 +167,19 @@ const EMPTY_LEVEL: { price?: number; size?: number; percentage?: number } = {};
 function ScoreboardBetAllRow({ title }: { title: string }) {
   return (
     <tr className="bet-all">
-      <th className="th-col align-l">
-        <span className="sb-market-title">{title}</span>
-        <div className="sb-market-icons">
-          <span className="text-red-600">
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-          </span>
-          <span className="text-zinc-800 dark:text-zinc-200">
-            <BarChart3 className="h-3.5 w-3.5" aria-hidden />
-          </span>
+      <th className="th-col align-l" colSpan={7}>
+        <div className="flex items-center gap-3 py-1">
+          <span className="sb-market-title text-sm font-bold text-[#0066cc] dark:text-sky-400">{title}</span>
+          <div className="flex items-center gap-2">
+            <button type="button" className="text-zinc-400 hover:text-red-500 transition-colors">
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <button type="button" className="text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
+              <BarChart3 className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          </div>
         </div>
       </th>
-      <th className="sb-head-spacer" colSpan={2} />
-      <td className="sb-head-mid align-r font-bold" />
-      <td className="sb-head-mid align-l font-bold" />
-      <th className="sb-head-spacer" colSpan={2} />
     </tr>
   );
 }
@@ -202,11 +204,38 @@ function ScoreboardBackLayLabelRow() {
   );
 }
 
+function LadderColGroup() {
+  return (
+    <colgroup>
+      <col style={{ width: "45%" }} />
+      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "9.16%" }} />
+    </colgroup>
+  );
+}
+
+function WinningColGroup() {
+  return (
+    <colgroup>
+      <col style={{ width: "38%" }} />
+      <col style={{ width: "12%" }} />
+      <col style={{ width: "38%" }} />
+      <col style={{ width: "12%" }} />
+    </colgroup>
+  );
+}
+
 /** Live site: bold price on top, size / % smaller below — same for Back and Lay. */
 function ScorePriceButton({
   level,
+  isLay,
 }: {
   level: { price?: number; size?: number; percentage?: number };
+  isLay?: boolean;
 }) {
   const rate = getDisplayCurrencyRate();
   const priceStr = formatOddsPrice(level.price);
@@ -224,11 +253,14 @@ function ScorePriceButton({
   }
 
   return (
-    <button type="button" className={sub ? "price" : "price onlyprice"}>
-      <span className="block tabular-nums sb-odds-price">{priceStr}</span>
+    <button
+      type="button"
+      className={`price ${sub ? "" : "onlyprice"} rounded-md`}
+    >
+      <span className="block tabular-nums sb-odds-price font-bold">{priceStr}</span>
       {sub ? (
         <span
-          className={`size block tabular-nums${hasPct ? " percentage" : ""}`}
+          className={`size block tabular-nums font-semibold ${hasPct ? "percentage" : "opacity-70 text-[10px]"}`}
         >
           {sub}
         </span>
@@ -291,7 +323,7 @@ function MatchTitleCell({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <p className="mb-0 min-w-0 flex-1">{name}</p>
+      <p className="mb-0 min-w-0 flex-1 text-[#0066cc] dark:text-sky-400">{name}</p>
       {exposurePl !== undefined ? (
         <span
           className={`shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums ${signedAmountTextClass(exposurePl)}`}
@@ -328,8 +360,8 @@ function LadderRow({
   const backsDisplay = [...backs].reverse();
   const laysForColumns = lays;
   const hasBook =
-    backs.some((b) => hasFinitePrice(b)) ||
-    lays.some((l) => hasFinitePrice(l));
+    backs.some((b: { price?: number }) => hasFinitePrice(b)) ||
+    lays.some((l: { price?: number }) => hasFinitePrice(l));
   const apiBall = isBallRunningMarket(market);
   const zebra = stripe === "even" ? "even" : stripe === "odd" ? "odd" : "";
 
@@ -394,26 +426,18 @@ function LadderRow({
       <th className="match-title" scope="row">
         <MatchTitleCell name={name} exposurePl={exposurePl} />
       </th>
-      {backsDisplay.map((lvl, i) => (
-        <td
-          key={`b-${i}`}
-          className={
-            hasFinitePrice(lvl)
-              ? `back-${3 - i} align-c`
-              : "sb-odds-neutral align-c"
-          }
-        >
-          <ScorePriceButton level={lvl} />
-        </td>
-      ))}
-      {laysForColumns.map((lvl, i) => (
+      {laysForColumns.map((lvl: { price?: number; size?: number; percentage?: number }, i: number) => (
         <td
           key={`l-${i}`}
-          className={
-            hasFinitePrice(lvl)
-              ? `lay-${i + 1} align-c`
-              : "sb-odds-neutral align-c"
-          }
+          className={`lay-${i + 1} align-c p-1`}
+        >
+          <ScorePriceButton level={lvl} isLay />
+        </td>
+      ))}
+      {backsDisplay.map((lvl: { price?: number; size?: number; percentage?: number }, i: number) => (
+        <td
+          key={`b-${i}`}
+          className={`back-${3 - i} align-c p-1`}
         >
           <ScorePriceButton level={lvl} />
         </td>
@@ -853,10 +877,10 @@ export default function WebsiteEventMarketsPage() {
                   <section className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/30">
                     <div className="overflow-x-auto">
                       <table className="table-score">
+                        <LadderColGroup />
                         <tbody>
                           <ScoreboardBetAllRow title="Match Odds" />
-                          <ScoreboardBackLayLabelRow />
-                          {(matchMarket.marketRunner ?? []).map((entry, rowIdx) => {
+                          {(matchMarket.marketRunner ?? []).map((entry: any, rowIdx: number) => {
                             const rid = entry.runner?.id;
                             const rname = String(entry.runner?.name ?? "—");
                             const book = lookupRunnerBook(
@@ -895,10 +919,10 @@ export default function WebsiteEventMarketsPage() {
                     >
                       <div className="overflow-x-auto">
                         <table className="table-score">
+                          <LadderColGroup />
                           <tbody>
                             <ScoreboardBetAllRow title={marketLabel(m)} />
-                            <ScoreboardBackLayLabelRow />
-                            {(m.marketRunner ?? []).map((entry, rowIdx) => {
+                            {(m.marketRunner ?? []).map((entry: any, rowIdx: number) => {
                               const rid = entry.runner?.id;
                               const rname = String(entry.runner?.name ?? "—");
                               const book = lookupRunnerBook(
@@ -930,8 +954,8 @@ export default function WebsiteEventMarketsPage() {
                 })}
 
                 {goalsOverUnderMarkets
-                  .filter((m) => m.id != null && String(m.id).trim())
-                  .map((m) => {
+                  .filter((m: any) => m.id != null && String(m.id).trim())
+                  .map((m: any) => {
                   const mid = String(m.id);
                   return (
                     <section
@@ -940,10 +964,10 @@ export default function WebsiteEventMarketsPage() {
                     >
                       <div className="overflow-x-auto">
                         <table className="table-score">
+                          <LadderColGroup />
                           <tbody>
                             <ScoreboardBetAllRow title={marketLabel(m)} />
-                            <ScoreboardBackLayLabelRow />
-                            {(m.marketRunner ?? []).map((entry, rowIdx) => {
+                            {(m.marketRunner ?? []).map((entry: any, rowIdx: number) => {
                               const rid = entry.runner?.id;
                               const rname = String(entry.runner?.name ?? "—");
                               const book = lookupRunnerBook(
@@ -986,9 +1010,9 @@ export default function WebsiteEventMarketsPage() {
                     >
                       <div className="overflow-x-auto">
                         <table className="table-score">
+                          <LadderColGroup />
                           <tbody>
                             <ScoreboardBetAllRow title={marketLabel(m)} />
-                            <ScoreboardBackLayLabelRow />
                             {entries.length === 0 ? (
                               <LadderRow
                                 name={marketLabel(m)}
@@ -1076,28 +1100,14 @@ export default function WebsiteEventMarketsPage() {
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="table-score">
+                        {fancyTab === "winning" ? <WinningColGroup /> : <LadderColGroup />}
                         <tbody>
-                          <tr className="sb-back-lay-labels">
-                            <th className="sb-corner" scope="row">
-                              Market
-                            </th>
-                            <th
-                              colSpan={3}
-                              className="text-center text-[10px] font-bold uppercase tracking-wider"
-                            >
-                              Lay
-                            </th>
-                            <th
-                              colSpan={3}
-                              className="text-center text-[10px] font-bold uppercase tracking-wider"
-                            >
-                              Back
-                            </th>
-                          </tr>
+
                           {tabMarkets.map((m, rowIdx) => {
                             const mid = m.id != null ? String(m.id) : "";
                             const runner = m.marketRunner?.[0];
                             const rid = runner?.runner?.id;
+                            const rname = String(runner?.runner?.name || "RUNS");
                             const book = lookupRunnerBook(
                               priceBooks,
                               mid || undefined,
@@ -1109,66 +1119,186 @@ export default function WebsiteEventMarketsPage() {
                               hasFinitePrice(back) || hasFinitePrice(lay);
                             const showBall =
                               isBallRunningMarket(m) || !has;
-                            const stripe =
-                              rowIdx % 2 === 0 ? "odd" : "even";
                             const fancyExposurePl = runnerExposurePlFromMap(
                               runnerExposureMap,
                               mid || undefined,
                               rid != null ? String(rid) : undefined,
                             );
-                            const iconCell = (
-                              <td className="sb-odds-neutral align-c">
-                                <div className="flex items-center justify-center gap-1.5 py-1 text-zinc-500 dark:text-zinc-400">
-                                  <RefreshCw
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden
-                                  />
-                                  <BarChart3
-                                    className="h-3.5 w-3.5"
-                                    aria-hidden
-                                  />
-                                </div>
-                              </td>
-                            );
+
+                            const isWinning = fancyTab === "winning";
+
+                            if (isWinning) {
+                              const runners = m.marketRunner ?? [];
+                              const runnerPairs: any[][] = [];
+                              for (let i = 0; i < runners.length; i += 2) {
+                                runnerPairs.push(runners.slice(i, i + 2));
+                              }
+
+                              return (
+                                <Fragment key={mid || marketLabel(m)}>
+                                  <tr className="bet-all">
+                                    <th className="th-col align-l" colSpan={7}>
+                                      <div className="flex items-center gap-2 py-1">
+                                        <span className="text-[11px] font-bold uppercase text-zinc-700 dark:text-zinc-300">
+                                          {marketLabel(m)}
+                                        </span>
+                                        <div className="flex items-center gap-1.5 opacity-60">
+                                          <RefreshCw className="h-3 w-3" />
+                                          <BarChart3 className="h-3 w-3" />
+                                        </div>
+                                      </div>
+                                    </th>
+                                  </tr>
+                                  {runnerPairs.map((pair, pIdx) => (
+                                    <tr key={pIdx} className="tr-data border-b border-zinc-100 dark:border-zinc-800/50">
+                                      {pair.map((r, rIdx) => {
+                                        const r_rid = r.runner?.id;
+                                        const r_rname = String(r.runner?.name || "—");
+                                        const r_book = lookupRunnerBook(
+                                          priceBooks,
+                                          mid || undefined,
+                                          r_rid != null ? String(r_rid) : undefined,
+                                        );
+                                        const r_back = bestBackLevels(r_book, 1)[0] ?? EMPTY_LEVEL;
+                                        const r_exposurePl = runnerExposurePlFromMap(
+                                          runnerExposureMap,
+                                          mid || undefined,
+                                          r_rid != null ? String(r_rid) : undefined,
+                                        );
+
+                                        return (
+                                          <Fragment key={String(r_rid ?? r_rname)}>
+                                            <th className="match-title !w-auto" scope="row">
+                                              <MatchTitleCell
+                                                name={r_rname}
+                                                exposurePl={r_exposurePl}
+                                              />
+                                            </th>
+                                            <td className="back-1 align-c !w-[60px] p-1">
+                                              <ScorePriceButton level={r_back} />
+                                            </td>
+                                            {rIdx === 0 && pair.length === 1 && (
+                                              <>
+                                                <td className="!w-auto bg-zinc-50/30 dark:bg-zinc-900/30" />
+                                                <td className="!w-[60px] bg-zinc-50/30 dark:bg-zinc-900/30" />
+                                              </>
+                                            )}
+                                          </Fragment>
+                                        );
+                                      })}
+                                      {pair.length === 2 ? null : null}
+                                      {/* Spacer columns to maintain 7-col layout if needed, 
+                                          but we are using custom widths here. 
+                                          The colgroup will still apply, so we might need to 
+                                          span the rest of the 7 cols if only 1 runner. */}
+                                      {pair.length === 1 ? (
+                                        <td colSpan={3} className="bg-zinc-50/30 dark:bg-zinc-900/30" />
+                                      ) : pair.length === 2 ? (
+                                        <td className="w-0 p-0" /> // spacer
+                                      ) : null}
+                                    </tr>
+                                  ))}
+                                  <tr className="h-2" />
+                                </Fragment>
+                              );
+                            }
+
+                            const isKhado = fancyTab === "khado";
+
                             return (
-                              <tr
-                                key={mid || marketLabel(m)}
-                                className={`tr-data ${stripe}`}
-                              >
-                                <th className="match-title" scope="row">
-                                  <MatchTitleCell
-                                    name={marketLabel(m)}
-                                    exposurePl={fancyExposurePl}
-                                  />
-                                </th>
-                                <td className="sb-odds-neutral align-c">
-                                  <ScorePriceButton level={EMPTY_LEVEL} />
-                                </td>
-                                {showBall ? (
+                              <Fragment key={mid || marketLabel(m)}>
+                                {isKhado ? (
                                   <>
-                                    <td colSpan={4} className="sb-ball-running">
-                                      BALL RUNNING
-                                    </td>
-                                    {iconCell}
+                                    <tr className="bet-all">
+                                      <th className="th-col align-l" colSpan={7}>
+                                        <div className="flex items-center gap-2 py-1">
+                                          <span className="text-[11px] font-bold uppercase text-zinc-700 dark:text-zinc-300">
+                                            {marketLabel(m)}
+                                          </span>
+                                          <div className="flex items-center gap-1.5 opacity-60">
+                                            <RefreshCw className="h-3 w-3" />
+                                            <BarChart3 className="h-3 w-3" />
+                                          </div>
+                                        </div>
+                                      </th>
+                                    </tr>
+                                    <tr className="tr-data even">
+                                      <th className="match-title !bg-zinc-50/50 dark:!bg-zinc-900/50" scope="row">
+                                        <MatchTitleCell
+                                          name={rname}
+                                          exposurePl={fancyExposurePl}
+                                        />
+                                      </th>
+                                      <td className="lay-3 align-c p-1">
+                                        <ScorePriceButton level={EMPTY_LEVEL} isLay />
+                                      </td>
+                                      <td className="lay-2 align-c p-1">
+                                        <ScorePriceButton level={EMPTY_LEVEL} isLay />
+                                      </td>
+                                      {showBall ? (
+                                        <>
+                                          <td colSpan={4} className="sb-ball-running">
+                                            BALL RUNNING
+                                          </td>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <td className="lay-1 align-c p-1">
+                                            <ScorePriceButton level={lay} isLay />
+                                          </td>
+                                          <td className="back-1 align-c p-1">
+                                            <ScorePriceButton level={back} />
+                                          </td>
+                                          <td className="back-2 align-c p-1">
+                                            <ScorePriceButton level={EMPTY_LEVEL} />
+                                          </td>
+                                          <td className="back-3 align-c p-1">
+                                            <ScorePriceButton level={EMPTY_LEVEL} />
+                                          </td>
+                                        </>
+                                      )}
+                                    </tr>
+                                    <tr className="h-2" />
                                   </>
                                 ) : (
-                                  <>
-                                    <td className="sb-odds-neutral align-c">
-                                      <ScorePriceButton level={EMPTY_LEVEL} />
+                                  <tr className={`tr-data ${rowIdx % 2 === 0 ? "odd" : "even"}`}>
+                                    <th className="match-title" scope="row">
+                                      <MatchTitleCell
+                                        name={marketLabel(m)}
+                                        exposurePl={fancyExposurePl}
+                                      />
+                                    </th>
+                                    <td className="lay-3 align-c p-1">
+                                      <ScorePriceButton level={EMPTY_LEVEL} isLay />
                                     </td>
-                                    <td className="lay-1 align-c">
-                                      <ScorePriceButton level={lay} />
+                                    <td className="lay-2 align-c p-1">
+                                      <ScorePriceButton level={EMPTY_LEVEL} isLay />
                                     </td>
-                                    <td className="back-1 align-c">
-                                      <ScorePriceButton level={back} />
-                                    </td>
-                                    <td className="sb-odds-neutral align-c">
-                                      <ScorePriceButton level={EMPTY_LEVEL} />
-                                    </td>
-                                    {iconCell}
-                                  </>
+                                    {showBall ? (
+                                      <>
+                                        <td colSpan={4} className="sb-ball-running">
+                                          BALL RUNNING
+                                        </td>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <td className="lay-1 align-c p-1">
+                                          <ScorePriceButton level={lay} isLay />
+                                        </td>
+                                        <td className="back-1 align-c p-1">
+                                          <ScorePriceButton level={back} />
+                                        </td>
+                                        <td className="back-2 align-c p-1">
+                                          <ScorePriceButton level={EMPTY_LEVEL} />
+                                        </td>
+                                        <td className="back-3 align-c p-1">
+                                          <ScorePriceButton level={EMPTY_LEVEL} />
+                                        </td>
+                                      </>
+                                    )}
+                                  </tr>
                                 )}
-                              </tr>
+                              </Fragment>
                             );
                           })}
                         </tbody>
@@ -1287,7 +1417,7 @@ export default function WebsiteEventMarketsPage() {
                   const { eventName, marketName } = liveBetEventAndMarketNames(r);
                   const runner = String(r.runnerName ?? "").trim();
                   const cardTitle = eventMarketTitle(
-                    eventName || runner || pageEventName,
+                    runner || eventName || pageEventName,
                     marketName,
                   );
                   const member = liveBetMemberName(r);
@@ -1302,44 +1432,20 @@ export default function WebsiteEventMarketsPage() {
                       : "—";
                   const stakeRaw = liveBetStakeForDisplay(r);
                   const stakeN = Number(stakeRaw ?? 0);
-                  const sizeStr = formatCurrency(stakeRaw);
                   const avgStr = liveBetAvgDisplay(r);
-                  const tableTime = formatDateTime(liveBetTimestamp(r));
-
+                  const side = Number(r.side ?? 1);
                   return (
-                    <div
+                    <BetCard
                       key={String(row.id ?? row.roundId ?? row.betId ?? i)}
-                      className="overflow-hidden rounded-sm border border-black text-xs"
-                    >
-                      <div className="bg-[#89BBE3] px-3 py-2 text-black">
-                        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
-                          <span className="min-w-0 flex-1 font-medium">{cardTitle}</span>
-                          <span className="shrink-0 whitespace-nowrap">
-                            <span className="font-semibold">Date :</span> {cardDate}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
-                          <span className="whitespace-nowrap">
-                            <span className="font-semibold">User :</span> {member}
-                          </span>
-                          <span className="min-w-0 max-w-[55%] break-all text-right">
-                            <span className="font-semibold">BetId :</span> {betId}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                          <span className="whitespace-nowrap">
-                            <span className="font-semibold">Price :</span> {priceStr}
-                          </span>
-                          <span className="whitespace-nowrap text-center">
-                            <span className="font-semibold">Size :</span>
-                            <span className={signedAmountTextClass(stakeN)}>{sizeStr}</span>
-                          </span>
-                          <span className="whitespace-nowrap text-right">
-                            <span className="font-semibold">Avg :</span> {avgStr}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+                      title={cardTitle}
+                      user={member}
+                      date={cardDate}
+                      betId={betId}
+                      price={priceStr}
+                      size={stakeN}
+                      avg={avgStr}
+                      side={side}
+                    />
                   );
                 })}
               </div>
