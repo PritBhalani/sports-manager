@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { getAuthSession } from "@/store/authStore";
 import {
   PageHeader,
   Card,
@@ -606,8 +607,13 @@ type ActivityRows = {
   casino: Metric;
 };
 
-function renderMetricValue(metric: Metric, key: RangeKey): string {
-  return formatCurrency(metric[key]);
+function renderMetricValue(metric: Metric, key: RangeKey): React.ReactNode {
+  const val = metric[key];
+  return (
+    <span className={signedAmountTextClass(val)}>
+      {formatCurrency(val)}
+    </span>
+  );
 }
 
 export default function PlayerDetailPage() {
@@ -703,6 +709,11 @@ export default function PlayerDetailPage() {
 
   const betTypeLabel = (row: Record<string, unknown>) => {
     const side = Number(row.side ?? NaN);
+    const bt = Number(row.bettingType ?? 0);
+    if (bt === 7) {
+      if (side === 1) return "Yes";
+      if (side === 2) return "No";
+    }
     if (side === 1) return "Back";
     if (side === 2) return "Lay";
     return "—";
@@ -783,6 +794,73 @@ export default function PlayerDetailPage() {
     setReferralStmtPage(1);
     setTransferStmtPage(1);
   }, [betDateFrom, betDateTo]);
+
+  // Real-time Bet List Updates via WebSocket
+  useEffect(() => {
+    if (activeTab !== "bet-list" || betPeriod !== "current") return;
+
+    let ws: WebSocket | null = null;
+    let reconnectTimer: any = null;
+    let cancelled = false;
+
+    const connect = () => {
+      if (cancelled) return;
+      const session = getAuthSession();
+      const token = String(session.token ?? "").trim();
+      const authToken = String(session.primaryToken ?? "").trim();
+      if (!token || !authToken) return;
+
+      try {
+        ws = new WebSocket("wss://ws1bde3a1550.one247.io/ws");
+
+        ws.onopen = () => {
+          if (cancelled) { ws?.close(); return; }
+          ws?.send(JSON.stringify({ token, authToken, messageType: 1 }));
+        };
+
+        ws.onmessage = (ev) => {
+          if (cancelled) return;
+          try {
+            const msg = JSON.parse(ev.data);
+            // wsMessageType 2 indicates a new bet or update
+            if (msg.wsMessageType === 2) {
+              loadBetList();
+            }
+          } catch (e) {
+            /* ignore */
+          }
+        };
+
+        ws.onclose = () => {
+          if (!cancelled) {
+            reconnectTimer = setTimeout(connect, 5000);
+          }
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch (err) {
+        if (!cancelled) {
+          reconnectTimer = setTimeout(connect, 5000);
+        }
+      }
+    };
+
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) {
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onclose = null;
+        ws.onerror = null;
+        try { ws.close(); } catch { /* ignore */ }
+      }
+    };
+  }, [activeTab, betPeriod, loadBetList]);
 
   const loadFdProfitLoss = useCallback(() => {
     if (!playerId || !betDateFrom || !betDateTo) return;
@@ -1227,26 +1305,26 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[920px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Description</th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">IP Address</th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Type</th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Odds</th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Stake</th>
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Description</th>
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Type</th>
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Odds</th>
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Stake</th>
                           {betPeriod === "current" ? (
                             <>
-                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Liability</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Potential Profit</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Liability</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Potential Profit</th>
                             </>
                           ) : (
                             <>
-                              <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Status</th>
-                              <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Win/Loss</th>
+                              <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Status</th>
+                              <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Win/Loss</th>
                             </>
                           )}
-                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">Placed</th>
-                          <th className="px-2 py-1.5 text-center text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-center text-xs font-bold uppercase tracking-wider text-foreground-tertiary">Placed</th>
+                          <th className="px-2 py-1.5 text-center text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             {betPeriod === "current" ? "Matched" : "Settled"}
                           </th>
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">IP Address</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1279,44 +1357,62 @@ export default function PlayerDetailPage() {
                             const status = String(r.status ?? "—");
                             const winLoss = Number(r.pl ?? r.winLoss ?? 0);
 
-                            return (
-                              <tr key={String(r.id ?? r.betId ?? idx)} className="border-b border-border">
-                                <td className="px-2 py-1.5 text-sm text-foreground">{betDescription(r)}</td>
-                                <td className="px-2 py-1.5 text-sm text-foreground">{ip}</td>
-                                <td className="px-2 py-1.5 text-sm text-foreground">{betTypeLabel(r)}</td>
-                                <td className="px-2 py-1.5 text-right text-sm tabular-nums text-foreground">
-                                  {odds ? String(odds) : "—"}
-                                </td>
-                                <td className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(stake)}`}>
-                                  {formatCurrency(stake)}
-                                </td>
-                                {betPeriod === "current" ? (
-                                  <>
-                                    <td
-                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(liability)}`}
-                                    >
-                                      {formatCurrency(liability)}
-                                    </td>
-                                    <td
-                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(profit)}`}
-                                    >
-                                      {formatCurrency(profit)}
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="px-2 py-1.5 text-sm text-foreground">{status}</td>
-                                    <td
-                                      className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(winLoss)}`}
-                                    >
-                                      {formatCurrency(winLoss)}
-                                    </td>
-                                  </>
-                                )}
-                                <td className="px-2 py-1.5 text-center text-sm text-foreground whitespace-nowrap">{placed}</td>
-                                <td className="px-2 py-1.5 text-center text-sm text-foreground whitespace-nowrap">{matchedOrSettled}</td>
-                              </tr>
-                            );
+                             const market = (r.market ?? {}) as Record<string, unknown>;
+                             const event = (market.event ?? {}) as Record<string, unknown>;
+                             const eventName = String(event.name ?? "");
+                             const marketName = String(market.name ?? "");
+                             const runner = String(r.runnerName ?? "");
+
+                             return (
+                               <tr key={String(r.id ?? r.betId ?? idx)} className="border-b border-border bg-surface transition-colors hover:bg-surface-muted/30">
+                                 <td className="px-2 py-2 text-sm leading-tight text-foreground">
+                                   <div className="font-medium text-foreground">{eventName}</div>
+                                   <div className="text-foreground-secondary">
+                                     <span className="font-bold text-foreground">
+                                       {odds} {runner}
+                                     </span>{" "}
+                                     {marketName}
+                                   </div>
+                                   <div className="mt-0.5 text-[11px] text-muted flex flex-wrap gap-x-3">
+                                     <span>BetId: {String(r.betId ?? "—")}</span>
+                                     <span>Matched: {matchedOrSettled}</span>
+                                   </div>
+                                 </td>
+                                 <td className="px-2 py-2 text-sm text-foreground">{betTypeLabel(r)}</td>
+                                 <td className="px-2 py-2 text-right text-sm tabular-nums text-foreground">
+                                   {odds ? String(odds) : "—"}
+                                 </td>
+                                 <td className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(stake)}`}>
+                                   {formatCurrency(stake)}
+                                 </td>
+                                 {betPeriod === "current" ? (
+                                   <>
+                                     <td
+                                       className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(liability)}`}
+                                     >
+                                       {liability > 0 ? formatCurrency(liability) : "—"}
+                                     </td>
+                                     <td
+                                       className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(profit)}`}
+                                     >
+                                       {formatCurrency(profit)}
+                                     </td>
+                                   </>
+                                 ) : (
+                                   <>
+                                     <td className="px-2 py-2 text-sm text-foreground">{status}</td>
+                                     <td
+                                       className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(winLoss)}`}
+                                     >
+                                       {formatCurrency(winLoss)}
+                                     </td>
+                                   </>
+                                 )}
+                                 <td className="px-2 py-2 text-center text-sm text-foreground whitespace-nowrap">{placed}</td>
+                                 <td className="px-2 py-2 text-center text-sm text-foreground whitespace-nowrap">{matchedOrSettled}</td>
+                                 <td className="px-2 py-2 text-sm text-foreground-secondary">{ip}</td>
+                               </tr>
+                             );
                           })
                         )}
                       </tbody>
@@ -1332,20 +1428,40 @@ export default function PlayerDetailPage() {
               label: tab.label,
               content: (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={betDateFrom}
-                      onChange={(e) => setBetDateFrom(e.target.value)}
-                      className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
-                    />
-                    <span className="text-sm text-muted">to</span>
-                    <input
-                      type="date"
-                      value={betDateTo}
-                      onChange={(e) => setBetDateTo(e.target.value)}
-                      className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
-                    />
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="date"
+                        value={betDateFrom}
+                        onChange={(e) => setBetDateFrom(e.target.value)}
+                        className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
+                      />
+                      <span className="text-sm text-muted">to</span>
+                      <input
+                        type="date"
+                        value={betDateTo}
+                        onChange={(e) => setBetDateTo(e.target.value)}
+                        className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
+                      />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+                      {Object.entries(
+                        bettingPlRows.reduce((acc, r) => {
+                          const sport = r.groupEventTypeName || "Other";
+                          acc[sport] = (acc[sport] || 0) + Number(r.win ?? 0);
+                          return acc;
+                        }, {} as Record<string, number>),
+                      ).map(([sport, val]) => (
+                        <div key={sport} className="flex items-center gap-1">
+                          <span className="text-foreground-secondary">{sport}:</span>
+                          <span className={signedAmountTextClass(val)}>
+                            {val > 0 ? "+" : ""}
+                            {formatCurrency(val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {bettingPlError ? (
@@ -1358,83 +1474,120 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[820px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Market Name
                           </th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Winner
                           </th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Start time
                           </th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Settled Time
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Comm.
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Net Win
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {bettingPlLoading ? (
-                          <tr>
-                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
-                              Loading…
-                            </td>
-                          </tr>
-                        ) : bettingPlRows.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
-                              No records found for selected filter and time period.
-                            </td>
-                          </tr>
-                        ) : (
-                            bettingPlRows.map((r, idx) => {
-                              const eventName = String(r.eventName ?? "").trim();
-                              const marketName = String(r.marketName ?? "").trim();
-                              const marketLabel =
-                                eventName && marketName
-                                  ? `${eventName} — ${marketName}`
-                                  : marketName || eventName || "—";
-                              const netWin = Number(r.win ?? 0);
-                              const comm = Number(r.comm ?? 0);
-                              return (
-                                <tr
-                                  key={`${String(r.marketId ?? "")}-${String(r.roundId ?? "")}-${idx}`}
-                                  className="border-b border-border bg-surface"
-                                >
-                                  <td className="px-2 py-1.5 text-sm text-foreground">
-                                    <span className="block">{marketLabel}</span>
-                                    {r.groupEventTypeName ? (
-                                      <span className="text-xs text-muted">{r.groupEventTypeName}</span>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-sm text-foreground">
-                                    {r.winner ?? "—"}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
-                                    {formatDateTime(r.marketTime)}
-                                  </td>
-                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground-secondary">
-                                    {formatDateTime(r.settleTime)}
-                                  </td>
-                                  <td
-                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(comm)}`}
-                                  >
-                                    {formatCurrency(comm)}
-                                  </td>
-                                  <td
-                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(netWin)}`}
-                                  >
-                                    {formatCurrency(netWin)}
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
+                         {bettingPlLoading ? (
+                           <tr>
+                             <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
+                               Loading…
+                             </td>
+                           </tr>
+                         ) : bettingPlRows.length === 0 ? (
+                           <tr>
+                             <td colSpan={6} className="px-2 py-4 text-center text-sm text-muted">
+                               No records found for selected filter and time period.
+                             </td>
+                           </tr>
+                         ) : (
+                           Object.entries(
+                             bettingPlRows.reduce((acc: Record<string, any[]>, r: any) => {
+                               const d = new Date((r.settleTime || r.marketTime || "") as any);
+                               const key = isNaN(d.getTime())
+                                 ? "Unknown"
+                                 : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                               if (!acc[key]) acc[key] = [];
+                               acc[key].push(r);
+                               return acc;
+                             }, {} as Record<string, any[]>),
+                           ).map(([date, rows]: [string, any]) => (
+                             <React.Fragment key={date}>
+                               <tr className="bg-surface-muted/70">
+                                 <td colSpan={6} className="px-2 py-1 text-xs font-bold text-foreground-secondary">
+                                   {date}
+                                 </td>
+                               </tr>
+                               {(rows as any[]).map((r, idx) => {
+                                 const eventName = String(r.eventName ?? "").trim();
+                                 const marketName = String(r.marketName ?? "").trim();
+                                 const marketLabel =
+                                   eventName && marketName
+                                     ? `${eventName} — ${marketName}`
+                                     : marketName || eventName || "—";
+                                 const netWin = Number(r.win ?? 0);
+                                 const comm = Number(r.comm ?? 0);
+
+                                 const formatPlDate = (val: any) => {
+                                   if (!val) return "—";
+                                   const d = new Date(val);
+                                   if (isNaN(d.getTime())) return "—";
+                                   const dD = String(d.getDate()).padStart(2, "0");
+                                   const dM = String(d.getMonth() + 1).padStart(2, "0");
+                                   const dY = String(d.getFullYear() % 100).padStart(2, "0");
+                                   const h = String(d.getHours()).padStart(2, "0");
+                                   const mi = String(d.getMinutes()).padStart(2, "0");
+                                   const s = String(d.getSeconds()).padStart(2, "0");
+                                   return `${dD}-${dM}-${dY} ${h}:${mi}:${s}`;
+                                 };
+
+                                 return (
+                                   <tr
+                                     key={`${String(r.marketId ?? "")}-${String(r.roundId ?? "")}-${idx}`}
+                                     className="border-b border-border bg-surface hover:bg-surface-muted/20"
+                                   >
+                                     <td className="px-2 py-2 text-sm">
+                                       <span className="block font-medium text-primary">
+                                         {marketLabel}
+                                       </span>
+                                       {r.groupEventTypeName ? (
+                                         <span className="text-[11px] uppercase tracking-wider text-muted">
+                                           {r.groupEventTypeName}
+                                         </span>
+                                       ) : null}
+                                     </td>
+                                     <td className="px-2 py-2 text-sm text-foreground">
+                                       {r.winner ?? "—"}
+                                     </td>
+                                     <td className="px-2 py-2 text-sm whitespace-nowrap text-foreground-secondary">
+                                       {formatPlDate(r.marketTime)}
+                                     </td>
+                                     <td className="px-2 py-2 text-sm whitespace-nowrap text-foreground-secondary">
+                                       {formatPlDate(r.settleTime)}
+                                     </td>
+                                     <td
+                                       className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(comm)}`}
+                                     >
+                                       {formatCurrency(comm)}
+                                     </td>
+                                     <td
+                                       className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(netWin)}`}
+                                     >
+                                       {formatCurrency(netWin)}
+                                     </td>
+                                   </tr>
+                                 );
+                               })}
+                             </React.Fragment>
+                           ))
+                         )}
                       </tbody>
                     </table>
                   </div>
@@ -1575,20 +1728,28 @@ export default function PlayerDetailPage() {
               label: tab.label,
               content: (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="date"
-                      value={betDateFrom}
-                      onChange={(e) => setBetDateFrom(e.target.value)}
-                      className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
-                    />
-                    <span className="text-sm text-muted">to</span>
-                    <input
-                      type="date"
-                      value={betDateTo}
-                      onChange={(e) => setBetDateTo(e.target.value)}
-                      className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
-                    />
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="date"
+                        value={betDateFrom}
+                        onChange={(e) => setBetDateFrom(e.target.value)}
+                        className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
+                      />
+                      <span className="text-sm text-muted">to</span>
+                      <input
+                        type="date"
+                        value={betDateTo}
+                        onChange={(e) => setBetDateTo(e.target.value)}
+                        className="h-9 rounded-sm border border-border bg-surface px-3 text-sm text-foreground"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-white transition-opacity hover:opacity-90"
+                    >
+                      Download CSV
+                    </button>
                   </div>
 
                   {acctStmtError ? (
@@ -1601,19 +1762,19 @@ export default function PlayerDetailPage() {
                     <table className="min-w-[760px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Date
                           </th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Description
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             P&L
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Credit Limit
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Balance
                           </th>
                         </tr>
@@ -1632,39 +1793,70 @@ export default function PlayerDetailPage() {
                             </td>
                           </tr>
                         ) : (
-                          acctStmtRows.map((r, idx) => {
-                            const pl = Number(r.balance ?? 0);
-                            const creditLimit = Number(r.creditTotal ?? 0);
-                            const balance = Number(r.total ?? 0);
-                            return (
-                              <tr
-                                key={String(r.id ?? idx)}
-                                className="border-b border-border bg-surface"
-                              >
-                                <td className="px-2 py-1.5 text-sm whitespace-nowrap text-foreground">
-                                  {formatDateTime(r.createdOn)}
-                                </td>
-                                <td className="max-w-[280px] px-2 py-1.5 text-sm text-foreground">
-                                  {accountStatementDescription(r)}
-                                </td>
-                                <td
-                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(pl)}`}
-                                >
-                                  {formatCurrency(pl)}
-                                </td>
-                                <td
-                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(creditLimit)}`}
-                                >
-                                  {formatCurrency(creditLimit)}
-                                </td>
-                                <td
-                                  className={`px-2 py-1.5 text-right text-sm tabular-nums ${signedAmountTextClass(balance)}`}
-                                >
-                                  {formatCurrency(balance)}
+                          Object.entries(
+                            acctStmtRows.reduce((acc: Record<string, any[]>, r: any) => {
+                              const d = new Date(r.createdOn as any);
+                              const key = isNaN(d.getTime())
+                                ? "Unknown"
+                                : `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+                              if (!acc[key]) acc[key] = [];
+                              acc[key].push(r);
+                              return acc;
+                            }, {} as Record<string, any[]>),
+                          ).map(([date, rows]: [string, any]) => (
+                            <React.Fragment key={date}>
+                              <tr className="bg-surface-muted/70">
+                                <td colSpan={5} className="px-2 py-1 text-xs font-bold text-foreground-secondary">
+                                  {date}
                                 </td>
                               </tr>
-                            );
-                          })
+                              {(rows as any[]).map((r, idx) => {
+                                const pl = Number(r.balance ?? 0);
+                                const creditLimit = Number(r.creditTotal ?? 0);
+                                const balance = Number(r.total ?? 0);
+                                const dt = new Date(r.createdOn as any);
+                                const timeStr = isNaN(dt.getTime())
+                                  ? "—"
+                                  : `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}:${String(dt.getSeconds()).padStart(2, "0")}`;
+
+                                const desc = String(r.narration ?? "").trim();
+                                const subDesc = [r.remarks, r.comment]
+                                  .map((x) => (x != null ? String(x).trim() : ""))
+                                  .filter(Boolean)
+                                  .join(" · ");
+
+                                return (
+                                  <tr
+                                    key={String(r.id ?? idx)}
+                                    className="border-b border-border bg-surface hover:bg-surface-muted/20"
+                                  >
+                                    <td className="px-2 py-2 text-sm whitespace-nowrap text-foreground">
+                                      {timeStr}
+                                    </td>
+                                    <td className="px-2 py-2 text-sm">
+                                      <div className="font-medium text-primary">
+                                        {desc || "—"}
+                                      </div>
+                                      {subDesc ? (
+                                        <div className="text-[11px] text-muted">({subDesc})</div>
+                                      ) : null}
+                                    </td>
+                                    <td
+                                      className={`px-2 py-2 text-right text-sm tabular-nums ${signedAmountTextClass(pl)}`}
+                                    >
+                                      {formatCurrency(pl)}
+                                    </td>
+                                    <td className="px-2 py-2 text-right text-sm tabular-nums text-foreground">
+                                      {creditLimit !== 0 ? formatCurrency(creditLimit) : "—"}
+                                    </td>
+                                    <td className="px-2 py-2 text-right text-sm tabular-nums text-foreground">
+                                      {formatCurrency(balance)}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </React.Fragment>
+                          ))
                         )}
                       </tbody>
                     </table>
@@ -2146,76 +2338,82 @@ export default function PlayerDetailPage() {
                     </p>
                   ) : null}
                   <div className="overflow-x-auto rounded-lg border border-border">
-                    <table className="min-w-[640px] w-full border-collapse">
+                    <table className="min-w-[760px] w-full border-collapse">
                       <thead>
                         <tr className="border-b border-border bg-surface-muted/70">
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Date
                           </th>
-                          <th className="px-2 py-1.5 text-left text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-left text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Description
                           </th>
-                          <th className="px-2 py-1.5 text-right text-xs font-semibold uppercase tracking-wider text-foreground-tertiary">
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
                             Amount
+                          </th>
+                          <th className="px-2 py-1.5 text-right text-xs font-bold uppercase tracking-wider text-foreground-tertiary">
+                            {/* Notes column header */}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {transferStmtLoading ? (
                           <tr>
-                            <td
-                              colSpan={3}
-                              className="px-2 py-4 text-center text-sm text-muted"
-                            >
+                            <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                               Loading…
                             </td>
                           </tr>
                         ) : transferStmtRows.length === 0 ? (
                           <tr>
-                            <td
-                              colSpan={3}
-                              className="px-2 py-4 text-center text-sm text-muted"
-                            >
+                            <td colSpan={4} className="px-2 py-4 text-center text-sm text-muted">
                               No transfers for this date range.
                             </td>
                           </tr>
                         ) : (
                           transferStmtGrouped.flatMap((group, gi) => {
                             const headerRow = (
-                              <tr
-                                key={`transfer-g-${group.dateKey}-${gi}`}
-                                className="bg-surface-muted"
-                              >
-                                <td
-                                  colSpan={3}
-                                  className="px-2 py-1.5 text-sm font-medium text-foreground"
-                                >
-                                  {group.labelDate
-                                    ? formatTransferStatementDateBar(group.labelDate)
-                                    : "—"}
+                              <tr key={`transfer-g-${group.dateKey}-${gi}`} className="bg-surface-muted/70">
+                                <td colSpan={4} className="px-2 py-1 text-xs font-bold text-foreground-secondary">
+                                  {group.labelDate ? formatTransferStatementDateBar(group.labelDate) : "—"}
                                 </td>
                               </tr>
                             );
                             const dataRows = group.items.map((r, idx) => {
-                              const amt = Number(
-                                r.amount ?? r.chips ?? r.balance ?? r.delta ?? 0,
-                              );
+                              const amt = Number(r.amount ?? r.chips ?? r.balance ?? r.delta ?? 0);
                               const amtClass = signedAmountTextClass(amt);
+                              const dt = new Date((r.createdOn ?? r.date) as any);
+                              const timeStr = isNaN(dt.getTime())
+                                ? "—"
+                                : `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}:${String(dt.getSeconds()).padStart(2, "0")}`;
+
+                              const note = typeof r.comment === "string" ? r.comment.trim() : "";
+                              const desc = String(r.description ?? (amt >= 0 ? "Transfer In" : "Transfer Out"));
+
                               return (
                                 <tr
                                   key={String(r.id ?? `${group.dateKey}-${idx}`)}
-                                  className="border-b border-border bg-surface"
+                                  className="border-b border-border bg-surface hover:bg-surface-muted/20"
                                 >
-                                  <td className="px-2 py-1.5 text-sm whitespace-nowrap tabular-nums text-foreground-secondary">
-                                    {formatDateTime(r.createdOn ?? r.date)}
+                                  <td className="px-2 py-2 text-sm whitespace-nowrap tabular-nums text-foreground">
+                                    {timeStr}
                                   </td>
-                                  <td className="max-w-[360px] px-2 py-1.5 text-sm text-foreground">
-                                    {accountStatementDescription(r)}
+                                  <td className="px-2 py-2 text-sm text-foreground">
+                                    {desc}
                                   </td>
-                                  <td
-                                    className={`px-2 py-1.5 text-right text-sm tabular-nums ${amtClass}`}
-                                  >
+                                  <td className={`px-2 py-2 text-right text-sm tabular-nums ${amtClass}`}>
                                     {Number.isFinite(amt) ? formatCurrency(amt) : "—"}
+                                  </td>
+                                  <td className="group relative px-2 py-2 text-right text-sm">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {note ? (
+                                        <>
+                                          <div className="invisible group-hover:visible absolute right-[60px] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-md bg-cyan-400 px-2 py-1 text-[11px] font-medium text-black shadow-lg z-10">
+                                            {note}
+                                            <div className="absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 bg-cyan-400" />
+                                          </div>
+                                          <span className="cursor-pointer text-primary hover:underline">Notes</span>
+                                        </>
+                                      ) : null}
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -2241,10 +2439,7 @@ export default function PlayerDetailPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={
-                          transferStmtPage * STATEMENT_PAGE_SIZE >= transferStmtTotal ||
-                          transferStmtLoading
-                        }
+                        disabled={transferStmtPage * STATEMENT_PAGE_SIZE >= transferStmtTotal || transferStmtLoading}
                         onClick={() => setTransferStmtPage((p) => p + 1)}
                         className="h-9 rounded-md border border-border bg-surface px-3 text-sm font-medium text-foreground disabled:opacity-50"
                       >
@@ -2421,11 +2616,11 @@ export default function PlayerDetailPage() {
                     </tr>
                     <tr className="border-b border-border bg-surface">
                       <td className="px-2 py-1.5 text-sm font-semibold text-foreground">D-W</td>
-                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day1 - activityRows.withdrawal.day1)}`}>{formatCurrency(activityRows.deposit.day1 - activityRows.withdrawal.day1)}</td>
-                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day3 - activityRows.withdrawal.day3)}`}>{formatCurrency(activityRows.deposit.day3 - activityRows.withdrawal.day3)}</td>
-                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day7 - activityRows.withdrawal.day7)}`}>{formatCurrency(activityRows.deposit.day7 - activityRows.withdrawal.day7)}</td>
-                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day30 - activityRows.withdrawal.day30)}`}>{formatCurrency(activityRows.deposit.day30 - activityRows.withdrawal.day30)}</td>
-                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.lifetime - activityRows.withdrawal.lifetime)}`}>{formatCurrency(activityRows.deposit.lifetime - activityRows.withdrawal.lifetime)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day1 + activityRows.withdrawal.day1)}`}>{formatCurrency(activityRows.deposit.day1 + activityRows.withdrawal.day1)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day3 + activityRows.withdrawal.day3)}`}>{formatCurrency(activityRows.deposit.day3 + activityRows.withdrawal.day3)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day7 + activityRows.withdrawal.day7)}`}>{formatCurrency(activityRows.deposit.day7 + activityRows.withdrawal.day7)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.day30 + activityRows.withdrawal.day30)}`}>{formatCurrency(activityRows.deposit.day30 + activityRows.withdrawal.day30)}</td>
+                      <td className={`px-2 py-1.5 text-center text-sm tabular-nums ${signedAmountTextClass(activityRows.deposit.lifetime + activityRows.withdrawal.lifetime)}`}>{formatCurrency(activityRows.deposit.lifetime + activityRows.withdrawal.lifetime)}</td>
                     </tr>
                     <tr className="border-b border-border bg-surface-muted/35">
                       <td colSpan={6} className="h-3 px-0 py-0" />

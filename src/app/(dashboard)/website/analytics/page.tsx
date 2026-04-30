@@ -347,10 +347,8 @@ export default function WebsiteAnalyticsPage() {
       // Attach icons from master data
       tabs.forEach(t => {
         const masterItem = masterData.find((m: any) => m.id === t.id);
-        if (masterItem?.iconImg) {
-          t.icon = String(masterItem.iconImg);
-        }
       });
+
 
       console.log("Analytics: Loaded sport tabs with icons", tabs.filter(t => t.icon));
       setEventTypes(tabs);
@@ -545,26 +543,6 @@ export default function WebsiteAnalyticsPage() {
                           : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
                         }`}
                     >
-                      {t.icon ? (
-                        <img
-                          src={t.icon.startsWith('http') ? t.icon : `${apiConfig.baseUrl}/${t.icon.replace(/^\//, '')}`}
-                          alt=""
-                          className={`h-4 w-4 object-contain transition-opacity ${activeSportId === t.id ? "opacity-100" : "opacity-60"}`}
-                          style={{
-                            filter: activeSportId === t.id
-                              ? "invert(27%) sepia(91%) saturate(583%) hue-rotate(81deg) brightness(93%) contrast(93%)"
-                              : "invert(40%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(90%) contrast(90%)"
-                          }}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        (() => {
-                          const Icon = getSportIcon(t.label);
-                          return <Icon className={`h-4 w-4 ${activeSportId === t.id ? "text-primary" : "text-zinc-400"}`} />;
-                        })()
-                      )}
                       <span>{t.label}</span>
                     </button>
                   ))}

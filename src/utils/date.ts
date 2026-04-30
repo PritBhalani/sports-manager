@@ -9,7 +9,7 @@ export function formatDateTime(value: unknown): string {
   if (Number.isNaN(date.getTime())) return "—";
   const dD = String(date.getDate()).padStart(2, "0");
   const dM = String(date.getMonth() + 1).padStart(2, "0");
-  const dY = String(date.getFullYear() % 100).padStart(2, "0");
+  const dY = String(date.getFullYear());
   const h = String(date.getHours()).padStart(2, "0");
   const mi = String(date.getMinutes()).padStart(2, "0");
   const s = String(date.getSeconds()).padStart(2, "0");
