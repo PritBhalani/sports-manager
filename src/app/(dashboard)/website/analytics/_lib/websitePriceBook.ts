@@ -652,7 +652,14 @@ export function useWebsitePriceBookWs(options: {
       }
     };
 
-    const bumpRefresh = () => onRefreshRef.current?.();
+    const refreshTimeoutRef = { current: null as number | null };
+    const bumpRefresh = () => {
+      if (refreshTimeoutRef.current) window.clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        onRefreshRef.current?.();
+        refreshTimeoutRef.current = null;
+      }, 150); // 150ms debounce
+    };
 
     const scheduleReconnect = () => {
       if (reconnectTimer != null) window.clearTimeout(reconnectTimer);
@@ -814,6 +821,7 @@ export function useWebsitePriceBookWs(options: {
       cancelled = true;
       wsRef.current = null;
       stopPing();
+      if (refreshTimeoutRef.current) window.clearTimeout(refreshTimeoutRef.current);
       if (reconnectTimer != null) window.clearTimeout(reconnectTimer);
       try {
         if (ws && ws.readyState === WebSocket.OPEN) {

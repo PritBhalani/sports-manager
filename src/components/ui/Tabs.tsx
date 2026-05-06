@@ -14,8 +14,9 @@ export type TabsProps = {
   activeId: string;
   onTabChange: (id: string) => void;
   className?: string;
-  /** Full-width tabs like reference admin UI */
   variant?: "default" | "fullWidth";
+  /** Color for the active tab's text and bottom border. Defaults to 'primary'. */
+  activeColor?: "primary" | "success" | "warning" | "error" | "info";
 };
 
 export default function Tabs({
@@ -24,8 +25,17 @@ export default function Tabs({
   onTabChange,
   className = "",
   variant = "default",
+  activeColor = "primary",
 }: TabsProps) {
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0];
+
+  const activeClasses = {
+    primary: "border-primary text-primary",
+    success: "border-success text-success",
+    warning: "border-warning text-warning",
+    error: "border-error text-error",
+    info: "border-info text-info",
+  }[activeColor];
 
   return (
     <div className={className}>
@@ -49,12 +59,12 @@ export default function Tabs({
                   variant === "fullWidth"
                     ? `flex flex-1 items-center justify-center gap-2 border-b-2 px-6 py-3 text-sm font-medium transition-colors ${
                         isActive
-                          ? "border-primary text-primary"
+                          ? activeClasses
                           : "border-transparent text-muted hover:text-foreground-secondary"
                       }`
                     : `flex items-center gap-2 border-b-2 py-3 text-sm font-medium transition-colors ${
                         isActive
-                          ? "border-primary text-primary"
+                          ? activeClasses
                           : "border-transparent text-muted hover:border-border-strong hover:text-foreground-secondary"
                       }`
                 }

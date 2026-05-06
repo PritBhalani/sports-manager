@@ -64,8 +64,15 @@ export function dateRangeToISO(
   fromDate: string,
   toDate: string
 ): { fromDate: string; toDate: string } {
+  // Parse YYYY-MM-DD as local time
+  const [fYear, fMonth, fDay] = fromDate.split("-").map(Number);
+  const [tYear, tMonth, tDay] = toDate.split("-").map(Number);
+
+  const start = new Date(fYear, fMonth - 1, fDay, 0, 0, 0, 0);
+  const end = new Date(tYear, tMonth - 1, tDay, 23, 59, 59, 999);
+
   return {
-    fromDate: new Date(fromDate + "T00:00:00.000Z").toISOString(),
-    toDate: new Date(toDate + "T23:59:59.999Z").toISOString(),
+    fromDate: start.toISOString().replace(/\.\d+Z$/, "Z"),
+    toDate: end.toISOString().replace(/\.\d+Z$/, "Z"),
   };
 }

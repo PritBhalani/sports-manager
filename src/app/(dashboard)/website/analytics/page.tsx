@@ -133,8 +133,8 @@ function OddsStack({ runnerBook, inPlay }: { runnerBook?: WsRunnerBookRow; inPla
   ) => (
     <div
       className={`flex min-w-[3rem] flex-1 flex-col items-center justify-center rounded-[4px] py-1 text-center leading-none transition-all hover:brightness-95 ${sky
-          ? "bg-sky-50 dark:bg-sky-950/30"
-          : "bg-rose-50 dark:bg-rose-950/30"
+        ? "bg-sky-50 dark:bg-sky-950/30"
+        : "bg-rose-50 dark:bg-rose-950/30"
         }`}
     >
       <span className={`mb-0.5 text-[8px] font-bold uppercase tracking-tighter ${sky ? "text-sky-500" : "text-rose-500"}`}>
@@ -527,7 +527,7 @@ export default function WebsiteAnalyticsPage() {
         </span>
       </div>
 
-      <ListPageFrame>
+      <ListPageFrame className="overflow-x-hidden">
         <div className="flex flex-col gap-4 px-2 py-4 sm:px-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
             <div className="min-w-0 flex-1 space-y-4">
@@ -539,8 +539,8 @@ export default function WebsiteAnalyticsPage() {
                       type="button"
                       onClick={() => setActiveSportId(t.id)}
                       className={`flex items-center gap-2.5 rounded-lg px-4 py-2 text-sm font-bold transition-all duration-200 ${activeSportId === t.id
-                          ? "bg-white text-[#0066cc] shadow-sm ring-1 ring-zinc-200/50 dark:bg-zinc-900 dark:text-sky-400 dark:ring-zinc-700/50"
-                          : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
+                        ? "bg-white text-[#0066cc] shadow-sm ring-1 ring-zinc-200/50 dark:bg-zinc-900 dark:text-sky-400 dark:ring-zinc-700/50"
+                        : "text-zinc-600 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200"
                         }`}
                     >
                       <span>{t.label}</span>
@@ -570,7 +570,7 @@ export default function WebsiteAnalyticsPage() {
                 </p>
               )}
 
-              <div className="overflow-x-hidden rounded-lg">
+              <div className="overflow-x-clip rounded-lg">
                 <Table className="w-full table-fixed border-collapse">
                   <colgroup>
                     <col className="w-auto" />
@@ -602,6 +602,15 @@ export default function WebsiteAnalyticsPage() {
                         const marketId =
                           market?.id != null ? String(market.id) : undefined;
                         const wsBook = marketId ? priceBooks[marketId] : undefined;
+                        // Suspended: marketStatus 3 = suspended, or temporaryStatus 4, or WS ms=3
+                        const isSuspended =
+                          market?.marketStatus === 3 ||
+                          market?.temporaryStatus === 4 ||
+                          wsBook?.ms === 3;
+                        // Ball Running: temporaryStatus 2 (REST) or WS ts=2 — only show when NOT suspended
+                        const isBallRunning =
+                          !isSuspended &&
+                          (market?.temporaryStatus === 2 || wsBook?.ts === 2);
                         const { col1, colX, col2 } = partitionMatchOddsRunners(
                           market?.marketRunner,
                         );
@@ -645,14 +654,14 @@ export default function WebsiteAnalyticsPage() {
                         return (
                           <TableRow
                             key={String(ev.id ?? title)}
-                            className={`group relative transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/40 ${canOpenEvent ? "cursor-pointer" : ""}`}
-                            onClick={canOpenEvent ? openEventDetail : undefined}
+                            className={`group relative transition-colors ${canOpenEvent && !isSuspended ? "cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/40" : "cursor-default"}`}
+                            onClick={canOpenEvent && !isSuspended ? openEventDetail : undefined}
                           >
                             <TableCell className="py-4 pl-4">
                               <div className="flex items-start justify-between gap-4">
                                 <div className="min-w-0 flex-1 space-y-1">
                                   <div className="flex items-center justify-between">
-                                    <span className="truncate text-sm font-bold text-zinc-900 transition-colors group-hover:text-sky-700 dark:text-zinc-100">
+                                    <span className={`truncate text-sm font-bold text-zinc-900 transition-colors dark:text-zinc-100 ${!isSuspended ? "group-hover:text-sky-700" : ""}`}>
                                       {title}
                                     </span>
                                     {inPlay ? (
@@ -669,24 +678,50 @@ export default function WebsiteAnalyticsPage() {
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
-                              <RunnerOddsCell
-                                runnerBook={book1}
-                                inPlay={inPlay}
-                              />
-                            </TableCell>
-                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
-                              <RunnerOddsCell
-                                runnerBook={bookX}
-                                inPlay={inPlay}
-                              />
-                            </TableCell>
-                            <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
-                              <RunnerOddsCell
-                                runnerBook={book2}
-                                inPlay={inPlay}
-                              />
-                            </TableCell>
+                            {isSuspended ? (
+                              <TableCell
+                                colSpan={3}
+                                className="border-l border-zinc-300/50 dark:border-zinc-800"
+                              >
+                                <div className="flex h-full w-full items-center justify-center py-4">
+                                  <span className="text-sm font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                                    SUSPENDED
+                                  </span>
+                                </div>
+                              </TableCell>
+                            ) : isBallRunning ? (
+                              <TableCell
+                                colSpan={3}
+                                className="border-l border-zinc-300/50 dark:border-zinc-800"
+                              >
+                                <div className="flex h-full w-full items-center justify-center py-4">
+                                  <span className="text-sm font-bold uppercase tracking-widest text-teal-600 dark:text-teal-400">
+                                    BALL RUNNING
+                                  </span>
+                                </div>
+                              </TableCell>
+                            ) : (
+                              <>
+                                <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                                  <RunnerOddsCell
+                                    runnerBook={book1}
+                                    inPlay={inPlay}
+                                  />
+                                </TableCell>
+                                <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                                  <RunnerOddsCell
+                                    runnerBook={bookX}
+                                    inPlay={inPlay}
+                                  />
+                                </TableCell>
+                                <TableCell className="border-l border-zinc-300/50 p-0 dark:border-zinc-800">
+                                  <RunnerOddsCell
+                                    runnerBook={book2}
+                                    inPlay={inPlay}
+                                  />
+                                </TableCell>
+                              </>
+                            )}
                           </TableRow>
                         );
                       })

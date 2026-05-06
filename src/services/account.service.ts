@@ -287,13 +287,12 @@ export async function getPlStatement(
   params: ListParams,
   searchQuery: StatementSearchQuery,
   userId: string
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  const raw = await apiPost<unknown>(`${ACCOUNT}/getplstatement`, {
+): Promise<any> {
+  return apiPost<unknown>(`${ACCOUNT}/getplstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
   });
-  return normalizeList<Record<string, unknown>>(raw);
 }
 
 /** POST /account/downline – paginated downline list (README §2) */
@@ -326,18 +325,16 @@ export async function getDownline(
   return normalizeList<DownlineRecord>(raw);
 }
 
-/** POST /account/getCreditstatement – credit statement (README §2 Statements) */
 export async function getCreditStatement(
   params: ListParams,
   searchQuery: StatementSearchQuery,
   userId: string
-): Promise<ApiListResponse<Record<string, unknown>>> {
-  const raw = await apiPost<unknown>(`${ACCOUNT}/getCreditstatement`, {
+): Promise<any> {
+  return apiPost<unknown>(`${ACCOUNT}/getCreditstatement`, {
     params: { pageSize: 15, ...params },
     searchQuery,
     id: userId,
   });
-  return normalizeList<Record<string, unknown>>(raw);
 }
 
 /** GET /account/getparentstatus/{userId} – parent status for user (README §2 Downline) */

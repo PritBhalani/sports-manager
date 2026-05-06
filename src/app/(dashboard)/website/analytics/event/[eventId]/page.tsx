@@ -126,7 +126,7 @@ function ingestRunnerExposureRows(
 }
 
 function tabKeyForMarket(
-  m: MarketByEventMarket, 
+  m: MarketByEventMarket,
 ): "fancy" | "line" | "winning" | "khado" {
   const t = normalizeMarketTypeKey(m);
   const n = String(m.name ?? "").toLowerCase();
@@ -168,16 +168,14 @@ function ScoreboardBetAllRow({ title }: { title: string }) {
   return (
     <tr className="bet-all">
       <th className="th-col align-l" colSpan={7}>
-        <div className="flex items-center gap-3 py-1">
-          <span className="sb-market-title text-sm font-bold text-[#0066cc] dark:text-sky-400">{title}</span>
-          <div className="flex items-center gap-2">
-            <button type="button" className="text-zinc-400 hover:text-red-500 transition-colors">
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <button type="button" className="text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors">
-              <BarChart3 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
+        <div className="flex items-center gap-2 py-1">
+          <span className="sb-market-title text-sm font-bold text-zinc-800 dark:text-zinc-100">{title}</span>
+          <button type="button" className="text-zinc-400 hover:text-red-500 transition-colors">
+            <RefreshCw className="h-3 w-3" />
+          </button>
+          <button type="button" className="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <BarChart3 className="h-3 w-3" />
+          </button>
         </div>
       </th>
     </tr>
@@ -207,13 +205,13 @@ function ScoreboardBackLayLabelRow() {
 function LadderColGroup() {
   return (
     <colgroup>
-      <col style={{ width: "45%" }} />
-      <col style={{ width: "9.16%" }} />
-      <col style={{ width: "9.16%" }} />
-      <col style={{ width: "9.16%" }} />
-      <col style={{ width: "9.16%" }} />
-      <col style={{ width: "9.16%" }} />
-      <col style={{ width: "9.16%" }} />
+      <col style={{ width: "auto" }} />
+      <col style={{ width: "62px" }} />
+      <col style={{ width: "62px" }} />
+      <col style={{ width: "62px" }} />
+      <col style={{ width: "62px" }} />
+      <col style={{ width: "62px" }} />
+      <col style={{ width: "62px" }} />
     </colgroup>
   );
 }
@@ -233,12 +231,25 @@ function WinningColGroup() {
 function ScorePriceButton({
   level,
   isLay,
+  market,
 }: {
   level: { price?: number; size?: number; percentage?: number };
   isLay?: boolean;
+  market?: MarketByEventMarket;
 }) {
+  const isBookmaker = market ? isBookmakerMarket(market) : false;
   const rate = getDisplayCurrencyRate();
-  const priceStr = formatOddsPrice(level.price);
+
+  let priceStr = "—";
+  if (level.price != null && Number.isFinite(level.price)) {
+    if (isBookmaker) {
+      // (1.21 -> 21, 5.34 -> 434)
+      const val = (level.price - 1) * 100;
+      priceStr = val % 1 === 0 ? String(Math.round(val)) : val.toFixed(1);
+    } else {
+      priceStr = formatOddsPrice(level.price);
+    }
+  }
   const pct =
     level.percentage != null && Number.isFinite(level.percentage)
       ? String(Math.round(level.percentage))
@@ -255,7 +266,7 @@ function ScorePriceButton({
   return (
     <button
       type="button"
-      className={`price ${sub ? "" : "onlyprice"} rounded-md`}
+      className={`price ${sub ? "" : "onlyprice"}`}
     >
       <span className="block tabular-nums sb-odds-price font-bold">{priceStr}</span>
       {sub ? (
@@ -289,11 +300,10 @@ function SettingToggleRow({
     >
       <span className="max-w-[12rem] leading-tight">{label}</span>
       <span
-        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-          on
+        className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${on
             ? "bg-emerald-500/20 text-emerald-800 dark:text-emerald-200"
             : "bg-surface-muted text-foreground-tertiary"
-        }`}
+          }`}
       >
         {on ? "YES" : "NO"}
       </span>
@@ -400,22 +410,22 @@ function LadderRow({
           <MatchTitleCell name={name} exposurePl={exposurePl} />
         </th>
         <td className="sb-odds-neutral align-c">
-          <ScorePriceButton level={EMPTY_LEVEL} />
+          <ScorePriceButton level={EMPTY_LEVEL} market={market} />
         </td>
         <td className="sb-odds-neutral align-c">
-          <ScorePriceButton level={EMPTY_LEVEL} />
+          <ScorePriceButton level={EMPTY_LEVEL} market={market} />
         </td>
         <td className="back-1 align-c">
-          <ScorePriceButton level={back} />
+          <ScorePriceButton level={back} market={market} />
         </td>
         <td className="lay-1 align-c">
-          <ScorePriceButton level={lay} />
+          <ScorePriceButton level={lay} market={market} />
         </td>
         <td className="sb-odds-neutral align-c">
-          <ScorePriceButton level={EMPTY_LEVEL} />
+          <ScorePriceButton level={EMPTY_LEVEL} market={market} />
         </td>
         <td className="sb-odds-neutral align-c">
-          <ScorePriceButton level={EMPTY_LEVEL} />
+          <ScorePriceButton level={EMPTY_LEVEL} market={market} />
         </td>
       </tr>
     );
@@ -426,20 +436,14 @@ function LadderRow({
       <th className="match-title" scope="row">
         <MatchTitleCell name={name} exposurePl={exposurePl} />
       </th>
-      {laysForColumns.map((lvl: { price?: number; size?: number; percentage?: number }, i: number) => (
-        <td
-          key={`l-${i}`}
-          className={`lay-${i + 1} align-c p-1`}
-        >
-          <ScorePriceButton level={lvl} isLay />
+      {backs.slice(0, 3).reverse().map((lvl, i) => (
+        <td key={`b-${i}`} className={`back-${3 - i} align-c`}>
+          <ScorePriceButton level={lvl} market={market} />
         </td>
       ))}
-      {backsDisplay.map((lvl: { price?: number; size?: number; percentage?: number }, i: number) => (
-        <td
-          key={`b-${i}`}
-          className={`back-${3 - i} align-c p-1`}
-        >
-          <ScorePriceButton level={lvl} />
+      {lays.slice(0, 3).map((lvl, i) => (
+        <td key={`l-${i}`} className={`lay-${i + 1} align-c`}>
+          <ScorePriceButton level={lvl} isLay market={market} />
         </td>
       ))}
     </tr>
@@ -500,7 +504,9 @@ export default function WebsiteEventMarketsPage() {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!eventRow) {
+      setLoading(true);
+    }
     setError(null);
     const loadForTypeId = async (tid: string): Promise<MarketByEventRow | null> => {
       const [wide, narrow] = await Promise.all([
@@ -576,7 +582,9 @@ export default function WebsiteEventMarketsPage() {
       setBetTotal(0);
       return;
     }
-    setBetsLoading(true);
+    if (betRows.length === 0) {
+      setBetsLoading(true);
+    }
     setBetsError(null);
     getLiveBetsByEventId(
       {
@@ -780,11 +788,10 @@ export default function WebsiteEventMarketsPage() {
       />
 
       <div
-        className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm ${
-          wsConnected && wsAuthed
+        className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm ${wsConnected && wsAuthed
             ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-800 dark:text-emerald-200"
             : "border-border bg-surface-muted/40 text-foreground-secondary"
-        }`}
+          }`}
         role="status"
       >
         {wsConnected && wsAuthed ? (
@@ -956,46 +963,46 @@ export default function WebsiteEventMarketsPage() {
                 {goalsOverUnderMarkets
                   .filter((m: any) => m.id != null && String(m.id).trim())
                   .map((m: any) => {
-                  const mid = String(m.id);
-                  return (
-                    <section
-                      key={mid}
-                      className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/30"
-                    >
-                      <div className="overflow-x-auto">
-                        <table className="table-score">
-                          <LadderColGroup />
-                          <tbody>
-                            <ScoreboardBetAllRow title={marketLabel(m)} />
-                            {(m.marketRunner ?? []).map((entry: any, rowIdx: number) => {
-                              const rid = entry.runner?.id;
-                              const rname = String(entry.runner?.name ?? "—");
-                              const book = lookupRunnerBook(
-                                priceBooks,
-                                mid,
-                                rid != null ? String(rid) : undefined,
-                              );
-                              return (
-                                <LadderRow
-                                  key={String(rid ?? rname)}
-                                  name={rname}
-                                  runnerBook={book}
-                                  stripe={rowIdx % 2 === 0 ? "odd" : "even"}
-                                  variant="exchange"
-                                  market={m}
-                                  exposurePl={runnerExposurePlFromMap(
-                                    runnerExposureMap,
-                                    mid,
-                                    rid != null ? String(rid) : undefined,
-                                  )}
-                                />
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  );
+                    const mid = String(m.id);
+                    return (
+                      <section
+                        key={mid}
+                        className="overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950/30"
+                      >
+                        <div className="overflow-x-auto">
+                          <table className="table-score">
+                            <LadderColGroup />
+                            <tbody>
+                              <ScoreboardBetAllRow title={marketLabel(m)} />
+                              {(m.marketRunner ?? []).map((entry: any, rowIdx: number) => {
+                                const rid = entry.runner?.id;
+                                const rname = String(entry.runner?.name ?? "—");
+                                const book = lookupRunnerBook(
+                                  priceBooks,
+                                  mid,
+                                  rid != null ? String(rid) : undefined,
+                                );
+                                return (
+                                  <LadderRow
+                                    key={String(rid ?? rname)}
+                                    name={rname}
+                                    runnerBook={book}
+                                    stripe={rowIdx % 2 === 0 ? "odd" : "even"}
+                                    variant="exchange"
+                                    market={m}
+                                    exposurePl={runnerExposurePlFromMap(
+                                      runnerExposureMap,
+                                      mid,
+                                      rid != null ? String(rid) : undefined,
+                                    )}
+                                  />
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    );
                   })}
 
                 {bookmakerMarkets.map((m) => {

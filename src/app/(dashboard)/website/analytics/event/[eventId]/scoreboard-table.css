@@ -10,11 +10,10 @@
 
 .table-score .bet-all th,
 .table-score .bet-all td {
-  border: none;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  padding: 6px 12px;
   vertical-align: middle;
-  background: #f8fafc;
+  background: #eeeeee;
   font-weight: 700;
 }
 
@@ -53,9 +52,8 @@
 
 .table-score .tr-data th.match-title,
 .table-score .tr-data td {
-  border: none;
-  border-bottom: 1px solid #f1f5f9;
-  padding: 6px;
+  border: 1px solid #d1d5db;
+  padding: 0;
   vertical-align: middle;
 }
 
@@ -75,27 +73,26 @@
   background: #f5f5f5;
 }
 
-/* Back: light → strong toward the centre (back-1). */
-/* Back: sky-blue palette from main dashboard. */
+/* Back: light -> strong toward the center (target colors) */
 .table-score .back-3 {
-  background: #f8fafc !important;
+  background: #cee8ff !important;
 }
 .table-score .back-2 {
-  background: #eff6ff !important;
+  background: #a7d8fd !important;
 }
 .table-score .back-1 {
-  background: #e3f2fd !important;
+  background: #72bbef !important;
 }
 
-/* Lay: rose-pink palette from main dashboard. */
+/* Lay: strong -> light toward the edge (target colors) */
 .table-score .lay-1 {
-  background: #f4c7cc !important;
+  background: #faa9ba !important;
 }
 .table-score .lay-2 {
-  background: #fff1f2 !important;
+  background: #fcccd8 !important;
 }
 .table-score .lay-3 {
-  background: #fffafb !important;
+  background: #fde3eb !important;
 }
 
 /* Empty ladder slot — no back/lay tint (live site). */
@@ -139,18 +136,18 @@
   align-items: center;
   justify-content: center;
   gap: 1px;
-  padding: 8px 4px;
+  padding: 6px 2px;
   color: #111;
   text-decoration: none;
   font-weight: 700;
   line-height: 1.1;
   cursor: pointer;
-  border: 1px solid #e2e8f0;
+  border: none;
   background: transparent;
   width: 100%;
   font: inherit;
   appearance: none;
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow: none !important;
 }
 
