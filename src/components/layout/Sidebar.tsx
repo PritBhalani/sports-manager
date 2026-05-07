@@ -214,15 +214,15 @@ const menuConfig: MenuItem[] = [
     ],
   },
 
-  // User Groups + Flags
-  // {
-  //   label: "User Groups",
-  //   icon: IconUsers,
-  //   children: [
-  //     { href: "/security/login-history", label: "User Groups", icon: IconUsers },
-  //     { href: "/players/blocked-history", label: "Flags", icon: IconFlags },
-  //   ],
-  // },
+  // User Groups (dropdown)
+  {
+    label: "User Groups",
+    icon: IconUsers,
+    children: [
+      { href: "/user-groups", label: "User Groups", icon: IconUsers },
+      { href: "/flags", label: "Flags", icon: IconFlags },
+    ],
+  },
 
   // Settings / wallets / profile
   // {
