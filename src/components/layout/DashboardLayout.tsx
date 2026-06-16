@@ -174,7 +174,9 @@ function DashboardLayoutInner({ children }: LayoutProps) {
         />
         <main
           ref={mainScrollRef}
-          className="dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 p-4 sm:p-6 md:p-7"
+          className={`dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 ${
+            pathname.startsWith("/sports-manager") ? "p-0" : "p-4 sm:p-6 md:p-7"
+          }`}
         >
           {children}
         </main>

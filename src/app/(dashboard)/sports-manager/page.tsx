@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { SportSidebar } from "./components/SportSidebar";
 import { EventTypeRecord, EventRecord } from "@/services/eventtype.service";
 import { SidebarMarketRecord } from "@/services/market.service";
-import { Wifi, RefreshCw, X } from "lucide-react";
+import { Wifi, RefreshCw, X, ExternalLink } from "lucide-react";
 
 interface OpenMarketState {
   market: SidebarMarketRecord;
@@ -98,7 +99,7 @@ export default function SportManagerPage() {
   const openMarketIds = openMarkets.map((m) => m.market.id);
 
   return (
-    <div className="flex h-full gap-6 select-none">
+    <div className="flex h-full gap-0 select-none">
       <SportSidebar
         selectedSport={selectedSport}
         setSelectedSport={setSelectedSport}
@@ -107,33 +108,35 @@ export default function SportManagerPage() {
         openMarketIds={openMarketIds}
         onToggleMarket={handleToggleMarket}
       />
-      
-      <div className="flex-1 flex flex-col gap-6 overflow-y-auto pr-2 dashboard-main-scroll">
-        <div>
+
+      <div className="flex-1 flex flex-col gap-0 overflow-y-auto dashboard-main-scroll">
+        {/* <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Sport Manager
           </h1>
           <p className="mt-1 text-sm text-muted">
             Overview of sports operations and management.
           </p>
-        </div>
+        </div> */}
 
         {openMarkets.length === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-6 shadow-xs flex items-center justify-center min-h-[300px]">
-            <p className="text-sm text-muted text-center max-w-md">
-              {selectedEvent ? (
-                <>
-                  No active market panels open.
-                  <br />
-                  <span className="font-semibold text-primary cursor-pointer">Click the + button</span> next to a market in the sidebar to open its control panel.
-                </>
-              ) : (
-                "This is a placeholder for the Sport Manager main content. Select a sport and an event from the sidebar, then add a market to view its details."
-              )}
-            </p>
+          <div className="p-6">
+            <div className="rounded-lg border border-border bg-surface p-6 shadow-xs flex items-center justify-center min-h-[300px]">
+              <p className="text-sm text-muted text-center max-w-md">
+                {selectedEvent ? (
+                  <>
+                    No active market panels open.
+                    <br />
+                    <span className="font-semibold text-primary cursor-pointer">Click the + button</span> next to a market in the sidebar to open its control panel.
+                  </>
+                ) : (
+                  "This is a placeholder for the Sport Manager main content. Select a sport and an event from the sidebar, then add a market to view its details."
+                )}
+              </p>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-0">
             {openMarkets.map(({ market, inPlay, temporaryStatus, marketStatus, autoOpenSec, isAutoOpenEnabled }) => {
               // Custom limits layout
               const minPrice = market.minPrice ?? 1;
@@ -148,7 +151,7 @@ export default function SportManagerPage() {
               const runners = market.marketRunner ?? [];
 
               return (
-                <div key={market.id} className="rounded-lg border border-border bg-surface overflow-hidden shadow-xs flex flex-col">
+                <div key={market.id} className="border-b border-border bg-surface overflow-hidden flex flex-col last:border-b-0">
                   {/* Header */}
                   <div className="bg-zinc-900 text-white px-4 py-2.5 flex items-center justify-between">
                     <div className="flex items-center flex-wrap gap-y-1 min-w-0 pr-4">
@@ -168,8 +171,22 @@ export default function SportManagerPage() {
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
+                      <Link
+                        href={`/sports-manager/${market.id}?data=${encodeURIComponent(
+                          JSON.stringify({
+                            market,
+                            eventName: selectedEvent?.name || "India v Afghanistan",
+                          })
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-zinc-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                        title="Open in new tab"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </Link>
                       <button
-                        onClick={() => {}}
+                        onClick={() => { }}
                         className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
                         title="Refresh panel data"
                       >
@@ -298,11 +315,11 @@ export default function SportManagerPage() {
                       <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between border-b border-border pb-1 select-none">
                           <span className="text-[10px] font-bold text-muted uppercase tracking-wider flex-1">Runner</span>
-                          
+
                           <div className="w-[180px] flex justify-center shrink-0">
                             <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Status</span>
                           </div>
-                          
+
                           <div className="w-[294px] flex gap-1.5 shrink-0">
                             <div className="w-[144px] bg-sky-100 text-sky-800 text-[10px] font-bold py-0.5 rounded-t text-center uppercase tracking-wider">
                               Back
@@ -316,7 +333,7 @@ export default function SportManagerPage() {
                         {runners.map((runnerObj, idx) => {
                           const runnerName = runnerObj.runner?.name ?? `Runner ${idx + 1}`;
                           const statusBadge = getRunnerStatusBadge(market.id, runnerObj.status);
-                          
+
                           // Mock odds locally based on selected statuses & bettingType to match mockup screenshot
                           const hasOdds = !statusBadge || statusBadge === "SUSPENED";
                           const isFancy = market.name.toLowerCase().includes("khado") || market.bettingType === 8;
@@ -396,21 +413,19 @@ export default function SportManagerPage() {
                         <div className="flex">
                           <button
                             onClick={() => updateMarketInPlay(market.id, true)}
-                            className={`px-4 py-1 text-xs font-bold rounded-l border border-border cursor-pointer transition-colors ${
-                              inPlay === true
-                                ? "bg-zinc-900 text-white border-zinc-900"
-                                : "bg-surface text-foreground-secondary hover:bg-surface-2"
-                            }`}
+                            className={`px-4 py-1 text-xs font-bold rounded-l border border-border cursor-pointer transition-colors ${inPlay === true
+                              ? "bg-zinc-900 text-white border-zinc-900"
+                              : "bg-surface text-foreground-secondary hover:bg-surface-2"
+                              }`}
                           >
                             true
                           </button>
                           <button
                             onClick={() => updateMarketInPlay(market.id, false)}
-                            className={`px-4 py-1 text-xs font-bold rounded-r border-t border-b border-r border-border cursor-pointer transition-colors ${
-                              inPlay === false
-                                ? "bg-zinc-900 text-white border-zinc-900"
-                                : "bg-surface text-foreground-secondary hover:bg-surface-2"
-                            }`}
+                            className={`px-4 py-1 text-xs font-bold rounded-r border-t border-b border-r border-border cursor-pointer transition-colors ${inPlay === false
+                              ? "bg-zinc-900 text-white border-zinc-900"
+                              : "bg-surface text-foreground-secondary hover:bg-surface-2"
+                              }`}
                           >
                             false
                           </button>
@@ -432,11 +447,10 @@ export default function SportManagerPage() {
                             <button
                               key={tOpt.val}
                               onClick={() => updateMarketTemporaryStatus(market.id, tOpt.val)}
-                              className={`px-3 py-1 text-[10px] font-bold cursor-pointer transition-colors ${
-                                temporaryStatus === tOpt.val
-                                  ? "bg-zinc-900 text-white"
-                                  : "bg-surface text-foreground-secondary hover:bg-surface-2"
-                              }`}
+                              className={`px-3 py-1 text-[10px] font-bold cursor-pointer transition-colors ${temporaryStatus === tOpt.val
+                                ? "bg-zinc-900 text-white"
+                                : "bg-surface text-foreground-secondary hover:bg-surface-2"
+                                }`}
                             >
                               {tOpt.label}
                             </button>
@@ -459,11 +473,10 @@ export default function SportManagerPage() {
                             <button
                               key={mOpt.val}
                               onClick={() => updateMarketStatus(market.id, mOpt.val)}
-                              className={`px-3 py-1 text-[10px] font-bold cursor-pointer transition-colors ${
-                                marketStatus === mOpt.val
-                                  ? "bg-zinc-900 text-white"
-                                  : "bg-surface text-foreground-secondary hover:bg-surface-2"
-                              }`}
+                              className={`px-3 py-1 text-[10px] font-bold cursor-pointer transition-colors ${marketStatus === mOpt.val
+                                ? "bg-zinc-900 text-white"
+                                : "bg-surface text-foreground-secondary hover:bg-surface-2"
+                                }`}
                             >
                               {mOpt.label}
                             </button>

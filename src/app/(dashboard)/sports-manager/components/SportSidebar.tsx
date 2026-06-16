@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { getEventType, searchEvents, EventTypeRecord, EventRecord } from "@/services/eventtype.service";
 import { getMarketByEventId, SidebarMarketRecord } from "@/services/market.service";
 import { ChevronRight, RefreshCw, Loader2, PlusCircle, MinusCircle, ExternalLink } from "lucide-react";
@@ -44,8 +45,13 @@ export function SportSidebar({
       
       const data = await getEventType();
       
+      // Filter out Session and Casino event types
+      const filteredData = data.filter(
+        (sport) => sport.name !== "Session" && sport.name !== "Casino"
+      );
+      
       // Sort by displayOrder if available
-      const sortedData = [...data].sort((a, b) => {
+      const sortedData = [...filteredData].sort((a, b) => {
         const orderA = a.displayOrder ?? 999;
         const orderB = b.displayOrder ?? 999;
         return orderA - orderB;
@@ -153,15 +159,15 @@ export function SportSidebar({
   const isAnyLoading = isLoading || isEventsLoading || isMarketsLoading;
 
   return (
-    <div className="flex w-64 flex-col rounded-lg border border-border bg-surface overflow-hidden shrink-0 shadow-sm">
+    <div className="flex w-64 flex-col border-r border-border bg-surface overflow-hidden shrink-0 h-full">
       {/* Header */}
-      <div className="flex items-center justify-between bg-surface px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-bold text-foreground">
+      <div className="flex items-center justify-between bg-zinc-900 text-white px-4 py-3 border-b border-zinc-800">
+        <h2 className="text-sm font-bold text-white">
           Sport
         </h2>
         <button
           onClick={handleRefresh}
-          className="text-muted hover:text-foreground transition-colors cursor-pointer"
+          className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
           title="Refresh"
           disabled={isAnyLoading || isAnyRefreshing}
         >
@@ -174,13 +180,13 @@ export function SportSidebar({
         {selectedSport ? (
           <>
             {/* Selected Sport Title (Back link) */}
-            <div className="border-b border-border bg-surface">
+            <div className="border-b border-zinc-800 bg-zinc-800">
               <button
                 onClick={() => {
                   setSelectedSport(null);
                   setSelectedEvent(null);
                 }}
-                className="w-full text-left px-4 py-3 text-sm font-semibold text-primary hover:underline transition-colors cursor-pointer"
+                className="w-full text-left px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer"
               >
                 {selectedSport.name}
               </button>
@@ -189,10 +195,10 @@ export function SportSidebar({
             {selectedEvent ? (
               <>
                 {/* Selected Event Title (Back link) */}
-                <div className="border-b border-border bg-surface">
+                <div className="border-b border-border bg-zinc-100/80">
                   <button
                     onClick={() => setSelectedEvent(null)}
-                    className="w-full text-left px-4 py-3 text-sm font-semibold text-primary hover:underline transition-colors cursor-pointer"
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-primary hover:underline transition-colors cursor-pointer"
                   >
                     {selectedEvent.name}
                   </button>
@@ -222,7 +228,23 @@ export function SportSidebar({
                               <span className="text-sm font-medium text-foreground-secondary group-hover:text-foreground truncate" title={market.name}>
                                 {market.name}
                               </span>
-                              <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <Link
+                                href={`/sports-manager/${market.id}?data=${encodeURIComponent(
+                                  JSON.stringify({
+                                    market,
+                                    eventName: selectedEvent?.name || "India v Afghanistan",
+                                  })
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cursor-pointer"
+                                onClick={(e) => {
+                                  // Prevent selecting the row when clicking the link
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </Link>
                             </div>
                             <button
                               onClick={() => onToggleMarket(market)}
