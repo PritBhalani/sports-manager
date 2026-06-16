@@ -168,7 +168,9 @@ export async function getMarketByEventTypeId(
   allFlag: boolean = true,
 ): Promise<MarketByEventRow[]> {
   const flagStr = allFlag ? "true" : "false";
-  const path = `/position/getmarketbyeventtypeid/${encodeURIComponent(eventTypeId)}/${flagStr}`;
+  // Guard: if eventTypeId is empty, fall back to "-1" (all sports) to prevent double slash in URL
+  const safeEventTypeId = eventTypeId && eventTypeId.trim() ? eventTypeId.trim() : "-1";
+  const path = `/position/getmarketbyeventtypeid/${encodeURIComponent(safeEventTypeId)}/${flagStr}`;
   const raw = await apiGet<
     | MarketByEventRow[]
     | { data?: MarketByEventRow[]; success?: boolean }

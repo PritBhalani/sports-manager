@@ -58,6 +58,7 @@ function DashboardLayoutInner({ children }: LayoutProps) {
   const mainScrollRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMiniSidebar, setIsMiniSidebar] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
     mapBalanceToNavbar(undefined),
   );
@@ -67,8 +68,13 @@ function DashboardLayoutInner({ children }: LayoutProps) {
     if (typeof window !== "undefined" && window.innerWidth >= LAYOUT_BREAKPOINT_MD) {
       if (pathname.startsWith("/website/analytics")) {
         setSidebarOpen(false);
+        setIsMiniSidebar(false);
+      } else if (pathname.startsWith("/sports-manager")) {
+        setSidebarOpen(true);
+        setIsMiniSidebar(true);
       } else {
         setSidebarOpen(true);
+        setIsMiniSidebar(false);
       }
     }
   }, [pathname]);
@@ -124,9 +130,11 @@ function DashboardLayoutInner({ children }: LayoutProps) {
           className="fixed inset-0 z-30 bg-black/50 md:hidden"
         />
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+      <Sidebar isOpen={sidebarOpen} isMini={isMiniSidebar} onClose={closeSidebar} />
       <div
-        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? "md:ml-[15rem]" : ""}`}
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
+          sidebarOpen ? (isMiniSidebar ? "md:ml-[5rem]" : "md:ml-[15rem]") : ""
+        }`}
       >
         {banner.text1 && banner.notice1Visible && (
           <div className="flex items-center gap-3 border-b border-warning/40 bg-warning-subtle px-4 py-2 text-xs text-warning-foreground sm:px-5 sm:py-2.5 md:px-6">

@@ -241,6 +241,9 @@ const menuConfig: MenuItem[] = [
   //   disabled: true,
   // },
   { href: "/profile", label: "My Profile", icon: IconMyProfile },
+
+  // Sport Manager
+  { href: "/sports-manager", label: "Sport Manager", icon: IconTrophy },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -259,10 +262,11 @@ function hasActiveChild(
 
 type SidebarProps = {
   isOpen?: boolean;
+  isMini?: boolean;
   onClose?: () => void;
 };
 
-export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
+export default function Sidebar({ isOpen = true, isMini = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
 
@@ -296,17 +300,22 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 flex h-screen w-[15rem] max-w-[85vw] flex-col bg-sidebar-bg text-sidebar-text shadow-xl transition-[transform] duration-200 md:shadow-none md:transition-[margin] md:duration-200"
+      className={`fixed left-0 top-0 z-40 flex h-screen max-w-[85vw] flex-col bg-sidebar-bg text-sidebar-text shadow-xl transition-all duration-200 md:shadow-none ${isMini ? "w-[5rem]" : "w-[15rem]"
+        }`}
       style={{
         transform: isOpen ? "translateX(0)" : "translateX(-100%)",
         marginLeft: 0,
       }}
     >
       {/* Top section: Logo */}
-      <div className="flex flex-shrink-0 items-center border-b border-sidebar-border px-5 py-4">
-        <span className="text-lg font-bold tracking-wider text-white">
-          Sports Manager
-        </span>
+      <div className={`flex flex-shrink-0 items-center border-b border-sidebar-border py-4 ${isMini ? "justify-center px-0" : "px-5"}`}>
+        {isMini ? (
+          <span className="text-lg font-bold tracking-wider text-white">SM</span>
+        ) : (
+          <span className="text-lg font-bold tracking-wider text-white">
+            Sports Manager
+          </span>
+        )}
       </div>
 
       {/* Middle section: Scrollable navigation */}
@@ -321,28 +330,27 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               const Icon = item.icon;
               if (item.disabled) {
                 return (
-                  <li key={item.label}>
+                  <li key={item.label} title={isMini ? item.label : undefined}>
                     <span
-                      className="flex cursor-not-allowed select-none items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium opacity-50"
+                      className={`flex cursor-not-allowed select-none items-center gap-3 rounded-sm py-2.5 text-sm font-medium opacity-50 ${isMini ? "justify-center px-0" : "px-3"}`}
                       aria-disabled="true"
                     >
                       <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{item.label}</span>
+                      {!isMini && <span>{item.label}</span>}
                     </span>
                   </li>
                 );
               }
               return (
-                <li key={item.label}>
+                <li key={item.label} title={isMini ? item.label : undefined}>
                   <Link
                     href={item.href}
                     onClick={onClose}
-                    className={`flex items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${
-                      active ? "bg-sidebar-active text-white" : ""
-                    }`}
+                    className={`flex items-center gap-3 rounded-sm py-2.5 text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${isMini ? "justify-center px-0" : "px-3"} ${active ? "bg-sidebar-active text-white" : ""
+                      }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
-                    <span>{item.label}</span>
+                    {!isMini && <span>{item.label}</span>}
                   </Link>
                 </li>
               );
@@ -355,41 +363,42 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
               const Icon = item.icon;
               if ("disabled" in item && item.disabled) {
                 return (
-                  <li key={item.label}>
+                  <li key={item.label} title={isMini ? item.label : undefined}>
                     <div
-                      className="flex cursor-not-allowed select-none items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium opacity-50"
+                      className={`flex cursor-not-allowed select-none items-center justify-between rounded-sm py-2.5 text-left text-sm font-medium opacity-50 ${isMini ? "justify-center px-0" : "px-3"}`}
                       aria-disabled="true"
                     >
                       <span className="flex items-center gap-3">
                         <Icon className="h-5 w-5 flex-shrink-0" />
-                        <span>{item.label}</span>
+                        {!isMini && <span>{item.label}</span>}
                       </span>
-                      <ChevronRight className="h-4 w-4" aria-hidden />
+                      {!isMini && <ChevronRight className="h-4 w-4" aria-hidden />}
                     </div>
                   </li>
                 );
               }
               return (
-                <li key={item.label}>
+                <li key={item.label} title={isMini ? item.label : undefined}>
                   <button
                     type="button"
                     onClick={() => toggleDropdown(item.label)}
-                    className={`flex w-full items-center justify-between rounded-sm px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${
-                      activeChild ? "bg-sidebar-active text-white" : ""
-                    }`}
+                    className={`flex w-full items-center justify-between rounded-sm py-2.5 text-left text-sm font-medium transition-colors hover:bg-sidebar-hover hover:text-white ${isMini ? "justify-center px-0" : "px-3"} ${activeChild ? "bg-sidebar-active text-white" : ""
+                      }`}
                   >
                     <span className="flex items-center gap-3">
                       <Icon className="h-5 w-5 flex-shrink-0" />
-                      <span>{item.label}</span>
+                      {!isMini && <span>{item.label}</span>}
                     </span>
-                    {isOpenDropdown ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
+                    {!isMini && (
+                      isOpenDropdown ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )
                     )}
                   </button>
                   {isOpenDropdown && (
-                    <ul className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-ring pl-3">
+                    <ul className={`mt-0.5 flex flex-col gap-0.5 ${isMini ? "ml-0 pl-0" : "ml-4 border-l border-sidebar-ring pl-3"}`}>
                       {children.map((child) => {
                         const childActive =
                           !child.disabled && pathname.startsWith(child.href);
@@ -398,16 +407,17 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                           return (
                             <li
                               key={`${item.label}:${child.label}:${child.href}`}
+                              title={isMini ? child.label : undefined}
                             >
                               <span
-                                className="block cursor-not-allowed select-none rounded-sm px-2.5 py-2 text-sm opacity-50"
+                                className={`block cursor-not-allowed select-none rounded-sm py-2 text-sm opacity-50 ${isMini ? "px-0 text-center" : "px-2.5"}`}
                                 aria-disabled="true"
                               >
-                                <div className="flex items-center gap-2">
+                                <div className={`flex items-center ${isMini ? "justify-center" : "gap-2"}`}>
                                   {ChildIcon ? (
                                     <ChildIcon className="h-4 w-4 flex-shrink-0" />
                                   ) : null}
-                                  <span>{child.label}</span>
+                                  {!isMini && <span>{child.label}</span>}
                                 </div>
                               </span>
                             </li>
@@ -416,21 +426,21 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
                         return (
                           <li
                             key={`${item.label}:${child.label}:${child.href}`}
+                            title={isMini ? child.label : undefined}
                           >
                             <Link
                               href={child.href}
                               onClick={onClose}
-                              className={`block rounded-sm px-2.5 py-2 text-sm transition-colors hover:bg-sidebar-hover hover:text-white ${
-                                childActive
+                              className={`block rounded-sm py-2 text-sm transition-colors hover:bg-sidebar-hover hover:text-white ${isMini ? "px-0 text-center" : "px-2.5"} ${childActive
                                   ? "bg-sidebar-hover/80 text-white ring-1 ring-sidebar-ring"
                                   : "text-sidebar-muted"
-                              }`}
+                                }`}
                             >
-                              <div className="flex items-center gap-2">
+                              <div className={`flex items-center ${isMini ? "justify-center" : "gap-2"}`}>
                                 {ChildIcon ? (
                                   <ChildIcon className="h-4 w-4 flex-shrink-0" />
                                 ) : null}
-                                <span>{child.label}</span>
+                                {!isMini && <span>{child.label}</span>}
                               </div>
                             </Link>
                           </li>
@@ -448,14 +458,15 @@ export default function Sidebar({ isOpen = true, onClose }: SidebarProps) {
       </nav>
 
       {/* Bottom section: Logout (fixed at bottom) */}
-      <div className="mt-auto flex flex-shrink-0 border-t border-sidebar-border p-3">
+      <div className={`mt-auto flex flex-shrink-0 border-t border-sidebar-border py-3 ${isMini ? "justify-center px-0" : "px-3"}`}>
         <Link
           href="/logout"
           onClick={onClose}
-          className="flex w-full items-center gap-3 rounded-sm px-3 py-2.5 text-sm font-medium text-sidebar-text transition-colors hover:bg-sidebar-hover hover:text-white"
+          title={isMini ? "Log Out" : undefined}
+          className={`flex w-full items-center gap-3 rounded-sm py-2.5 text-sm font-medium text-sidebar-text transition-colors hover:bg-sidebar-hover hover:text-white ${isMini ? "justify-center px-0" : "px-3"}`}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
-          <span>Log Out</span>
+          {!isMini && <span>Log Out</span>}
         </Link>
       </div>
     </aside>

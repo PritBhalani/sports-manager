@@ -2,6 +2,44 @@
 import { apiGet, apiPost, type ApiMutationOptions } from "./apiClient";
 import type { MarketLockRecord } from "@/types/market.types";
 
+export interface MarketRunner {
+  status: number;
+  displayOrder: number;
+  runner: {
+    id: string;
+    sourceId: number;
+    name: string;
+  };
+}
+
+export interface SidebarMarketRecord {
+  id: number;
+  marketRuleId: string;
+  name: string;
+  startTime: string;
+  marketStatus: number;
+  temporaryStatus: number;
+  inPlay: boolean;
+  sportNodeType: number;
+  betDelay: number;
+  bettingType: number;
+  priceLadderType: number;
+  eventTypeId: string;
+  marketRunner: MarketRunner[];
+  marketType: string;
+  group: number;
+  syncData: boolean;
+  maxBet: number;
+  maxProfit: number;
+  maxLiability: number;
+  displayOrder: number;
+  version: number;
+  minPrice?: number;
+  maxPrice?: number;
+  allowLimit?: boolean;
+  allowLimitMarket?: boolean;
+}
+
 export type MarketTypeMapping = {
   id: string;
   displayName: string;
@@ -39,4 +77,12 @@ export async function updateMarketLockStatus(
     successMessage: "Updated successfully.",
     ...options,
   });
+}
+
+/** GET /market/getmarketbyeventid/{eventId} — get markets for an event. Auth: Session. */
+export async function getMarketByEventId(eventId: string): Promise<SidebarMarketRecord[]> {
+  const res = await apiGet<{ data?: SidebarMarketRecord[] }>(
+    `/market/getmarketbyeventid/${eventId}`
+  );
+  return res?.data ?? [];
 }
