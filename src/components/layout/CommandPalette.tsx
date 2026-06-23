@@ -16,6 +16,9 @@ import {
   type CommandPaletteRoute,
 } from "@/config/commandPaletteRoutes";
 
+import { isRouteAllowed } from "@/config/routePermissions";
+import { getAuthSession } from "@/store/authStore";
+
 type CommandPaletteProps = {
   open: boolean;
   onClose: () => void;
@@ -28,7 +31,21 @@ export default function CommandPalette({ open, onClose }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
 
-  const filtered = useMemo(() => filterCommandRoutes(query), [query]);
+  const [mounted, setMounted] = useState(false);
+  const [session, setSession] = useState(getAuthSession);
+
+  useEffect(() => {
+    setMounted(true);
+    setSession(getAuthSession());
+  }, []);
+
+  const userType = session.user?.userType;
+
+  const filtered = useMemo(() => {
+    const matched = filterCommandRoutes(query);
+    if (!mounted) return matched;
+    return matched.filter((route) => isRouteAllowed(route.href, userType));
+  }, [query, mounted, userType]);
 
   useEffect(() => {
     setSelected(0);

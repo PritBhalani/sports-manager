@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
 import { LayoutProps } from "@/types/layout.types";
+import { isRouteAllowed } from "@/config/routePermissions";
 import { LAYOUT_BREAKPOINT_MD } from "@/utils/constants";
 import {
   getBalance,
@@ -57,6 +58,19 @@ function DashboardLayoutInner({ children }: LayoutProps) {
   const banner = useNotificationBanner();
   const mainScrollRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Enforce role-based route permissions client-side
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const userType = getAuthSession()?.user?.userType;
+    if (!isRouteAllowed(pathname, userType)) {
+      if (pathname !== "/dashboard") {
+        router.replace("/dashboard");
+      }
+    }
+  }, [isAuthenticated, pathname, router]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMiniSidebar, setIsMiniSidebar] = useState(false);
   const [navbarBalances, setNavbarBalances] = useState(() =>
@@ -132,9 +146,8 @@ function DashboardLayoutInner({ children }: LayoutProps) {
       )}
       <Sidebar isOpen={sidebarOpen} isMini={isMiniSidebar} onClose={closeSidebar} />
       <div
-        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${
-          sidebarOpen ? (isMiniSidebar ? "md:ml-[5rem]" : "md:ml-[15rem]") : ""
-        }`}
+        className={`flex min-w-0 flex-1 flex-col transition-[margin] duration-200 ${sidebarOpen ? (isMiniSidebar ? "md:ml-[5rem]" : "md:ml-[15rem]") : ""
+          }`}
       >
         {banner.text1 && banner.notice1Visible && (
           <div className="flex items-center gap-3 border-b border-warning/40 bg-warning-subtle px-4 py-2 text-xs text-warning-foreground sm:px-5 sm:py-2.5 md:px-6">
@@ -174,9 +187,8 @@ function DashboardLayoutInner({ children }: LayoutProps) {
         />
         <main
           ref={mainScrollRef}
-          className={`dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 ${
-            pathname.startsWith("/sports-manager") ? "p-0" : "p-4 sm:p-6 md:p-7"
-          }`}
+          className={`dashboard-main-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-surface-2 ${pathname.startsWith("/sports-manager") ? "p-0" : "p-4 sm:p-6 md:p-7"
+            }`}
         >
           {children}
         </main>

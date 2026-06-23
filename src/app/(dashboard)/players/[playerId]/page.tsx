@@ -632,6 +632,15 @@ export default function PlayerDetailPage() {
   const playerId = String(params?.playerId ?? "").trim();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [mounted, setMounted] = useState(false);
+  const [session, setSession] = useState(getAuthSession);
+
+  useEffect(() => {
+    setMounted(true);
+    setSession(getAuthSession());
+  }, []);
+
   const [activeTab, setActiveTab] = useState<TabId>("activity");
   const [activeAccountSubTab, setActiveAccountSubTab] = useState<AccountSubTabId>("acct-stmt");
   const [loadingActivity, setLoadingActivity] = useState(false);
@@ -1269,13 +1278,27 @@ export default function PlayerDetailPage() {
   useEffect(() => {
     const raw = searchParams?.get("tab") ?? "";
     const next = raw.trim() as TabId;
-    const isValid = PLAYER_DETAIL_TABS.some((t) => t.id === next);
-    if (!isValid) return;
+    const isRestrictedUser = mounted && (session.user?.userType === 1 || session.user?.userType === 2);
+    const isRestrictedTab = isRestrictedUser && (next === "betting-pl" || next === "bonus-statement" || next === "referral-statement");
+    const isValid = PLAYER_DETAIL_TABS.some((t) => t.id === next) && !isRestrictedTab;
+    if (!isValid) {
+      if (isRestrictedTab) {
+        setActiveTab("activity");
+        const sp = new URLSearchParams(searchParams?.toString() ?? "");
+        sp.delete("tab");
+        const qs = sp.toString();
+        router.replace(qs ? `?${qs}` : "?", { scroll: false });
+      }
+      return;
+    }
     setActiveTab(next);
-  }, [searchParams]);
+  }, [searchParams, mounted, session, router]);
 
   const onTabChange = (id: string) => {
     const next = id as TabId;
+    const isRestrictedUser = mounted && (session.user?.userType === 1 || session.user?.userType === 2);
+    const isRestrictedTab = isRestrictedUser && (next === "betting-pl" || next === "bonus-statement" || next === "referral-statement");
+    if (isRestrictedTab) return;
     setActiveTab(next);
     const sp = new URLSearchParams(searchParams?.toString() ?? "");
     if (next === "activity") {
@@ -1348,8 +1371,16 @@ export default function PlayerDetailPage() {
   }, [acctStmtRows]);
 
   const tabs = useMemo(
-    () =>
-      PLAYER_DETAIL_TABS.map((tab) => {
+    () => {
+      const isRestrictedUser = mounted && (session.user?.userType === 1 || session.user?.userType === 2);
+      const filteredTabsList = PLAYER_DETAIL_TABS.filter((tab) => {
+        if (isRestrictedUser && (tab.id === "betting-pl" || tab.id === "bonus-statement" || tab.id === "referral-statement")) {
+          return false;
+        }
+        return true;
+      });
+
+      return filteredTabsList.map((tab) => {
         if (tab.id !== "activity") {
           if (tab.id === "bet-list") {
             return {
@@ -2863,7 +2894,8 @@ export default function PlayerDetailPage() {
             </div>
           ),
         };
-      }),
+      });
+    },
     [
       activityError,
       loadingActivity,
@@ -2923,6 +2955,8 @@ export default function PlayerDetailPage() {
       bonusStmtPage,
       bonusStmtLoading,
       bonusStmtError,
+      mounted,
+      session,
     ],
   );
 

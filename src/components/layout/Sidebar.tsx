@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, ChevronRight, LogOut } from "lucide-react";
 import type { ComponentType } from "react";
 import {
@@ -53,6 +53,9 @@ import {
   IconTransaction,
   IconUsers,
 } from "@/components/layout/SidebarSvgIcons";
+
+import { isRouteAllowed } from "@/config/routePermissions";
+import { getAuthSession } from "@/store/authStore";
 
 type MenuLink = {
   href: string;
@@ -146,7 +149,7 @@ const menuConfig: MenuItem[] = [
       { href: "/website/analytics", label: "Analytics", icon: IconBarChart3 },
       { href: "/website/banners", label: "Banners", icon: IconImageIcon },
       { href: "/website/banking", label: "Banking", icon: IconBanknote },
-      { href: "/website/gatways", label: "Gateways", icon: IconGateways },
+      // { href: "/website/gatways", label: "Gateways", icon: IconGateways },
       { href: "/website/currency", label: "Currency", icon: IconCurrency },
       // { href: "/website/forms", label: "Forms", icon: IconFileCheck2, disabled: true },
       // {
@@ -269,13 +272,47 @@ type SidebarProps = {
 export default function Sidebar({ isOpen = true, isMini = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [openDropdowns, setOpenDropdowns] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
+  const [session, setSession] = useState(getAuthSession);
+
+  const userType = mounted ? session.user?.userType : undefined;
+
+  // Filter menuConfig dynamically based on route permissions
+  const filteredMenu = useMemo(() => {
+    return menuConfig
+      .map((item) => {
+        if ("href" in item && item.href) {
+          if (!isRouteAllowed(item.href, userType)) return null;
+          return item;
+        }
+        if ("children" in item && item.children) {
+          const allowedChildren = item.children.filter((child) =>
+            isRouteAllowed(child.href, userType),
+          );
+          if (allowedChildren.length === 0) return null;
+          return {
+            ...item,
+            children: allowedChildren,
+          };
+        }
+        return item;
+      })
+      .filter(Boolean) as MenuItem[];
+  }, [userType]);
+
+  // Handle client-side mount only
+  useEffect(() => {
+    setMounted(true);
+    setSession(getAuthSession());
+  }, []);
 
   // Ensure the dropdown for the current route is open (e.g. on hard refresh
   // or when navigating directly to a deep link).
   useEffect(() => {
+    if (!mounted) return;
     setOpenDropdowns((prev) => {
       const next = new Set(prev);
-      menuConfig.forEach((item) => {
+      filteredMenu.forEach((item) => {
         if (
           "children" in item &&
           item.children?.length &&
@@ -287,7 +324,7 @@ export default function Sidebar({ isOpen = true, isMini = false, onClose }: Side
       });
       return next;
     });
-  }, [pathname]);
+  }, [pathname, mounted, filteredMenu]);
 
   const toggleDropdown = (label: string) => {
     setOpenDropdowns((prev) => {
@@ -324,7 +361,7 @@ export default function Sidebar({ isOpen = true, isMini = false, onClose }: Side
         style={{ scrollBehavior: "smooth" }}
       >
         <ul className="flex flex-col gap-0.5 px-3">
-          {menuConfig.map((item) => {
+          {filteredMenu.map((item) => {
             if ("href" in item && item.href) {
               const active = isActive(pathname, item.href);
               const Icon = item.icon;
@@ -432,8 +469,8 @@ export default function Sidebar({ isOpen = true, isMini = false, onClose }: Side
                               href={child.href}
                               onClick={onClose}
                               className={`block rounded-sm py-2 text-sm transition-colors hover:bg-sidebar-hover hover:text-white ${isMini ? "px-0 text-center" : "px-2.5"} ${childActive
-                                  ? "bg-sidebar-hover/80 text-white ring-1 ring-sidebar-ring"
-                                  : "text-sidebar-muted"
+                                ? "bg-sidebar-hover/80 text-white ring-1 ring-sidebar-ring"
+                                : "text-sidebar-muted"
                                 }`}
                             >
                               <div className={`flex items-center ${isMini ? "justify-center" : "gap-2"}`}>

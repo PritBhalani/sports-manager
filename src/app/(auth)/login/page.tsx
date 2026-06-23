@@ -282,8 +282,8 @@ export default function LoginPage() {
                     style={{
                       backgroundImage:
                         captcha.image.startsWith("data:") ||
-                        captcha.image.startsWith("http://") ||
-                        captcha.image.startsWith("https://")
+                          captcha.image.startsWith("http://") ||
+                          captcha.image.startsWith("https://")
                           ? `url(${captcha.image})`
                           : undefined,
                       backgroundSize: "contain",
@@ -296,10 +296,10 @@ export default function LoginPage() {
                       captcha.image.startsWith("http://") ||
                       captcha.image.startsWith("https://")
                     ) && (
-                      <span className="flex h-full w-full items-center justify-center text-xs text-placeholder">
-                        Image
-                      </span>
-                    )}
+                        <span className="flex h-full w-full items-center justify-center text-xs text-placeholder">
+                          Image
+                        </span>
+                      )}
                   </div>
                   <button
                     type="button"
